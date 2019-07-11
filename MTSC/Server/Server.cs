@@ -18,7 +18,7 @@ namespace MTSC.Server
         #region Fields
         bool running;
         TcpListener listener;
-        int port = 111;
+        int port = 50;
         List<TcpClient> toRemove = new List<TcpClient>();
         List<TcpClient> clients = new List<TcpClient>();
         List<IHandler> handlers = new List<IHandler>();
