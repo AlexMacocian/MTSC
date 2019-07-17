@@ -134,7 +134,7 @@ namespace MTSC.Server
                             }
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.PreHandleMessage(client, out message))
+                                if (handler.PreHandleMessage(client, ref message))
                                 {
                                     break;
                                 }

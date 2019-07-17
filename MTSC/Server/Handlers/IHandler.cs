@@ -23,7 +23,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client">Client structure.</param>
         /// <param name="message">Message to be preprocessed.</param>
         /// <returns>True if the message has been preprocessed and no other handler should handle it anymore.</returns>
-        bool PreHandleMessage(ClientStruct client, out Message message);
+        bool PreHandleMessage(ClientStruct client, ref Message message);
         /// <summary>
         /// Handles the received message.
         /// </summary>
