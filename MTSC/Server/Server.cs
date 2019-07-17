@@ -19,8 +19,8 @@ namespace MTSC.Server
         bool running;
         TcpListener listener;
         int port = 50;
-        List<TcpClient> toRemove = new List<TcpClient>();
-        List<TcpClient> clients = new List<TcpClient>();
+        List<ClientStruct> toRemove = new List<ClientStruct>();
+        List<ClientStruct> clients = new List<ClientStruct>();
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
@@ -107,14 +107,15 @@ namespace MTSC.Server
                 if (listener.Pending())
                 {
                     TcpClient tcpClient = listener.AcceptTcpClient();
+                    ClientStruct clientStruct = new ClientStruct(tcpClient);
                     foreach(IHandler handler in handlers)
                     {
-                        if (handler.HandleClient(tcpClient))
+                        if (handler.HandleClient(clientStruct))
                         {
                             break;
                         }
                     }
-                    clients.Add(tcpClient);
+                    clients.Add(clientStruct);
                 }
                 /*
                  * Process in parallel all clients.
@@ -123,17 +124,24 @@ namespace MTSC.Server
                 {
                     try
                     {
-                        if (client.Available > 0)
+                        if (client.TcpClient.Available > 0)
                         {
-                            Message message = CommunicationPrimitives.GetMessage(client);
+                            Message message = CommunicationPrimitives.GetMessage(client.TcpClient);
                             foreach (ILogger logger in loggers)
                             {
-                                logger.Log("Received message from " + client.Client.RemoteEndPoint.ToString() + 
+                                logger.Log("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() + 
                                     " Message length: " + message.MessageLength);
                             }
-                            foreach(IHandler handler in handlers)
+                            foreach (IHandler handler in handlers)
                             {
-                                if (handler.HandleMessage(out message))
+                                if (handler.PreHandleMessage(client, out message))
+                                {
+                                    break;
+                                }
+                            }
+                            foreach (IHandler handler in handlers)
+                            {
+                                if (handler.HandleMessage(client, message))
                                 {
                                     break;
                                 }
@@ -155,15 +163,20 @@ namespace MTSC.Server
                  * Check the client states. If a client is disconnected, 
                  * remove it from the list of clients.
                  */
-                foreach(TcpClient client in clients)
+                foreach(ClientStruct client in clients)
                 {
-                    if (!client.Connected)
+                    if (!client.TcpClient.Connected || client.ToBeRemoved)
                     {
                         toRemove.Add(client);
                     }
                 }
-                foreach(TcpClient client in toRemove)
+                foreach(ClientStruct client in toRemove)
                 {
+                    foreach(IHandler handler in handlers)
+                    {
+                        handler.ClientRemoved(client);
+                    }
+                    client.TcpClient?.Dispose();
                     clients.Remove(client);
                 }
                 toRemove.Clear();
@@ -189,5 +202,21 @@ namespace MTSC.Server
         #endregion
         #region Private Methods
         #endregion
+    }
+    /// <summary>
+    /// Structure containing client information.
+    /// </summary>
+    public struct ClientStruct
+    {
+        public TcpClient TcpClient;
+        public DateTime LastMessageTime;
+        public bool ToBeRemoved;
+
+        public ClientStruct(TcpClient client)
+        {
+            this.TcpClient = client;
+            this.LastMessageTime = DateTime.Now;
+            ToBeRemoved = false;
+        }
     }
 }
