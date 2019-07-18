@@ -23,7 +23,7 @@ namespace MTSC.Client.Handlers
         /// <param name="client">Client socket.</param>
         /// <param name="message">Message to be sent.</param>
         /// <returns></returns>
-        bool OnSend(TcpClient client, out Message message);
+        bool HandleSendMessage(TcpClient client, ref Message message);
         /// <summary>
         /// Called before the message is handled.
         /// Use this method to modify the message if necesarry.
@@ -31,7 +31,7 @@ namespace MTSC.Client.Handlers
         /// <param name="client">Client object.</param>
         /// <param name="message">Message to be preprocessed.</param>
         /// <returns>True if the message has been preprocessed and no other handler should modify the message.</returns>
-        bool PreHandleReceivedMessage(TcpClient client, out Message message);
+        bool PreHandleReceivedMessage(TcpClient client, ref Message message);
         /// <summary>
         /// Called when a message has been received.
         /// </summary>
@@ -48,6 +48,6 @@ namespace MTSC.Client.Handlers
         /// Called when the client is disconnected.
         /// </summary>
         /// <param name="client">Client object.</param>
-        void OnDisconnect(TcpClient client);
+        void Disconnected(TcpClient client);
     }
 }

@@ -38,22 +38,35 @@ namespace MTSC.Server.Handlers
         public EncryptionHandler(RSACryptoServiceProvider rsa)
         {
             additionalData = new Dictionary<ClientStruct, AdditionalData>();
-            privateKey = rsa.ToXmlString(true);
-            publicKey = rsa.ToXmlString(false);
+            privateKey = HelperFunctions.ToXmlString(rsa, true);
+            publicKey = HelperFunctions.ToXmlString(rsa, false);
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Called when a client is being removed.
+        /// </summary>
+        /// <param name="client">Client to be removed.</param>
         public void ClientRemoved(ClientStruct client)
         {
             additionalData.Remove(client);
         }
-
+        /// <summary>
+        /// Handle a new client connection.
+        /// </summary>
+        /// <param name="client">New client connection.</param>
+        /// <returns>False if an error occurred.</returns>
         public bool HandleClient(ClientStruct client)
         {
             additionalData.Add(client, new AdditionalData());
             return false;
         }
-
+        /// <summary>
+        /// Handle a received message.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Received message.</param>
+        /// <returns>True if no other handler should handle current message.</returns>
         public bool HandleMessage(ClientStruct client, Message message)
         {
             if (additionalData[client].ClientState == ClientState.Initial || additionalData[client].ClientState == ClientState.Negotiating)
@@ -68,8 +81,8 @@ namespace MTSC.Server.Handlers
                 }
                 else if (asciiMessage.Contains(CommunicationPrimitives.SendEncryptionKey))
                 {
-                    byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length];
-                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length, encryptedKey, 0, encryptedKey.Length);
+                    byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length - 1];
+                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length + 1, encryptedKey, 0, encryptedKey.Length);
                     byte[] decryptedKey = rsa.Decrypt(encryptedKey, false);
                     additionalData[client].Key = decryptedKey;
                     Message sendMessage = CommunicationPrimitives.BuildMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.AcceptEncryptionKey));
@@ -87,7 +100,12 @@ namespace MTSC.Server.Handlers
                 return false;
             }
         }
-
+        /// <summary>
+        /// Perform transformative operations on the message.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Message to be processed.</param>
+        /// <returns>True if no other handlers should perform operations on current message.</returns>
         public bool PreHandleMessage(ClientStruct client, ref Message message)
         {
             if(additionalData[client].ClientState == ClientState.Encrypted)
@@ -108,7 +126,9 @@ namespace MTSC.Server.Handlers
                 return false;
             }
         }
-
+        /// <summary>
+        /// Performs periodic operations on the server.
+        /// </summary>
         public void Tick()
         {
             

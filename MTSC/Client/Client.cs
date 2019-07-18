@@ -128,7 +128,7 @@ namespace MTSC.Client
                      */
                     foreach(IHandler handler in handlers)
                     {
-                        if(handler.PreHandleReceivedMessage(tcpClient, out message))
+                        if(handler.PreHandleReceivedMessage(tcpClient, ref message))
                         {
                             break;
                         }
