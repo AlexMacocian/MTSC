@@ -35,5 +35,9 @@ namespace MTSC.Server.Handlers
         /// </summary>
         /// <param name="client">Client about to be removed.</param>
         void ClientRemoved(ClientStruct client);
+        /// <summary>
+        /// Method performs regular operations onto the server.
+        /// </summary>
+        void Tick();
     }
 }

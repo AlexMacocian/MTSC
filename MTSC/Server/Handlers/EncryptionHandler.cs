@@ -18,38 +18,74 @@ namespace MTSC.Server.Handlers
             Negotiating,
             Encrypted
         }
-        private struct AdditionalData
+        private class AdditionalData
         {
             public byte[] Key;
-            public ClientState ClientState;
+            public ClientState ClientState = ClientState.Initial;
         }
+        #region Fields
         private Dictionary<ClientStruct, AdditionalData> additionalData;
-        private RSA rsa;
+        private RSACryptoServiceProvider rsa;
         private string privateKey, publicKey;
+        #endregion
+        #region Properties
+        #endregion
+        #region Constructors
         /// <summary>
         /// Creates an instance of EncryptionHandler.
         /// </summary>
         /// <param name="rsa">Symmetrical algorithm to be used for end-to-end encryption.</param>
-        public EncryptionHandler(RSA rsa)
+        public EncryptionHandler(RSACryptoServiceProvider rsa)
         {
             additionalData = new Dictionary<ClientStruct, AdditionalData>();
             privateKey = rsa.ToXmlString(true);
             publicKey = rsa.ToXmlString(false);
         }
-        
+        #endregion
+        #region Public Methods
         public void ClientRemoved(ClientStruct client)
         {
-            throw new NotImplementedException();
+            additionalData.Remove(client);
         }
 
         public bool HandleClient(ClientStruct client)
         {
-            throw new NotImplementedException();
+            additionalData.Add(client, new AdditionalData());
+            return false;
         }
 
         public bool HandleMessage(ClientStruct client, Message message)
         {
-            throw new NotImplementedException();
+            if (additionalData[client].ClientState == ClientState.Initial || additionalData[client].ClientState == ClientState.Negotiating)
+            {
+                string asciiMessage = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
+                if (asciiMessage == CommunicationPrimitives.RequestPublicKey)
+                {
+                    Message sendMessage = CommunicationPrimitives.BuildMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendPublicKey + ":" + publicKey));
+                    CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage);
+                    additionalData[client].ClientState = ClientState.Negotiating;
+                    return true;
+                }
+                else if (asciiMessage.Contains(CommunicationPrimitives.SendEncryptionKey))
+                {
+                    byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length];
+                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length, encryptedKey, 0, encryptedKey.Length);
+                    byte[] decryptedKey = rsa.Decrypt(encryptedKey, false);
+                    additionalData[client].Key = decryptedKey;
+                    Message sendMessage = CommunicationPrimitives.BuildMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.AcceptEncryptionKey));
+                    CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage);
+                    additionalData[client].ClientState = ClientState.Encrypted;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public bool PreHandleMessage(ClientStruct client, ref Message message)
@@ -73,7 +109,12 @@ namespace MTSC.Server.Handlers
             }
         }
 
-
+        public void Tick()
+        {
+            
+        }
+        #endregion
+        #region Private Methods
         private byte[] EncryptBytes(byte[] clientKey, byte[] bytesToBeEncrypted)
         {
             byte[] encryptedBytes = null;
@@ -143,5 +184,6 @@ namespace MTSC.Server.Handlers
 
             return decryptedBytes;
         }
+        #endregion
     }
 }

@@ -7,6 +7,11 @@ namespace MTSC
 {
     public static class CommunicationPrimitives
     {
+        public static string RequestPublicKey = "REQPBKEY";
+        public static string SendPublicKey = "PUBKEY";
+        public static string SendEncryptionKey = "SYMKEY";
+        public static string AcceptEncryptionKey = "SYMKEYOK";
+
         public static Message GetMessage(TcpClient client)
         {
             NetworkStream stream = client.GetStream();
