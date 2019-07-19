@@ -137,8 +137,9 @@ namespace MTSC.Server
                 {
                     Tuple<ClientStruct, byte[]> queuedOrder = messageQueue.Dequeue();
                     Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
-                    foreach(IHandler handler in handlers)
+                    for(int i = handlers.Count - 1; i >= 0; i--)
                     {
+                        IHandler handler = handlers[i];
                         handler.HandleSendMessage(queuedOrder.Item1, ref sendMessage);
                     }
                     CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage);
@@ -173,7 +174,7 @@ namespace MTSC.Server
                         {
                             Message message = CommunicationPrimitives.GetMessage(client.TcpClient);
                             Log("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
-                                    " Message length: " + message.MessageLength);
+                                    "\nMessage length: " + message.MessageLength);
                             foreach (IHandler handler in handlers)
                             {
                                 if (handler.PreHandleReceivedMessage(client, ref message))

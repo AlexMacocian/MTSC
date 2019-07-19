@@ -182,8 +182,9 @@ namespace MTSC.Client
                     {
                         byte[] messagebytes = messageQueue.Dequeue();
                         Message sendMessage = CommunicationPrimitives.BuildMessage(messagebytes);
-                        foreach(IHandler handler in handlers)
+                        for(int i = handlers.Count - 1; i >= 0; i--)
                         {
+                            IHandler handler = handlers[i];
                             handler.HandleSendMessage(tcpClient, ref sendMessage);
                         }
                         CommunicationPrimitives.SendMessage(tcpClient, sendMessage);
