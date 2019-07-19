@@ -1,4 +1,6 @@
 ﻿using MTSC.Client.Handlers;
+using MTSC.Exceptions;
+using MTSC.Logging;
 using System;
 using System.Collections.Generic;
 using System.Net.Sockets;
@@ -19,6 +21,9 @@ namespace MTSC.Client
         TcpClient tcpClient;
         CancellationTokenSource cancelMonitorToken;
         List<IHandler> handlers = new List<IHandler>();
+        List<ILogger> loggers = new List<ILogger>();
+        List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
+        Queue<byte[]> messageQueue = new Queue<byte[]>();
         #endregion
         #region Properties
         public bool Connected
@@ -41,6 +46,25 @@ namespace MTSC.Client
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Add a message to the message queue.
+        /// </summary>
+        /// <param name="message">Message to be sent.</param>
+        public void QueueMessage(byte[] message)
+        {
+            messageQueue.Enqueue(message);
+        }
+        /// <summary>
+        /// Logs the message onto the associated loggers.
+        /// </summary>
+        /// <param name="log">Message to be logged.</param>
+        public void Log(string log)
+        {
+            foreach (ILogger logger in loggers)
+            {
+                logger.Log(log + "\n");
+            }
+        }
         /// <summary>
         /// Sets the server address.
         /// </summary>
@@ -72,28 +96,63 @@ namespace MTSC.Client
             return this;
         }
         /// <summary>
+        /// Adds an exception handler to the client.
+        /// </summary>
+        /// <param name="handler">Exception handler to be added.</param>
+        /// <returns>This client object.</returns>
+        public Client AddExceptionHandler(IExceptionHandler handler)
+        {
+            exceptionHandlers.Add(handler);
+            return this;
+        }
+        /// <summary>
+        /// Adds a logger onto the client.
+        /// </summary>
+        /// <param name="logger">Logger to be added.</param>
+        /// <returns>This client object.</returns>
+        public Client AddLogger(ILogger logger)
+        {
+            loggers.Add(logger);
+            return this;
+        }
+        /// <summary>
         /// Attemps to connect to the specified server.
         /// </summary>
         /// <returns>True if connection was successful.</returns>
         public bool Connect()
         {
-            if(tcpClient != null)
+            try
             {
-                cancelMonitorToken?.Cancel();
-                tcpClient.Dispose();
-            }
-            tcpClient = new TcpClient();
-            tcpClient.Connect(address, port);
-            foreach(IHandler handler in handlers)
-            {
-                if (!handler.InitializeConnection(tcpClient))
+                if (tcpClient != null)
                 {
-                    return false;
+                    cancelMonitorToken?.Cancel();
+                    tcpClient.Dispose();
                 }
+                tcpClient = new TcpClient();
+                tcpClient.Connect(address, port);
+                foreach(ILogger logger in loggers)
+                {
+                    logger.Log("Connected to: " + tcpClient.Client.RemoteEndPoint.ToString());
+                }
+                foreach (IHandler handler in handlers)
+                {
+                    if (!handler.InitializeConnection(tcpClient))
+                    {
+                        return false;
+                    }
+                }
+                cancelMonitorToken = new CancellationTokenSource();
+                Task.Run(MonitorConnection, cancelMonitorToken.Token);
+                return true;
             }
-            cancelMonitorToken = new CancellationTokenSource();
-            Task.Run(MonitorConnection, cancelMonitorToken.Token);
-            return true;
+            catch(Exception e)
+            {
+                foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
+                {
+                    exceptionHandler.HandleException(e);
+                }
+                return false;
+            }
         }
         /// <summary>
         /// Attempts to connect to the specified server.
@@ -117,31 +176,56 @@ namespace MTSC.Client
         {
             while (true)
             {
-                if(tcpClient.Available > 0)
+                try
                 {
-                    /*
-                     * When a message has been received, process it.
-                     */
-                    Message message = CommunicationPrimitives.GetMessage(tcpClient);
-                    /*
-                     * Preprocess message.
-                     */
-                    foreach(IHandler handler in handlers)
+                    if(messageQueue.Count > 0)
                     {
-                        if(handler.PreHandleReceivedMessage(tcpClient, ref message))
+                        byte[] messagebytes = messageQueue.Dequeue();
+                        Message sendMessage = CommunicationPrimitives.BuildMessage(messagebytes);
+                        foreach(IHandler handler in handlers)
                         {
-                            break;
+                            handler.HandleSendMessage(tcpClient, ref sendMessage);
+                        }
+                        CommunicationPrimitives.SendMessage(tcpClient, sendMessage);
+                    }
+                    if (tcpClient.Available > 0)
+                    {
+                        /*
+                         * When a message has been received, process it.
+                         */
+                        Message message = CommunicationPrimitives.GetMessage(tcpClient);
+                        Log("Received a message of size: " + message.MessageLength);
+                        /*
+                         * Preprocess message.
+                         */
+                        foreach (IHandler handler in handlers)
+                        {
+                            if (handler.PreHandleReceivedMessage(tcpClient, ref message))
+                            {
+                                break;
+                            }
+                        }
+                        /*
+                         * Process the final message structure.
+                         */
+                        foreach (IHandler handler in handlers)
+                        {
+                            if (handler.HandleReceivedMessage(tcpClient, message))
+                            {
+                                break;
+                            }
                         }
                     }
-                    /*
-                     * Process the final message structure.
-                     */
-                    foreach(IHandler handler in handlers)
+                    foreach (IHandler handler in handlers)
                     {
-                        if(handler.HandleReceivedMessage(tcpClient, message))
-                        {
-                            break;
-                        }
+                        handler.Tick(tcpClient);
+                    }
+                }
+                catch(Exception e)
+                {
+                    foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        exceptionHandler.HandleException(e);
                     }
                 }
             }

@@ -43,7 +43,8 @@ namespace MTSC.Client.Handlers
         /// Called every cycle. This method should perform regular actions on the connection.
         /// </summary>
         /// <param name="client">Client object.</param>
-        void Tick(TcpClient client);
+        /// <param name="tcpClient">TcpClient connection.</param>
+        void Tick(TcpClient tcpClient);
         /// <summary>
         /// Called when the client is disconnected.
         /// </summary>

@@ -17,19 +17,26 @@ namespace MTSC.Server.Handlers
         /// <returns>True if the handler processed the client.</returns>
         bool HandleClient(ClientStruct client);
         /// <summary>
+        /// Handles a message before sending.
+        /// </summary>
+        /// <param name="client">Client object.</param>
+        /// <param name="message">Message to be processed.</param>
+        /// <returns>True if no other handler should handle this message.</returns>
+        bool HandleSendMessage(ClientStruct client, ref Message message);
+        /// <summary>
         /// Called before the message handling.
         /// Perform here any processing of the message.
         /// </summary>
         /// <param name="client">Client structure.</param>
         /// <param name="message">Message to be preprocessed.</param>
         /// <returns>True if the message has been preprocessed and no other handler should handle it anymore.</returns>
-        bool PreHandleMessage(ClientStruct client, ref Message message);
+        bool PreHandleReceivedMessage(ClientStruct client, ref Message message);
         /// <summary>
         /// Handles the received message.
         /// </summary>
         /// <param name="message">Message to be handled.</param>
         /// <returns>True if the message has been handled, false if the message has not been handled.</returns>
-        bool HandleMessage(ClientStruct client, Message message);
+        bool HandleReceivedMessage(ClientStruct client, Message message);
         /// <summary>
         /// Handles the removal of a client from the server.
         /// </summary>

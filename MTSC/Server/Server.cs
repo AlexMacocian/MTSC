@@ -24,13 +24,21 @@ namespace MTSC.Server
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
+        Queue<Tuple<ClientStruct, byte[]>> messageQueue = new Queue<Tuple<ClientStruct, byte[]>>();
         #endregion
         #region Properties
+        /// <summary>
+        /// Server port.
+        /// </summary>
         public int Port { get => port; set => port = value; }
         /// <summary>
         /// Returns the state of the server.
         /// </summary>
         public bool Running { get => running; }
+        /// <summary>
+        /// List of clients currently connected to the server.
+        /// </summary>
+        public List<ClientStruct> Clients { get => clients; set => clients = value; }
         #endregion
         #region Constructors
         /// <summary>
@@ -91,6 +99,26 @@ namespace MTSC.Server
             return this;
         }
         /// <summary>
+        /// Queues a message to be sent.
+        /// </summary>
+        /// <param name="target">Target client.</param>
+        /// <param name="message">Message to be sent.</param>
+        public void QueueMessage(ClientStruct target, byte[] message)
+        {
+            messageQueue.Enqueue(new Tuple<ClientStruct, byte[]>(target, message));
+        }
+        /// <summary>
+        /// Adds a message to be logged by the associated loggers.
+        /// </summary>
+        /// <param name="">Message to be logged</param>
+        public void Log(string log)
+        {
+            foreach (ILogger logger in loggers)
+            {
+                logger.Log(log + "\n");
+            }
+        }
+        /// <summary>
         /// Blocking method. Runs the server on the current thread.
         /// </summary>
         public void Run()
@@ -98,8 +126,24 @@ namespace MTSC.Server
             listener?.Stop();
             listener = new TcpListener(IPAddress.Any, port);
             listener.Start();
+            running = true;
+            Log("Server started on: " + listener.LocalEndpoint.ToString());
             while (running)
             {
+                /*
+                 * Check if there are messages queued to be sent.
+                 */
+                if(messageQueue.Count > 0)
+                {
+                    Tuple<ClientStruct, byte[]> queuedOrder = messageQueue.Dequeue();
+                    Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
+                    foreach(IHandler handler in handlers)
+                    {
+                        handler.HandleSendMessage(queuedOrder.Item1, ref sendMessage);
+                    }
+                    CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage);
+                }
+
                 /*
                  * Check if the server has any pending connections.
                  * If it has a new connection, process it.
@@ -116,6 +160,7 @@ namespace MTSC.Server
                         }
                     }
                     clients.Add(clientStruct);
+                    Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
                 }
                 /*
                  * Process in parallel all clients.
@@ -127,21 +172,18 @@ namespace MTSC.Server
                         if (client.TcpClient.Available > 0)
                         {
                             Message message = CommunicationPrimitives.GetMessage(client.TcpClient);
-                            foreach (ILogger logger in loggers)
-                            {
-                                logger.Log("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() + 
+                            Log("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                     " Message length: " + message.MessageLength);
-                            }
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.PreHandleMessage(client, ref message))
+                                if (handler.PreHandleReceivedMessage(client, ref message))
                                 {
                                     break;
                                 }
                             }
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.HandleMessage(client, message))
+                                if (handler.HandleReceivedMessage(client, message))
                                 {
                                     break;
                                 }

@@ -17,10 +17,22 @@ namespace MTSC.Client.Handlers
             NegotiatingSymKey,
             Encrypted
         }
-
+        private Client managedClient;
+        #region Fields
         private ConnectionState connectionState = ConnectionState.Initial;
         private byte[] aesKey;
-
+        #endregion
+        #region Constructors
+        /// <summary>
+        /// Creates an instance of EncryptionHandler.
+        /// </summary>
+        /// <param name="client">Client object that this handler manages.</param>
+        public EncryptionHandler(Client client)
+        {
+            this.managedClient = client;
+        }
+        #endregion
+        #region Public Methods
         /// <summary>
         /// Tries to initialize an encrypted connection.
         /// </summary>
@@ -87,7 +99,7 @@ namespace MTSC.Client.Handlers
                 if (ascii.Contains(CommunicationPrimitives.SendPublicKey))
                 {
                     byte[] publicKeyBytes = new byte[message.MessageLength - CommunicationPrimitives.SendPublicKey.Length - 1];
-                    Array.Copy(message.MessageBytes, message.MessageLength + 1, publicKeyBytes, 0, publicKeyBytes.Length);
+                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendPublicKey.Length + 1, publicKeyBytes, 0, publicKeyBytes.Length);
                     string publicKey = ASCIIEncoding.ASCII.GetString(publicKeyBytes);
                     RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
                     RSAParameters parameters = new RSAParameters();
@@ -118,15 +130,14 @@ namespace MTSC.Client.Handlers
                     byte[] messageBytes = new byte[encryptedSymKey.Length + messageHeader.Length];
                     Array.Copy(messageHeader, 0, messageBytes, 0, messageHeader.Length);
                     Array.Copy(encryptedSymKey, 0, messageBytes, messageHeader.Length, encryptedSymKey.Length);
-                    Message sendMessage = CommunicationPrimitives.BuildMessage(messageBytes);
-                    CommunicationPrimitives.SendMessage(client, sendMessage);
+                    managedClient.QueueMessage(messageBytes);
                     connectionState = ConnectionState.NegotiatingSymKey;
                     return true;
                 }
             }
             else if(connectionState == ConnectionState.NegotiatingSymKey)
             {
-                string ascii = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
+                string ascii = ASCIIEncoding.ASCII.GetString(DecryptBytes(message.MessageBytes));
                 if(ascii == CommunicationPrimitives.AcceptEncryptionKey)
                 {
                     connectionState = ConnectionState.Encrypted;
@@ -144,18 +155,18 @@ namespace MTSC.Client.Handlers
         /// Called on every tick by the client object.
         /// Performs regular operations.
         /// </summary>
-        /// <param name="client">Client connection.</param>
-        public void Tick(TcpClient client)
+        /// <param name="tcpClient">Client connection.</param>
+        public void Tick(TcpClient tcpClient)
         {
             if(connectionState == ConnectionState.Initial)
             {
-                Message message = CommunicationPrimitives.BuildMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.RequestPublicKey));
-                CommunicationPrimitives.SendMessage(client, message);
+
+                managedClient.QueueMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.RequestPublicKey));
                 this.connectionState = ConnectionState.RequestingPublicKey;
             }
         }
-
-
+        #endregion
+        #region Private Methods
         private string GetUniqueKey(int size)
         {
             return Convert.ToBase64String(GetUniqueByteKey(size));
@@ -260,5 +271,6 @@ namespace MTSC.Client.Handlers
 
             return result;
         }
+        #endregion
     }
 }
