@@ -142,7 +142,7 @@ namespace MTSC.Client
                     }
                 }
                 cancelMonitorToken = new CancellationTokenSource();
-                Task.Run(MonitorConnection, cancelMonitorToken.Token);
+                Task.Run(new Action(MonitorConnection), cancelMonitorToken.Token);
                 return true;
             }
             catch(Exception e)
