@@ -4,6 +4,7 @@ using MTSC.Server;
 using MTSC.Server.Handlers;
 using System;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 namespace MTSC_TestServer
 {    
@@ -11,7 +12,8 @@ namespace MTSC_TestServer
     {
         static void Main(string[] args)
         {
-            Server server = new Server(555);
+            X509Certificate2 certificate = new X509Certificate2("localhost.pfx", "psdsd");
+            Server server = new Server(certificate, 555);
             RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
             EncryptionHandler encryptionHandler = new EncryptionHandler(rsa, server);
             BroadcastHandler broadcastHandler = new BroadcastHandler(server);

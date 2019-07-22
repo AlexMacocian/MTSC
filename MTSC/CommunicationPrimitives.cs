@@ -1,20 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 
 namespace MTSC
 {
-    public static class CommunicationPrimitives
+    static class CommunicationPrimitives
     {
         public static string RequestPublicKey = "REQPBKEY";
         public static string SendPublicKey = "PUBKEY";
         public static string SendEncryptionKey = "SYMKEY";
         public static string AcceptEncryptionKey = "SYMKEYOK";
 
-        public static Message GetMessage(TcpClient client)
+        public static Message GetMessage(TcpClient client, SslStream sslStream = null)
         {
-            NetworkStream stream = client.GetStream();
+            Stream stream;
+            if (sslStream != null)
+            {
+                stream = sslStream;
+            }
+            else
+            {
+                stream = client.GetStream();
+            }
             byte[] controlBuffer = new byte[5];
             stream.Read(controlBuffer, 0, 4);
             uint messageLength = BitConverter.ToUInt32(controlBuffer, 0);
@@ -27,9 +37,17 @@ namespace MTSC
             return message;
         }
 
-        public static void SendMessage(TcpClient client, Message message)
+        public static void SendMessage(TcpClient client, Message message, SslStream sslStream = null)
         {
-            NetworkStream stream = client.GetStream();
+            Stream stream;
+            if (sslStream != null)
+            {
+                stream = sslStream;
+            }
+            else
+            {
+                stream = client.GetStream();
+            }
             byte[] messageBuffer = new byte[4 + message.MessageLength];
             byte[] lengthBuffer = BitConverter.GetBytes(message.MessageLength);
             uint length = message.MessageLength;
