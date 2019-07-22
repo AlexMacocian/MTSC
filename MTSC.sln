@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MTSC", "MTSC\MTSC.csproj", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MTSC-TestServer", "MTSC-TestServer\MTSC-TestServer.csproj", "{08A53F8F-BA6B-4C1C-B24B-CFD2626DE6C3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MTSC-TestClient", "MTSC-TestClient\MTSC-TestClient.csproj", "{B6792D3B-E141-48AC-B1E1-BCC0096ECF51}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MTSC-TestClient", "MTSC-TestClient\MTSC-TestClient.csproj", "{B6792D3B-E141-48AC-B1E1-BCC0096ECF51}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

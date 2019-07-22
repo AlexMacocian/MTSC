@@ -15,5 +15,11 @@ namespace MTSC.Logging
         /// <param name="message">Message to be received.</param>
         /// <returns>True if the message has been logged and no other logger should log this message.</returns>
         bool Log(string message);
+        /// <summary>
+        /// Logs the received debug message.
+        /// </summary>
+        /// <param name="message">Debug message to be logged.</param>
+        /// <returns>True if the message has been logged and no other logger should log this message.</returns>
+        bool LogDebug(string message);
     }
 }

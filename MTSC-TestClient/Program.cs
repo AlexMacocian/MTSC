@@ -17,6 +17,7 @@ namespace MTSC_TestClient
                 .AddHandler(new EncryptionHandler(client))
                 .AddHandler(broadcastHandler)
                 .AddLogger(new ConsoleLogger())
+                .AddLogger(new DebugConsoleLogger())
                 .Connect();
             while (true)
             {

@@ -62,7 +62,18 @@ namespace MTSC.Client
         {
             foreach (ILogger logger in loggers)
             {
-                logger.Log(log + "\n");
+                logger.Log(log);
+            }
+        }
+        /// <summary>
+        /// Logs the debug message onto the associated loggers.
+        /// </summary>
+        /// <param name="debugMessage"></param>
+        public void LogDebug(string debugMessage)
+        {
+            foreach (ILogger logger in loggers)
+            {
+                logger.LogDebug(debugMessage);
             }
         }
         /// <summary>
@@ -195,7 +206,7 @@ namespace MTSC.Client
                          * When a message has been received, process it.
                          */
                         Message message = CommunicationPrimitives.GetMessage(tcpClient);
-                        Log("Received a message of size: " + message.MessageLength);
+                        LogDebug("Received a message of size: " + message.MessageLength);
                         /*
                          * Preprocess message.
                          */
@@ -224,7 +235,9 @@ namespace MTSC.Client
                 }
                 catch(Exception e)
                 {
-                    foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
+                    LogDebug("Exception: " + e.Message);
+                    LogDebug("Stacktrace: " + e.StackTrace);
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
                         exceptionHandler.HandleException(e);
                     }

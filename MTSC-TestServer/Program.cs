@@ -18,6 +18,7 @@ namespace MTSC_TestServer
             server
                 .AddHandler(encryptionHandler)
                 .AddLogger(new ConsoleLogger())
+                .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 .AddHandler(broadcastHandler)
                 .Run();
