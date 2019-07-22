@@ -28,7 +28,7 @@ namespace MTSC.Server.Handlers
 
         public bool HandleReceivedMessage(ClientStruct client, Message message)
         {
-            managedServer.LogDebug("Broadcast: " + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
+            managedServer.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
             managedServer.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
             foreach(ClientStruct clientStruct in managedServer.Clients)
             {

@@ -24,7 +24,7 @@ namespace MTSC.Client.Handlers
         /// <param name="message">Message to be broadcasted.</param>
         public void Broadcast(string message)
         {
-            managedClient.QueueMessage(ASCIIEncoding.ASCII.GetBytes(message));
+            managedClient.QueueMessage(UnicodeEncoding.Unicode.GetBytes(message));
         }
 
         public void Disconnected(TcpClient client)
@@ -34,8 +34,8 @@ namespace MTSC.Client.Handlers
 
         public bool HandleReceivedMessage(TcpClient client, Message message)
         {
-            managedClient.LogDebug("Broadcast: " + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
-            managedClient.Log(">" + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
+            managedClient.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
+            managedClient.Log(">" + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
             return false;
         }
 
