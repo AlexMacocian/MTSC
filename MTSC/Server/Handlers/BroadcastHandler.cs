@@ -28,8 +28,8 @@ namespace MTSC.Server.Handlers
 
         public bool HandleReceivedMessage(ClientStruct client, Message message)
         {
-            managedServer.Log("Broadcast: " + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
-            managedServer.Log("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+            managedServer.LogDebug("Broadcast: " + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
+            managedServer.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
             foreach(ClientStruct clientStruct in managedServer.Clients)
             {
                 managedServer.QueueMessage(clientStruct, message.MessageBytes);

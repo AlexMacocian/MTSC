@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MTSC.Server
@@ -115,7 +116,18 @@ namespace MTSC.Server
         {
             foreach (ILogger logger in loggers)
             {
-                logger.Log(log + "\n");
+                logger.Log(log);
+            }
+        }
+        /// <summary>
+        /// Adds a debug message to be logged by the associated loggers.
+        /// </summary>
+        /// <param name="">Debug message to be logged</param>
+        public void LogDebug(string debugMessage)
+        {
+            foreach (ILogger logger in loggers)
+            {
+                logger.LogDebug(debugMessage);
             }
         }
         /// <summary>
@@ -173,7 +185,7 @@ namespace MTSC.Server
                         if (client.TcpClient.Available > 0)
                         {
                             Message message = CommunicationPrimitives.GetMessage(client.TcpClient);
-                            Log("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
+                            LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                     "\nMessage length: " + message.MessageLength);
                             foreach (IHandler handler in handlers)
                             {
@@ -190,9 +202,15 @@ namespace MTSC.Server
                                 }
                             }
                         }
+                        else
+                        {
+                            Thread.Sleep(100);
+                        }
                     }
                     catch(Exception e)
                     {
+                        LogDebug("Exception: " + e.Message);
+                        LogDebug("Stacktrace: " + e.StackTrace);
                         foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
                         {
                             if (exceptionHandler.HandleException(e))

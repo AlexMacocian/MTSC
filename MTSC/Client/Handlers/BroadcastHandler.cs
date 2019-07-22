@@ -34,7 +34,8 @@ namespace MTSC.Client.Handlers
 
         public bool HandleReceivedMessage(TcpClient client, Message message)
         {
-            managedClient.Log("Broadcast: " + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
+            managedClient.LogDebug("Broadcast: " + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
+            managedClient.Log(">" + ASCIIEncoding.ASCII.GetString(message.MessageBytes));
             return false;
         }
 

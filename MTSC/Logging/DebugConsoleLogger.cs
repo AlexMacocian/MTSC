@@ -4,27 +4,25 @@ using System.Text;
 
 namespace MTSC.Logging
 {
-    /// <summary>
-    /// Basic logger that outputs the log messages to the console.
-    /// </summary>
-    public class ConsoleLogger : ILogger
+    public class DebugConsoleLogger : ILogger
     {
         /// <summary>
-        /// Outputs the message to the console.
-        /// </summary>
-        /// <param name="message"></param>
-        public bool Log(string message)
-        {
-            Console.WriteLine(message);
-            return false;
-        }
-        /// <summary>
-        /// Ignores debug messages.
+        /// Ignores simple logging messages.
         /// </summary>
         /// <param name="message"></param>
         /// <returns>False</returns>
+        public bool Log(string message)
+        {
+            return false;
+        }
+        /// <summary>
+        /// Outputs the debug message to console.
+        /// </summary>
+        /// <param name="message">Message to be output.</param>
+        /// <returns>False</returns>
         public bool LogDebug(string message)
         {
+            Console.WriteLine(message);
             return false;
         }
     }
