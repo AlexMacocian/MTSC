@@ -133,6 +133,10 @@ namespace MTSC.Client
             return this;
         }
         /// <summary>
+        /// Callback function used to determine if the remote certificate is valid.
+        /// </summary>
+        public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
+        /// <summary>
         /// Attemps to connect to the specified server.
         /// </summary>
         /// <returns>True if connection was successful.</returns>
@@ -149,7 +153,11 @@ namespace MTSC.Client
                 tcpClient.Connect(address, port);
                 if (useSsl)
                 {
-                    sslStream = new SslStream(tcpClient.GetStream(), true, new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+                    if(this.CertificateValidationCallback == null)
+                    {
+                        this.CertificateValidationCallback = new RemoteCertificateValidationCallback(ValidateServerCertificate);
+                    }
+                    sslStream = new SslStream(tcpClient.GetStream(), true, this.CertificateValidationCallback, null);
                     sslStream.AuthenticateAsClient(address);
                 }
                 foreach(ILogger logger in loggers)
