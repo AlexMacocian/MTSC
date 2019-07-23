@@ -23,12 +23,12 @@ namespace MTSC.Server
         X509Certificate2 certificate;
         TcpListener listener;
         int port = 50;
-        List<ClientStruct> toRemove = new List<ClientStruct>();
-        List<ClientStruct> clients = new List<ClientStruct>();
+        List<ClientData> toRemove = new List<ClientData>();
+        List<ClientData> clients = new List<ClientData>();
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
-        Queue<Tuple<ClientStruct, byte[]>> messageQueue = new Queue<Tuple<ClientStruct, byte[]>>();
+        Queue<Tuple<ClientData, byte[]>> messageQueue = new Queue<Tuple<ClientData, byte[]>>();
         #endregion
         #region Properties
         /// <summary>
@@ -42,7 +42,7 @@ namespace MTSC.Server
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
-        public List<ClientStruct> Clients { get => clients; set => clients = value; }
+        public List<ClientData> Clients { get => clients; set => clients = value; }
         #endregion
         #region Constructors
         /// <summary>
@@ -117,9 +117,9 @@ namespace MTSC.Server
         /// </summary>
         /// <param name="target">Target client.</param>
         /// <param name="message">Message to be sent.</param>
-        public void QueueMessage(ClientStruct target, byte[] message)
+        public void QueueMessage(ClientData target, byte[] message)
         {
-            messageQueue.Enqueue(new Tuple<ClientStruct, byte[]>(target, message));
+            messageQueue.Enqueue(new Tuple<ClientData, byte[]>(target, message));
         }
         /// <summary>
         /// Adds a message to be logged by the associated loggers.
@@ -156,20 +156,43 @@ namespace MTSC.Server
             while (running)
             {
                 /*
-                 * Check if there are messages queued to be sent.
+                 * Check the client states. If a client is disconnected, 
+                 * remove it from the list of clients.
                  */
-                if(messageQueue.Count > 0)
+                try
                 {
-                    Tuple<ClientStruct, byte[]> queuedOrder = messageQueue.Dequeue();
-                    Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
-                    for(int i = handlers.Count - 1; i >= 0; i--)
+                    foreach (ClientData client in clients)
                     {
-                        IHandler handler = handlers[i];
-                        handler.HandleSendMessage(this, queuedOrder.Item1, ref sendMessage);
+                        if (!client.TcpClient.Connected || client.ToBeRemoved)
+                        {
+                            toRemove.Add(client);
+                        }
                     }
-                    CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
+                    foreach (ClientData client in toRemove)
+                    {
+                        foreach (IHandler handler in handlers)
+                        {
+                            handler.ClientRemoved(this, client);
+                        }
+                        LogDebug("Client removed: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                        client.SslStream?.Dispose();
+                        client.TcpClient?.Dispose();
+                        clients.Remove(client);
+                    }
+                    toRemove.Clear();
                 }
-
+                catch (Exception e)
+                {
+                    LogDebug("Exception: " + e.Message);
+                    LogDebug("Stacktrace: " + e.StackTrace);
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        if (exceptionHandler.HandleException(e))
+                        {
+                            break;
+                        }
+                    }
+                }
                 /*
                  * Check if the server has any pending connections.
                  * If it has a new connection, process it.
@@ -179,7 +202,7 @@ namespace MTSC.Server
                     if (listener.Pending())
                     {
                         TcpClient tcpClient = listener.AcceptTcpClient();
-                        ClientStruct clientStruct = new ClientStruct(tcpClient);
+                        ClientData clientStruct = new ClientData(tcpClient);
                         if (certificate != null)
                         {
                             SslStream sslStream = new SslStream(tcpClient.GetStream(), true, new RemoteCertificateValidationCallback((o, c, ch, po) => {
@@ -238,10 +261,6 @@ namespace MTSC.Server
                                 }
                             }
                         }
-                        else
-                        {
-                            Thread.Sleep(100);
-                        }
                     }
                     catch(Exception e)
                     {
@@ -256,28 +275,59 @@ namespace MTSC.Server
                         }
                     }
                 });
+                foreach(IHandler handler in handlers)
+                {
+                    try
+                    {
+                        handler.Tick(this);
+                    }
+                    catch(Exception e)
+                    {
+                        LogDebug("Exception: " + e.Message);
+                        LogDebug("Stacktrace: " + e.StackTrace);
+                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                        {
+                            if (exceptionHandler.HandleException(e))
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
                 /*
-                 * Check the client states. If a client is disconnected, 
-                 * remove it from the list of clients.
+                 * Check if there are messages queued to be sent.
                  */
-                foreach(ClientStruct client in clients)
+                if (messageQueue.Count == 0)
                 {
-                    if (!client.TcpClient.Connected || client.ToBeRemoved)
+                    Thread.Sleep(33);
+                }
+                else
+                {
+                    try
                     {
-                        toRemove.Add(client);
+                        Tuple<ClientData, byte[]> queuedOrder = messageQueue.Dequeue();
+                        Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
+                        for (int i = handlers.Count - 1; i >= 0; i--)
+                        {
+                            IHandler handler = handlers[i];
+                            ClientData client = queuedOrder.Item1;
+                            handler.HandleSendMessage(this, client, ref sendMessage);
+                        }
+                        CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
+                    }
+                    catch (Exception e)
+                    {
+                        LogDebug("Exception: " + e.Message);
+                        LogDebug("Stacktrace: " + e.StackTrace);
+                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                        {
+                            if (exceptionHandler.HandleException(e))
+                            {
+                                break;
+                            }
+                        }
                     }
                 }
-                foreach(ClientStruct client in toRemove)
-                {
-                    foreach(IHandler handler in handlers)
-                    {
-                        handler.ClientRemoved(this, client);
-                    }
-                    client.SslStream?.Dispose();
-                    client.TcpClient?.Dispose();
-                    clients.Remove(client);
-                }
-                toRemove.Clear();
             }
         }
         /// <summary>
@@ -304,14 +354,14 @@ namespace MTSC.Server
     /// <summary>
     /// Structure containing client information.
     /// </summary>
-    public struct ClientStruct
+    public class ClientData
     {
         public TcpClient TcpClient;
         public DateTime LastMessageTime;
         public bool ToBeRemoved;
         public SslStream SslStream;
 
-        public ClientStruct(TcpClient client)
+        public ClientData(TcpClient client)
         {
             this.TcpClient = client;
             this.LastMessageTime = DateTime.Now;

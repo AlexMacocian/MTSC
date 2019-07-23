@@ -177,7 +177,9 @@ namespace MTSC.Client
             }
             catch(Exception e)
             {
-                foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
+                LogDebug("Exception: " + e.Message);
+                LogDebug("Stacktrace: " + e.StackTrace);
+                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                 {
                     exceptionHandler.HandleException(e);
                 }
@@ -278,6 +280,7 @@ namespace MTSC.Client
                         exceptionHandler.HandleException(e);
                     }
                 }
+                Thread.Sleep(33);
             }
         }
         #endregion

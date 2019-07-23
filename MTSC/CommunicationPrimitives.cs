@@ -46,18 +46,7 @@ namespace MTSC
             {
                 stream = client.GetStream();
             }
-            byte[] messageBuffer = new byte[4 + message.MessageLength];
-            byte[] lengthBuffer = BitConverter.GetBytes(message.MessageLength);
-            uint length = message.MessageLength;
-            messageBuffer[0] = lengthBuffer[0];
-            messageBuffer[1] = lengthBuffer[1];
-            messageBuffer[2] = lengthBuffer[2];
-            messageBuffer[3] = lengthBuffer[3];
-            if (message.MessageLength > 0)
-            {
-                Array.Copy(message.MessageBytes, 0, messageBuffer, 4, length);
-            }
-            stream.Write(messageBuffer, 0, messageBuffer.Length);
+            stream.Write(message.MessageBytes, 0, (int)message.MessageLength);
         }
 
         public static Message BuildMessage(byte[] msgData)

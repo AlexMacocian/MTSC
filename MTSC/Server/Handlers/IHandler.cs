@@ -16,7 +16,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client">Client to be handled.</param>
         /// <param name="server">Server calling the handler.</param>
         /// <returns>True if the handler processed the client.</returns>
-        bool HandleClient(Server server, ClientStruct client);
+        bool HandleClient(Server server, ClientData client);
         /// <summary>
         /// Handles a message before sending.
         /// </summary>
@@ -24,7 +24,7 @@ namespace MTSC.Server.Handlers
         /// <param name="message">Message to be processed.</param>
         /// <param name="server">Server calling the handler.</param>
         /// <returns>True if no other handler should handle this message.</returns>
-        bool HandleSendMessage(Server server, ClientStruct client, ref Message message);
+        bool HandleSendMessage(Server server, ClientData client, ref Message message);
         /// <summary>
         /// Called before the message handling.
         /// Perform here any processing of the message.
@@ -33,20 +33,20 @@ namespace MTSC.Server.Handlers
         /// <param name="message">Message to be preprocessed.</param>
         /// <param name="server">Server calling the handler.</param>
         /// <returns>True if the message has been preprocessed and no other handler should handle it anymore.</returns>
-        bool PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message);
+        bool PreHandleReceivedMessage(Server server, ClientData client, ref Message message);
         /// <summary>
         /// Handles the received message.
         /// </summary>
         /// <param name="message">Message to be handled.</param>
         /// <param name="server">Server calling the handler.</param>
         /// <returns>True if the message has been handled, false if the message has not been handled.</returns>
-        bool HandleReceivedMessage(Server server, ClientStruct client, Message message);
+        bool HandleReceivedMessage(Server server, ClientData client, Message message);
         /// <summary>
         /// Handles the removal of a client from the server.
         /// </summary>
         /// <param name="client">Client about to be removed.</param>
         /// <param name="server">Server calling the handler.</param>
-        void ClientRemoved(Server server, ClientStruct client);
+        void ClientRemoved(Server server, ClientData client);
         /// <summary>
         /// Method performs regular operations onto the server.
         /// </summary>

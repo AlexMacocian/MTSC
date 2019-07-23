@@ -24,7 +24,7 @@ namespace MTSC.Server.Handlers
             public ClientState ClientState = ClientState.Initial;
         }
         #region Fields
-        private Dictionary<ClientStruct, AdditionalData> additionalData;
+        private Dictionary<ClientData, AdditionalData> additionalData;
         private RSACryptoServiceProvider rsa;
         private string privateKey, publicKey;
         #endregion
@@ -38,7 +38,7 @@ namespace MTSC.Server.Handlers
         /// <param name="server">Server object managed by the handler.</param>
         public EncryptionHandler(RSACryptoServiceProvider rsa)
         {
-            additionalData = new Dictionary<ClientStruct, AdditionalData>();
+            additionalData = new Dictionary<ClientData, AdditionalData>();
             this.rsa = rsa;
             privateKey = HelperFunctions.ToXmlString(rsa, true);
             publicKey = HelperFunctions.ToXmlString(rsa, false);
@@ -123,7 +123,7 @@ namespace MTSC.Server.Handlers
         /// Called when a client is being removed.
         /// </summary>
         /// <param name="client">Client to be removed.</param>
-        void IHandler.ClientRemoved(Server server, ClientStruct client)
+        void IHandler.ClientRemoved(Server server, ClientData client)
         {
             additionalData.Remove(client);
         }
@@ -132,7 +132,7 @@ namespace MTSC.Server.Handlers
         /// </summary>
         /// <param name="client">New client connection.</param>
         /// <returns>False if an error occurred.</returns>
-        bool IHandler.HandleClient(Server server, ClientStruct client)
+        bool IHandler.HandleClient(Server server, ClientData client)
         {
             additionalData.Add(client, new AdditionalData());
             return false;
@@ -143,7 +143,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client">Client connection.</param>
         /// <param name="message">Received message.</param>
         /// <returns>True if no other handler should handle current message.</returns>
-        bool IHandler.HandleReceivedMessage(Server server, ClientStruct client, Message message)
+        bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
             if (additionalData[client].ClientState == ClientState.Initial || additionalData[client].ClientState == ClientState.Negotiating)
             {
@@ -180,7 +180,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client">Client connection.</param>
         /// <param name="message">Message to be processed.</param>
         /// <returns>True if no other handlers should perform operations on current message.</returns>
-        bool IHandler.PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Server server, ClientData client, ref Message message)
         {
             if (additionalData[client].ClientState == ClientState.Encrypted)
             {
@@ -213,7 +213,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client">Client object.</param>
         /// <param name="message">Message to be processed.</param>
         /// <returns>True if no other handler should process this message.</returns>
-        bool IHandler.HandleSendMessage(Server server, ClientStruct client, ref Message message)
+        bool IHandler.HandleSendMessage(Server server, ClientData client, ref Message message)
         {
             if (additionalData[client].ClientState == ClientState.Encrypted)
             {

@@ -14,6 +14,7 @@ namespace MTSC.Server.Handlers
     {
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
+        Queue<Tuple<ClientData,HttpMessage>> messageQueue = new Queue<Tuple<ClientData, HttpMessage>>();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -36,10 +37,9 @@ namespace MTSC.Server.Handlers
         /// Send a response back to the client.
         /// </summary>
         /// <param name="response">Message containing the response.</param>
-        public void SendResponse(Server server, ClientStruct client, HttpMessage response)
+        public void SendResponse(ClientData client, HttpMessage response)
         {
-            byte[] responseBytes = response.GetResponse();
-            server.QueueMessage(client, responseBytes);
+            messageQueue.Enqueue(new Tuple<ClientData, HttpMessage>(client, response));
         }
         #endregion
         #region Interface Implementation
@@ -47,7 +47,7 @@ namespace MTSC.Server.Handlers
         /// Handler interface implementation.
         /// </summary>
         /// <param name="client"></param>
-        void IHandler.ClientRemoved(Server server, ClientStruct client)
+        void IHandler.ClientRemoved(Server server, ClientData client)
         {
             
         }
@@ -56,7 +56,7 @@ namespace MTSC.Server.Handlers
         /// </summary>
         /// <param name="client"></param>
         /// <returns></returns>
-        bool IHandler.HandleClient(Server server, ClientStruct client)
+        bool IHandler.HandleClient(Server server, ClientData client)
         {
             return false;
         }
@@ -66,7 +66,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool IHandler.HandleReceivedMessage(Server server, ClientStruct client, Message message)
+        bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
             HttpMessage httpMessage = new HttpMessage();
             httpMessage.ParseRequest(message.MessageBytes);
@@ -85,7 +85,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool IHandler.HandleSendMessage(Server server, ClientStruct client, ref Message message)
+        bool IHandler.HandleSendMessage(Server server, ClientData client, ref Message message)
         {
             return false;
         }
@@ -95,7 +95,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool IHandler.PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Server server, ClientData client, ref Message message)
         {
             return false;
         }
@@ -104,7 +104,11 @@ namespace MTSC.Server.Handlers
         /// </summary>
         void IHandler.Tick(Server server)
         {
-            
+            while(messageQueue.Count > 0)
+            {
+                Tuple<ClientData, HttpMessage> tuple = messageQueue.Dequeue();
+                server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse());
+            }
         }
         #endregion
     }

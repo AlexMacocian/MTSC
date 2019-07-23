@@ -1,4 +1,5 @@
-﻿using MTSC.Exceptions;
+﻿using MTSC.Common.Http.ServerModules;
+using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server;
 using MTSC.Server.Handlers;
@@ -22,8 +23,8 @@ namespace MTSC_TestServer
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
-                .AddHandler(new BroadcastHandler())
-                .AddHandler(new HttpHandler())
+                //.AddHandler(new BroadcastHandler())
+                .AddHandler(new HttpHandler().AddHttpModule(new Http404Module()))
                 .Run();
         }
 

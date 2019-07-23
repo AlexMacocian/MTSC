@@ -14,33 +14,33 @@ namespace MTSC.Server.Handlers
 
         }
 
-        void IHandler.ClientRemoved(Server server, ClientStruct client)
+        void IHandler.ClientRemoved(Server server, ClientData client)
         {
             
         }
 
-        bool IHandler.HandleClient(Server server, ClientStruct client)
+        bool IHandler.HandleClient(Server server, ClientData client)
         {
             return false;
         }
 
-        bool IHandler.HandleReceivedMessage(Server server, ClientStruct client, Message message)
+        bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
             server.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
             server.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-            foreach(ClientStruct clientStruct in server.Clients)
+            foreach(ClientData clientStruct in server.Clients)
             {
                 server.QueueMessage(clientStruct, message.MessageBytes);
             }
             return false;
         }
 
-        bool IHandler.HandleSendMessage(Server server, ClientStruct client, ref Message message)
+        bool IHandler.HandleSendMessage(Server server, ClientData client, ref Message message)
         {
             return false;
         }
 
-        bool IHandler.PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Server server, ClientData client, ref Message message)
         {
             return false;
         }

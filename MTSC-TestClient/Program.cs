@@ -10,20 +10,14 @@ namespace MTSC_TestClient
         static void Main(string[] args)
         {
             Client client = new Client(true);
-            BroadcastHandler broadcastHandler = new BroadcastHandler();
             client
                 .SetServerAddress("127.0.0.1")
                 .SetPort(555)
                 .AddHandler(new EncryptionHandler())
-                .AddHandler(broadcastHandler)
+                //.AddHandler(new BroadcastHandler())
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .Connect();
-            while (true)
-            {
-                string line = Console.ReadLine();
-                broadcastHandler.Broadcast(client, line);
-            }
         }
     }
 }

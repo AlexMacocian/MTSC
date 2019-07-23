@@ -322,6 +322,10 @@ namespace MTSC.Common.Http
         {
             StringBuilder responseString = new StringBuilder();
             responseString.Append(HTTPVER).Append(SP).Append((int)this.StatusCode).Append(SP).Append(this.StatusCode.ToString()).Append(CRLF);
+            foreach (KeyValuePair<string, string> header in headers)
+            {
+                responseString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
+            }
             responseString.Append(CRLF);
             byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
             byte[] responseBytes = ASCIIEncoding.ASCII.GetBytes(responseString.ToString());
