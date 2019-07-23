@@ -182,6 +182,7 @@ namespace MTSC.Common
             {
                 request.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
             }
+            request.Append(CRLF);
             return request.ToString();
         }
     }
