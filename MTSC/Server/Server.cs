@@ -173,26 +173,43 @@ namespace MTSC.Server
                 /*
                  * Check if the server has any pending connections.
                  * If it has a new connection, process it.
-                 */ 
-                if (listener.Pending())
+                 */
+                try
                 {
-                    TcpClient tcpClient = listener.AcceptTcpClient();
-                    ClientStruct clientStruct = new ClientStruct(tcpClient);
-                    if(certificate != null)
+                    if (listener.Pending())
                     {
-                        SslStream sslStream = new SslStream(tcpClient.GetStream());
-                        clientStruct.SslStream = sslStream;
-                        sslStream.AuthenticateAsServer(certificate);
+                        TcpClient tcpClient = listener.AcceptTcpClient();
+                        ClientStruct clientStruct = new ClientStruct(tcpClient);
+                        if (certificate != null)
+                        {
+                            SslStream sslStream = new SslStream(tcpClient.GetStream(), true, new RemoteCertificateValidationCallback((o, c, ch, po) => {
+                                return true;
+                            }), null, EncryptionPolicy.RequireEncryption);
+                            clientStruct.SslStream = sslStream;
+                            sslStream.AuthenticateAsServer(certificate);
+                        }
+                        foreach (IHandler handler in handlers)
+                        {
+                            if (handler.HandleClient(clientStruct))
+                            {
+                                break;
+                            }
+                        }
+                        clients.Add(clientStruct);
+                        Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
                     }
-                    foreach(IHandler handler in handlers)
+                }
+                catch(Exception e)
+                {
+                    LogDebug("Exception: " + e.Message);
+                    LogDebug("Stacktrace: " + e.StackTrace);
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
-                        if (handler.HandleClient(clientStruct))
+                        if (exceptionHandler.HandleException(e))
                         {
                             break;
                         }
                     }
-                    clients.Add(clientStruct);
-                    Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
                 }
                 /*
                  * Process in parallel all clients.

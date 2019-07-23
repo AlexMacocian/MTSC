@@ -3,6 +3,7 @@ using MTSC.Logging;
 using MTSC.Server;
 using MTSC.Server.Handlers;
 using System;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -16,14 +17,15 @@ namespace MTSC_TestServer
             Server server = new Server(555);
             RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
             EncryptionHandler encryptionHandler = new EncryptionHandler(rsa, server);
-            BroadcastHandler broadcastHandler = new BroadcastHandler(server);
             server
                 //.AddHandler(encryptionHandler)
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
-                .AddHandler(broadcastHandler)
+                .AddHandler(new BroadcastHandler(server))
+                .AddHandler(new HttpHandler(server))
                 .Run();
         }
+
     }
 }

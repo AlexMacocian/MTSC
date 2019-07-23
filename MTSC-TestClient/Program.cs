@@ -9,7 +9,7 @@ namespace MTSC_TestClient
     {
         static void Main(string[] args)
         {
-            Client client = new Client();
+            Client client = new Client(true);
             BroadcastHandler broadcastHandler = new BroadcastHandler(client);
             client
                 .SetServerAddress("127.0.0.1")

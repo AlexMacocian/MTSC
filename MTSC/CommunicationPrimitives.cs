@@ -25,9 +25,7 @@ namespace MTSC
             {
                 stream = client.GetStream();
             }
-            byte[] controlBuffer = new byte[5];
-            stream.Read(controlBuffer, 0, 4);
-            uint messageLength = BitConverter.ToUInt32(controlBuffer, 0);
+            uint messageLength = (uint)client.Available;
             byte[] messageBuffer = new byte[messageLength];
             if (messageLength > 0)
             {
