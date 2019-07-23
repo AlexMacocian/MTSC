@@ -2,8 +2,11 @@
 using MTSC.Exceptions;
 using MTSC.Logging;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +27,9 @@ namespace MTSC.Client
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         Queue<byte[]> messageQueue = new Queue<byte[]>();
+        SslStream sslStream = null;
+        static Hashtable certificateErrors = new Hashtable();
+        bool useSsl = false;
         #endregion
         #region Properties
         public bool Connected
@@ -40,9 +46,9 @@ namespace MTSC.Client
         public int Port { get => port; }
         #endregion
         #region Constructors
-        public Client()
+        public Client(bool useSsl = false)
         {
-
+            this.useSsl = useSsl;
         }
         #endregion
         #region Public Methods
@@ -127,6 +133,10 @@ namespace MTSC.Client
             return this;
         }
         /// <summary>
+        /// Callback function used to determine if the remote certificate is valid.
+        /// </summary>
+        public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
+        /// <summary>
         /// Attemps to connect to the specified server.
         /// </summary>
         /// <returns>True if connection was successful.</returns>
@@ -141,6 +151,15 @@ namespace MTSC.Client
                 }
                 tcpClient = new TcpClient();
                 tcpClient.Connect(address, port);
+                if (useSsl)
+                {
+                    if(this.CertificateValidationCallback == null)
+                    {
+                        this.CertificateValidationCallback = new RemoteCertificateValidationCallback(ValidateServerCertificate);
+                    }
+                    sslStream = new SslStream(tcpClient.GetStream(), true, this.CertificateValidationCallback, null);
+                    sslStream.AuthenticateAsClient(address);
+                }
                 foreach(ILogger logger in loggers)
                 {
                     logger.Log("Connected to: " + tcpClient.Client.RemoteEndPoint.ToString());
@@ -153,7 +172,7 @@ namespace MTSC.Client
                     }
                 }
                 cancelMonitorToken = new CancellationTokenSource();
-                Task.Run(MonitorConnection, cancelMonitorToken.Token);
+                Task.Run(new Action(MonitorConnection), cancelMonitorToken.Token);
                 return true;
             }
             catch(Exception e)
@@ -183,6 +202,23 @@ namespace MTSC.Client
         }
         #endregion
         #region Private Methods
+        /// <summary>
+        /// Delegate used to validate server certificate.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="certificate"></param>
+        /// <param name="chain"></param>
+        /// <param name="sslPolicyErrors"></param>
+        /// <returns>True if certificate is valid.</returns>
+        private static bool ValidateServerCertificate( object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (sslPolicyErrors == SslPolicyErrors.None)
+                return true;
+
+            // Do not allow this client to communicate with unauthenticated servers.
+            return true;
+        }
+
         private void MonitorConnection()
         {
             while (true)
@@ -198,14 +234,14 @@ namespace MTSC.Client
                             IHandler handler = handlers[i];
                             handler.HandleSendMessage(tcpClient, ref sendMessage);
                         }
-                        CommunicationPrimitives.SendMessage(tcpClient, sendMessage);
+                        CommunicationPrimitives.SendMessage(tcpClient, sendMessage, sslStream);
                     }
                     if (tcpClient.Available > 0)
                     {
                         /*
                          * When a message has been received, process it.
                          */
-                        Message message = CommunicationPrimitives.GetMessage(tcpClient);
+                        Message message = CommunicationPrimitives.GetMessage(tcpClient, sslStream);
                         LogDebug("Received a message of size: " + message.MessageLength);
                         /*
                          * Preprocess message.

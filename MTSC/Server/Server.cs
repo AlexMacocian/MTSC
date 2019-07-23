@@ -4,7 +4,9 @@ using MTSC.Server.Handlers;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +20,7 @@ namespace MTSC.Server
     {
         #region Fields
         bool running;
+        X509Certificate2 certificate;
         TcpListener listener;
         int port = 50;
         List<ClientStruct> toRemove = new List<ClientStruct>();
@@ -55,6 +58,16 @@ namespace MTSC.Server
         /// <param name="port">Port to be used by server.</param>
         public Server(int port)
         {
+            this.port = port;
+        }
+        /// <summary>
+        /// Creates an instance of server.
+        /// </summary>
+        /// <param name="certificate">Certificate for SSL.</param>
+        /// <param name="port">Port to be used by the server.</param>
+        public Server(X509Certificate2 certificate, int port)
+        {
+            this.certificate = certificate;
             this.port = port;
         }
         #endregion
@@ -154,7 +167,7 @@ namespace MTSC.Server
                         IHandler handler = handlers[i];
                         handler.HandleSendMessage(queuedOrder.Item1, ref sendMessage);
                     }
-                    CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage);
+                    CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
                 }
 
                 /*
@@ -165,6 +178,12 @@ namespace MTSC.Server
                 {
                     TcpClient tcpClient = listener.AcceptTcpClient();
                     ClientStruct clientStruct = new ClientStruct(tcpClient);
+                    if(certificate != null)
+                    {
+                        SslStream sslStream = new SslStream(tcpClient.GetStream());
+                        clientStruct.SslStream = sslStream;
+                        sslStream.AuthenticateAsServer(certificate);
+                    }
                     foreach(IHandler handler in handlers)
                     {
                         if (handler.HandleClient(clientStruct))
@@ -184,7 +203,7 @@ namespace MTSC.Server
                     {
                         if (client.TcpClient.Available > 0)
                         {
-                            Message message = CommunicationPrimitives.GetMessage(client.TcpClient);
+                            Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
                             LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                     "\nMessage length: " + message.MessageLength);
                             foreach (IHandler handler in handlers)
@@ -237,6 +256,7 @@ namespace MTSC.Server
                     {
                         handler.ClientRemoved(client);
                     }
+                    client.SslStream?.Dispose();
                     client.TcpClient?.Dispose();
                     clients.Remove(client);
                 }
@@ -272,12 +292,14 @@ namespace MTSC.Server
         public TcpClient TcpClient;
         public DateTime LastMessageTime;
         public bool ToBeRemoved;
+        public SslStream SslStream;
 
         public ClientStruct(TcpClient client)
         {
             this.TcpClient = client;
             this.LastMessageTime = DateTime.Now;
             ToBeRemoved = false;
+            SslStream = null;
         }
     }
 }

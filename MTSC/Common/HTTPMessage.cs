@@ -148,6 +148,7 @@ namespace MTSC.Common
 
         public MethodEnum Method { get; set; }
         public Uri RequestURI { get; set; }
+        public byte[] Body { get; set; }
 
         public HTTPMessage()
         {
