@@ -9,45 +9,43 @@ namespace MTSC.Server.Handlers
     /// </summary>
     public class BroadcastHandler : IHandler
     {
-        private Server managedServer;
-
-        public BroadcastHandler(Server server)
+        public BroadcastHandler()
         {
-            this.managedServer = server;
+
         }
 
-        public void ClientRemoved(ClientStruct client)
+        void IHandler.ClientRemoved(Server server, ClientStruct client)
         {
             
         }
 
-        public bool HandleClient(ClientStruct client)
+        bool IHandler.HandleClient(Server server, ClientStruct client)
         {
             return false;
         }
 
-        public bool HandleReceivedMessage(ClientStruct client, Message message)
+        bool IHandler.HandleReceivedMessage(Server server, ClientStruct client, Message message)
         {
-            managedServer.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
-            managedServer.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-            foreach(ClientStruct clientStruct in managedServer.Clients)
+            server.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
+            server.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+            foreach(ClientStruct clientStruct in server.Clients)
             {
-                managedServer.QueueMessage(clientStruct, message.MessageBytes);
+                server.QueueMessage(clientStruct, message.MessageBytes);
             }
             return false;
         }
 
-        public bool HandleSendMessage(ClientStruct client, ref Message message)
+        bool IHandler.HandleSendMessage(Server server, ClientStruct client, ref Message message)
         {
             return false;
         }
 
-        public bool PreHandleReceivedMessage(ClientStruct client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message)
         {
             return false;
         }
 
-        public void Tick()
+        void IHandler.Tick(Server server)
         {
             
         }

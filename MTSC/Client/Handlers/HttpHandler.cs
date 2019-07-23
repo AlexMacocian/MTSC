@@ -13,13 +13,12 @@ namespace MTSC.Client.Handlers
     public class HttpHandler : IHandler
     {
         #region Fields
-        Client managedClient;
         List<IHttpModule> httpModules = new List<IHttpModule>();
         #endregion
         #region Constructors
-        public HttpHandler(Client client)
+        public HttpHandler()
         {
-            managedClient = client;
+
         }
         #endregion
         #region Public Methods
@@ -27,9 +26,9 @@ namespace MTSC.Client.Handlers
         /// Send a request to the server.
         /// </summary>
         /// <param name="request">Request to be sent.</param>
-        public void SendRequest(HttpMessage request)
+        public void SendRequest(Client client, HttpMessage request)
         {
-            managedClient.QueueMessage(request.GetRequest());
+            client.QueueMessage(request.GetRequest());
         }
         /// <summary>
         /// Add a http module.
@@ -47,7 +46,7 @@ namespace MTSC.Client.Handlers
         /// Handler implementation
         /// </summary>
         /// <param name="client"></param>
-        void IHandler.Disconnected(TcpClient client)
+        void IHandler.Disconnected(Client client)
         {
             
         }
@@ -57,7 +56,7 @@ namespace MTSC.Client.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns>False.</returns>
-        bool IHandler.HandleReceivedMessage(TcpClient client, Message message)
+        bool IHandler.HandleReceivedMessage(Client client, Message message)
         {
             HttpMessage httpMessage = new HttpMessage();
             httpMessage.ParseResponse(message.MessageBytes);
@@ -76,7 +75,7 @@ namespace MTSC.Client.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns>False.</returns>
-        bool IHandler.HandleSendMessage(TcpClient client, ref Message message)
+        bool IHandler.HandleSendMessage(Client client, ref Message message)
         {
             return false;
         }
@@ -85,7 +84,7 @@ namespace MTSC.Client.Handlers
         /// </summary>
         /// <param name="client"></param>
         /// <returns>True.</returns>
-        bool IHandler.InitializeConnection(TcpClient client)
+        bool IHandler.InitializeConnection(Client client)
         {
             return true;
         }
@@ -95,7 +94,7 @@ namespace MTSC.Client.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns>False.</returns>
-        bool IHandler.PreHandleReceivedMessage(TcpClient client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Client client, ref Message message)
         {
             return false;
         }
@@ -103,7 +102,7 @@ namespace MTSC.Client.Handlers
         /// Handler implementation.
         /// </summary>
         /// <param name="tcpClient"></param>
-        void IHandler.Tick(TcpClient tcpClient)
+        void IHandler.Tick(Client tcpClient)
         {
             
         }

@@ -27,7 +27,6 @@ namespace MTSC.Server.Handlers
         private Dictionary<ClientStruct, AdditionalData> additionalData;
         private RSACryptoServiceProvider rsa;
         private string privateKey, publicKey;
-        private Server managedServer;
         #endregion
         #region Properties
         #endregion
@@ -37,9 +36,8 @@ namespace MTSC.Server.Handlers
         /// </summary>
         /// <param name="rsa">Symmetrical algorithm to be used for end-to-end encryption.</param>
         /// <param name="server">Server object managed by the handler.</param>
-        public EncryptionHandler(RSACryptoServiceProvider rsa, Server server)
+        public EncryptionHandler(RSACryptoServiceProvider rsa)
         {
-            managedServer = server;
             additionalData = new Dictionary<ClientStruct, AdditionalData>();
             this.rsa = rsa;
             privateKey = HelperFunctions.ToXmlString(rsa, true);
@@ -47,108 +45,7 @@ namespace MTSC.Server.Handlers
         }
         #endregion
         #region Public Methods
-        /// <summary>
-        /// Called when a client is being removed.
-        /// </summary>
-        /// <param name="client">Client to be removed.</param>
-        public void ClientRemoved(ClientStruct client)
-        {
-            additionalData.Remove(client);
-        }
-        /// <summary>
-        /// Handle a new client connection.
-        /// </summary>
-        /// <param name="client">New client connection.</param>
-        /// <returns>False if an error occurred.</returns>
-        public bool HandleClient(ClientStruct client)
-        {
-            additionalData.Add(client, new AdditionalData());
-            return false;
-        }
-        /// <summary>
-        /// Handle a received message.
-        /// </summary>
-        /// <param name="client">Client connection.</param>
-        /// <param name="message">Received message.</param>
-        /// <returns>True if no other handler should handle current message.</returns>
-        public bool HandleReceivedMessage(ClientStruct client, Message message)
-        {
-            if (additionalData[client].ClientState == ClientState.Initial || additionalData[client].ClientState == ClientState.Negotiating)
-            {
-                string asciiMessage = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
-                if (asciiMessage == CommunicationPrimitives.RequestPublicKey)
-                {
-                    managedServer.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendPublicKey + ":" + publicKey));
-                    additionalData[client].ClientState = ClientState.Negotiating;
-                    return true;
-                }
-                else if (asciiMessage.Contains(CommunicationPrimitives.SendEncryptionKey))
-                {
-                    byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length - 1];
-                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length + 1, encryptedKey, 0, encryptedKey.Length);
-                    byte[] decryptedKey = rsa.Decrypt(encryptedKey, false);
-                    additionalData[client].Key = decryptedKey;
-                    managedServer.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.AcceptEncryptionKey));
-                    additionalData[client].ClientState = ClientState.Encrypted;
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
-        }
-        /// <summary>
-        /// Perform transformative operations on the message.
-        /// </summary>
-        /// <param name="client">Client connection.</param>
-        /// <param name="message">Message to be processed.</param>
-        /// <returns>True if no other handlers should perform operations on current message.</returns>
-        public bool PreHandleReceivedMessage(ClientStruct client, ref Message message)
-        {
-            if(additionalData[client].ClientState == ClientState.Encrypted)
-            {
-                /*
-                 * Decrypt message before returning.
-                 */
-                byte[] encryptedBytes = message.MessageBytes;
-                byte[] decryptedBytes = DecryptBytes(additionalData[client].Key, encryptedBytes);
-                message = new Message((uint)decryptedBytes.Length, decryptedBytes);
-                return false;
-            }
-            else
-            {
-                /*
-                 * If the state of the client is not encrypted, there's nothing to decrypt.
-                 */
-                return false;
-            }
-        }
-        /// <summary>
-        /// Performs periodic operations on the server.
-        /// </summary>
-        public void Tick()
-        {
-            
-        }
-        /// <summary>
-        /// Encrypts the message before sending.
-        /// </summary>
-        /// <param name="client">Client object.</param>
-        /// <param name="message">Message to be processed.</param>
-        /// <returns>True if no other handler should process this message.</returns>
-        public bool HandleSendMessage(ClientStruct client, ref Message message)
-        {
-            if(additionalData[client].ClientState == ClientState.Encrypted)
-            {
-                message = CommunicationPrimitives.BuildMessage(EncryptBytes(additionalData[client].Key, message.MessageBytes));
-            }
-            return false;
-        }
+
         #endregion
         #region Private Methods
         private byte[] EncryptBytes(byte[] clientKey, byte[] bytesToBeEncrypted)
@@ -219,6 +116,110 @@ namespace MTSC.Server.Handlers
             }
 
             return decryptedBytes;
+        }
+        #endregion
+        #region Handler Implementation
+        /// <summary>
+        /// Called when a client is being removed.
+        /// </summary>
+        /// <param name="client">Client to be removed.</param>
+        void IHandler.ClientRemoved(Server server, ClientStruct client)
+        {
+            additionalData.Remove(client);
+        }
+        /// <summary>
+        /// Handle a new client connection.
+        /// </summary>
+        /// <param name="client">New client connection.</param>
+        /// <returns>False if an error occurred.</returns>
+        bool IHandler.HandleClient(Server server, ClientStruct client)
+        {
+            additionalData.Add(client, new AdditionalData());
+            return false;
+        }
+        /// <summary>
+        /// Handle a received message.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Received message.</param>
+        /// <returns>True if no other handler should handle current message.</returns>
+        bool IHandler.HandleReceivedMessage(Server server, ClientStruct client, Message message)
+        {
+            if (additionalData[client].ClientState == ClientState.Initial || additionalData[client].ClientState == ClientState.Negotiating)
+            {
+                string asciiMessage = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
+                if (asciiMessage == CommunicationPrimitives.RequestPublicKey)
+                {
+                    server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendPublicKey + ":" + publicKey));
+                    additionalData[client].ClientState = ClientState.Negotiating;
+                    return true;
+                }
+                else if (asciiMessage.Contains(CommunicationPrimitives.SendEncryptionKey))
+                {
+                    byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length - 1];
+                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length + 1, encryptedKey, 0, encryptedKey.Length);
+                    byte[] decryptedKey = rsa.Decrypt(encryptedKey, false);
+                    additionalData[client].Key = decryptedKey;
+                    server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.AcceptEncryptionKey));
+                    additionalData[client].ClientState = ClientState.Encrypted;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        /// <summary>
+        /// Perform transformative operations on the message.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Message to be processed.</param>
+        /// <returns>True if no other handlers should perform operations on current message.</returns>
+        bool IHandler.PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message)
+        {
+            if (additionalData[client].ClientState == ClientState.Encrypted)
+            {
+                /*
+                 * Decrypt message before returning.
+                 */
+                byte[] encryptedBytes = message.MessageBytes;
+                byte[] decryptedBytes = DecryptBytes(additionalData[client].Key, encryptedBytes);
+                message = new Message((uint)decryptedBytes.Length, decryptedBytes);
+                return false;
+            }
+            else
+            {
+                /*
+                 * If the state of the client is not encrypted, there's nothing to decrypt.
+                 */
+                return false;
+            }
+        }
+        /// <summary>
+        /// Performs periodic operations on the server.
+        /// </summary>
+        void IHandler.Tick(Server server)
+        {
+
+        }
+        /// <summary>
+        /// Encrypts the message before sending.
+        /// </summary>
+        /// <param name="client">Client object.</param>
+        /// <param name="message">Message to be processed.</param>
+        /// <returns>True if no other handler should process this message.</returns>
+        bool IHandler.HandleSendMessage(Server server, ClientStruct client, ref Message message)
+        {
+            if (additionalData[client].ClientState == ClientState.Encrypted)
+            {
+                message = CommunicationPrimitives.BuildMessage(EncryptBytes(additionalData[client].Key, message.MessageBytes));
+            }
+            return false;
         }
         #endregion
     }

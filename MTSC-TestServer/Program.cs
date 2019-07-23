@@ -16,14 +16,14 @@ namespace MTSC_TestServer
             X509Certificate2 certificate = new X509Certificate2("localhost.pfx", "psdsd");
             Server server = new Server(555);
             RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
-            EncryptionHandler encryptionHandler = new EncryptionHandler(rsa, server);
+            EncryptionHandler encryptionHandler = new EncryptionHandler(rsa);
             server
                 //.AddHandler(encryptionHandler)
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
-                .AddHandler(new BroadcastHandler(server))
-                .AddHandler(new HttpHandler(server))
+                .AddHandler(new BroadcastHandler())
+                .AddHandler(new HttpHandler())
                 .Run();
         }
 

@@ -8,53 +8,52 @@ namespace MTSC.Client.Handlers
     public class BroadcastHandler : IHandler
     {
         private List<string> buffer = new List<string>();
-        private Client managedClient;
         /// <summary>
         /// Creates a new instance of BroadcastHandler.
         /// </summary>
-        /// <param name="client">Client managed by the handler.</param>
-        public BroadcastHandler(Client client)
+        public BroadcastHandler()
         {
-            this.managedClient = client;
+
         }
 
         /// <summary>
         /// Broadcast a message to all other clients connected to the server.
         /// </summary>
         /// <param name="message">Message to be broadcasted.</param>
-        public void Broadcast(string message)
+        /// <param name="client">Client object containing the communication channel.</param>
+        public void Broadcast(Client client, string message)
         {
-            managedClient.QueueMessage(UnicodeEncoding.Unicode.GetBytes(message));
+            client.QueueMessage(UnicodeEncoding.Unicode.GetBytes(message));
         }
 
-        public void Disconnected(TcpClient client)
+        void IHandler.Disconnected(Client client)
         {
             
         }
 
-        public bool HandleReceivedMessage(TcpClient client, Message message)
+        bool IHandler.HandleReceivedMessage(Client client, Message message)
         {
-            managedClient.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
-            managedClient.Log(">" + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
+            client.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
+            client.Log(">" + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
             return false;
         }
 
-        public bool HandleSendMessage(TcpClient client, ref Message message)
+        bool IHandler.HandleSendMessage(Client client, ref Message message)
         {
             return false;
         }
 
-        public bool InitializeConnection(TcpClient client)
+        bool IHandler.InitializeConnection(Client client)
         {
             return true;
         }
 
-        public bool PreHandleReceivedMessage(TcpClient client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Client client, ref Message message)
         {
             return false;
         }
 
-        public void Tick(TcpClient tcpClient)
+        void IHandler.Tick(Client client)
         {
             
         }

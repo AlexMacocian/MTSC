@@ -13,13 +13,12 @@ namespace MTSC.Server.Handlers
     public class HttpHandler : IHandler
     {
         #region Fields
-        Server managedServer;
         List<IHttpModule> httpModules = new List<IHttpModule>();
         #endregion
         #region Constructors
-        public HttpHandler(Server server)
+        public HttpHandler()
         {
-            this.managedServer = server;
+            
         }
         #endregion
         #region Public Methods
@@ -37,10 +36,10 @@ namespace MTSC.Server.Handlers
         /// Send a response back to the client.
         /// </summary>
         /// <param name="response">Message containing the response.</param>
-        public void SendResponse(ClientStruct client, HttpMessage response)
+        public void SendResponse(Server server, ClientStruct client, HttpMessage response)
         {
             byte[] responseBytes = response.GetResponse();
-            managedServer.QueueMessage(client, responseBytes);
+            server.QueueMessage(client, responseBytes);
         }
         #endregion
         #region Interface Implementation
@@ -48,7 +47,7 @@ namespace MTSC.Server.Handlers
         /// Handler interface implementation.
         /// </summary>
         /// <param name="client"></param>
-        void IHandler.ClientRemoved(ClientStruct client)
+        void IHandler.ClientRemoved(Server server, ClientStruct client)
         {
             
         }
@@ -57,7 +56,7 @@ namespace MTSC.Server.Handlers
         /// </summary>
         /// <param name="client"></param>
         /// <returns></returns>
-        bool IHandler.HandleClient(ClientStruct client)
+        bool IHandler.HandleClient(Server server, ClientStruct client)
         {
             return false;
         }
@@ -67,7 +66,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool IHandler.HandleReceivedMessage(ClientStruct client, Message message)
+        bool IHandler.HandleReceivedMessage(Server server, ClientStruct client, Message message)
         {
             HttpMessage httpMessage = new HttpMessage();
             httpMessage.ParseRequest(message.MessageBytes);
@@ -86,7 +85,7 @@ namespace MTSC.Server.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool IHandler.HandleSendMessage(ClientStruct client, ref Message message)
+        bool IHandler.HandleSendMessage(Server server, ClientStruct client, ref Message message)
         {
             return false;
         }
@@ -96,14 +95,14 @@ namespace MTSC.Server.Handlers
         /// <param name="client"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        bool IHandler.PreHandleReceivedMessage(ClientStruct client, ref Message message)
+        bool IHandler.PreHandleReceivedMessage(Server server, ClientStruct client, ref Message message)
         {
             return false;
         }
         /// <summary>
         /// Handler interface implementation.
         /// </summary>
-        void IHandler.Tick()
+        void IHandler.Tick(Server server)
         {
             
         }

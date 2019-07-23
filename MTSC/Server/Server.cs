@@ -165,7 +165,7 @@ namespace MTSC.Server
                     for(int i = handlers.Count - 1; i >= 0; i--)
                     {
                         IHandler handler = handlers[i];
-                        handler.HandleSendMessage(queuedOrder.Item1, ref sendMessage);
+                        handler.HandleSendMessage(this, queuedOrder.Item1, ref sendMessage);
                     }
                     CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
                 }
@@ -190,7 +190,7 @@ namespace MTSC.Server
                         }
                         foreach (IHandler handler in handlers)
                         {
-                            if (handler.HandleClient(clientStruct))
+                            if (handler.HandleClient(this, clientStruct))
                             {
                                 break;
                             }
@@ -225,14 +225,14 @@ namespace MTSC.Server
                                     "\nMessage length: " + message.MessageLength);
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.PreHandleReceivedMessage(client, ref message))
+                                if (handler.PreHandleReceivedMessage(this, client, ref message))
                                 {
                                     break;
                                 }
                             }
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.HandleReceivedMessage(client, message))
+                                if (handler.HandleReceivedMessage(this, client, message))
                                 {
                                     break;
                                 }
@@ -271,7 +271,7 @@ namespace MTSC.Server
                 {
                     foreach(IHandler handler in handlers)
                     {
-                        handler.ClientRemoved(client);
+                        handler.ClientRemoved(this, client);
                     }
                     client.SslStream?.Dispose();
                     client.TcpClient?.Dispose();

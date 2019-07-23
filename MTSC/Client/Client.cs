@@ -166,7 +166,7 @@ namespace MTSC.Client
                 }
                 foreach (IHandler handler in handlers)
                 {
-                    if (!handler.InitializeConnection(tcpClient))
+                    if (!handler.InitializeConnection(this))
                     {
                         return false;
                     }
@@ -232,7 +232,7 @@ namespace MTSC.Client
                         for(int i = handlers.Count - 1; i >= 0; i--)
                         {
                             IHandler handler = handlers[i];
-                            handler.HandleSendMessage(tcpClient, ref sendMessage);
+                            handler.HandleSendMessage(this, ref sendMessage);
                         }
                         CommunicationPrimitives.SendMessage(tcpClient, sendMessage, sslStream);
                     }
@@ -248,7 +248,7 @@ namespace MTSC.Client
                          */
                         foreach (IHandler handler in handlers)
                         {
-                            if (handler.PreHandleReceivedMessage(tcpClient, ref message))
+                            if (handler.PreHandleReceivedMessage(this, ref message))
                             {
                                 break;
                             }
@@ -258,7 +258,7 @@ namespace MTSC.Client
                          */
                         foreach (IHandler handler in handlers)
                         {
-                            if (handler.HandleReceivedMessage(tcpClient, message))
+                            if (handler.HandleReceivedMessage(this, message))
                             {
                                 break;
                             }
@@ -266,7 +266,7 @@ namespace MTSC.Client
                     }
                     foreach (IHandler handler in handlers)
                     {
-                        handler.Tick(tcpClient);
+                        handler.Tick(this);
                     }
                 }
                 catch(Exception e)

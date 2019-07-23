@@ -17,7 +17,6 @@ namespace MTSC.Client.Handlers
             NegotiatingSymKey,
             Encrypted
         }
-        private Client managedClient;
         #region Fields
         private ConnectionState connectionState = ConnectionState.Initial;
         private byte[] aesKey;
@@ -27,144 +26,13 @@ namespace MTSC.Client.Handlers
         /// Creates an instance of EncryptionHandler.
         /// </summary>
         /// <param name="client">Client object that this handler manages.</param>
-        public EncryptionHandler(Client client)
-        {
-            this.managedClient = client;
-        }
-        #endregion
-        #region Public Methods
-        /// <summary>
-        /// Tries to initialize an encrypted connection.
-        /// </summary>
-        /// <param name="client">TcpClient connection.</param>
-        /// <returns>True if connection is successful. False otherwise.</returns>
-        public bool InitializeConnection(TcpClient client)
-        {
-            this.connectionState = ConnectionState.Initial;
-            return true;
-        }
-        /// <summary>
-        /// Handles the operations done after client disconnected.
-        /// </summary>
-        /// <param name="client"></param>
-        public void Disconnected(TcpClient client)
+        public EncryptionHandler()
         {
             
         }
-        /// <summary>
-        /// Performs operations on the message before sending it.
-        /// </summary>
-        /// <param name="client">Client connection.</param>
-        /// <param name="message">Message to be processed.</param>
-        /// <returns>True if no other handler should process the message further.</returns>
-        public bool HandleSendMessage(TcpClient client, ref Message message)
-        {
-            if(connectionState == ConnectionState.Encrypted)
-            {
-                byte[] decryptedBytes = message.MessageBytes;
-                byte[] encryptedBytes = EncryptBytes(decryptedBytes);
-                message = CommunicationPrimitives.BuildMessage(encryptedBytes);
-                return true;
-            }
-            return false;
-        }
-        /// <summary>
-        /// Performs operations on the message buffer, modifying it.
-        /// </summary>
-        /// <param name="client">Client connection.</param>
-        /// <param name="message">Message to be processed.</param>
-        /// <returns>True if no other handler should process it further.</returns>
-        public bool PreHandleReceivedMessage(TcpClient client, ref Message message)
-        {
-            if(connectionState == ConnectionState.Encrypted)
-            {
-                byte[] encryptedBytes = message.MessageBytes;
-                byte[] decryptedBytes = DecryptBytes(encryptedBytes);
-                message = CommunicationPrimitives.BuildMessage(decryptedBytes);
-                return false;
-            }
-            return false;
-        }
-        /// <summary>
-        /// Handle the received message.
-        /// </summary>
-        /// <param name="client">Client connection.</param>
-        /// <param name="message">Message.</param>
-        /// <returns>True if no other handler should handle the message further.</returns>
-        public bool HandleReceivedMessage(TcpClient client, Message message)
-        {
-            if(connectionState == ConnectionState.RequestingPublicKey)
-            {
-                string ascii = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
-                if (ascii.Contains(CommunicationPrimitives.SendPublicKey))
-                {
-                    byte[] publicKeyBytes = new byte[message.MessageLength - CommunicationPrimitives.SendPublicKey.Length - 1];
-                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendPublicKey.Length + 1, publicKeyBytes, 0, publicKeyBytes.Length);
-                    string publicKey = ASCIIEncoding.ASCII.GetString(publicKeyBytes);
-                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
-                    RSAParameters parameters = new RSAParameters();
-                    XmlDocument xmlDoc = new XmlDocument();
-                    xmlDoc.LoadXml(publicKey);
-                    if (xmlDoc.DocumentElement.Name.Equals("RSAKeyValue"))
-                    {
-                        foreach (XmlNode node in xmlDoc.DocumentElement.ChildNodes)
-                        {
-                            switch (node.Name)
-                            {
-                                case "Modulus": parameters.Modulus = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "Exponent": parameters.Exponent = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "P": parameters.P = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "Q": parameters.Q = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "DP": parameters.DP = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "DQ": parameters.DQ = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "InverseQ": parameters.InverseQ = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "D": parameters.D = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                            }
-                        }
-                    }
-                    rsa.ImportParameters(parameters);
-                    byte[] symkeyBytes = GetUniqueByteKey(32);
-                    byte[] encryptedSymKey = rsa.Encrypt(symkeyBytes, false);
-                    aesKey = symkeyBytes;
-                    byte[] messageHeader = ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendEncryptionKey + ":");
-                    byte[] messageBytes = new byte[encryptedSymKey.Length + messageHeader.Length];
-                    Array.Copy(messageHeader, 0, messageBytes, 0, messageHeader.Length);
-                    Array.Copy(encryptedSymKey, 0, messageBytes, messageHeader.Length, encryptedSymKey.Length);
-                    managedClient.QueueMessage(messageBytes);
-                    connectionState = ConnectionState.NegotiatingSymKey;
-                    return true;
-                }
-            }
-            else if(connectionState == ConnectionState.NegotiatingSymKey)
-            {
-                string ascii = ASCIIEncoding.ASCII.GetString(DecryptBytes(message.MessageBytes));
-                if(ascii == CommunicationPrimitives.AcceptEncryptionKey)
-                {
-                    connectionState = ConnectionState.Encrypted;
-                    return true;
-                }
-                else
-                {
-                    connectionState = ConnectionState.Initial;
-                    return false;
-                }
-            }
-            return false;
-        }
-        /// <summary>
-        /// Called on every tick by the client object.
-        /// Performs regular operations.
-        /// </summary>
-        /// <param name="tcpClient">Client connection.</param>
-        public void Tick(TcpClient tcpClient)
-        {
-            if(connectionState == ConnectionState.Initial)
-            {
+        #endregion
+        #region Public Methods
 
-                managedClient.QueueMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.RequestPublicKey));
-                this.connectionState = ConnectionState.RequestingPublicKey;
-            }
-        }
         #endregion
         #region Private Methods
         private string GetUniqueKey(int size)
@@ -270,6 +138,140 @@ namespace MTSC.Client.Handlers
             string result = Encoding.UTF8.GetString(bytesDecrypted);
 
             return result;
+        }
+        #endregion
+        #region Interface Implementation
+        /// <summary>
+        /// Tries to initialize an encrypted connection.
+        /// </summary>
+        /// <param name="client">TcpClient connection.</param>
+        /// <returns>True if connection is successful. False otherwise.</returns>
+        bool IHandler.InitializeConnection(Client client)
+        {
+            this.connectionState = ConnectionState.Initial;
+            return true;
+        }
+        /// <summary>
+        /// Handles the operations done after client disconnected.
+        /// </summary>
+        /// <param name="client"></param>
+        void IHandler.Disconnected(Client client)
+        {
+
+        }
+        /// <summary>
+        /// Performs operations on the message before sending it.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Message to be processed.</param>
+        /// <returns>True if no other handler should process the message further.</returns>
+        bool IHandler.HandleSendMessage(Client client, ref Message message)
+        {
+            if (connectionState == ConnectionState.Encrypted)
+            {
+                byte[] decryptedBytes = message.MessageBytes;
+                byte[] encryptedBytes = EncryptBytes(decryptedBytes);
+                message = CommunicationPrimitives.BuildMessage(encryptedBytes);
+                return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// Performs operations on the message buffer, modifying it.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Message to be processed.</param>
+        /// <returns>True if no other handler should process it further.</returns>
+        bool IHandler.PreHandleReceivedMessage(Client client, ref Message message)
+        {
+            if (connectionState == ConnectionState.Encrypted)
+            {
+                byte[] encryptedBytes = message.MessageBytes;
+                byte[] decryptedBytes = DecryptBytes(encryptedBytes);
+                message = CommunicationPrimitives.BuildMessage(decryptedBytes);
+                return false;
+            }
+            return false;
+        }
+        /// <summary>
+        /// Handle the received message.
+        /// </summary>
+        /// <param name="client">Client connection.</param>
+        /// <param name="message">Message.</param>
+        /// <returns>True if no other handler should handle the message further.</returns>
+        bool IHandler.HandleReceivedMessage(Client client, Message message)
+        {
+            if (connectionState == ConnectionState.RequestingPublicKey)
+            {
+                string ascii = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
+                if (ascii.Contains(CommunicationPrimitives.SendPublicKey))
+                {
+                    byte[] publicKeyBytes = new byte[message.MessageLength - CommunicationPrimitives.SendPublicKey.Length - 1];
+                    Array.Copy(message.MessageBytes, CommunicationPrimitives.SendPublicKey.Length + 1, publicKeyBytes, 0, publicKeyBytes.Length);
+                    string publicKey = ASCIIEncoding.ASCII.GetString(publicKeyBytes);
+                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
+                    RSAParameters parameters = new RSAParameters();
+                    XmlDocument xmlDoc = new XmlDocument();
+                    xmlDoc.LoadXml(publicKey);
+                    if (xmlDoc.DocumentElement.Name.Equals("RSAKeyValue"))
+                    {
+                        foreach (XmlNode node in xmlDoc.DocumentElement.ChildNodes)
+                        {
+                            switch (node.Name)
+                            {
+                                case "Modulus": parameters.Modulus = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "Exponent": parameters.Exponent = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "P": parameters.P = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "Q": parameters.Q = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "DP": parameters.DP = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "DQ": parameters.DQ = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "InverseQ": parameters.InverseQ = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "D": parameters.D = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                            }
+                        }
+                    }
+                    rsa.ImportParameters(parameters);
+                    byte[] symkeyBytes = GetUniqueByteKey(32);
+                    byte[] encryptedSymKey = rsa.Encrypt(symkeyBytes, false);
+                    aesKey = symkeyBytes;
+                    byte[] messageHeader = ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendEncryptionKey + ":");
+                    byte[] messageBytes = new byte[encryptedSymKey.Length + messageHeader.Length];
+                    Array.Copy(messageHeader, 0, messageBytes, 0, messageHeader.Length);
+                    Array.Copy(encryptedSymKey, 0, messageBytes, messageHeader.Length, encryptedSymKey.Length);
+                    client.QueueMessage(messageBytes);
+                    connectionState = ConnectionState.NegotiatingSymKey;
+                    return true;
+                }
+            }
+            else if (connectionState == ConnectionState.NegotiatingSymKey)
+            {
+                string ascii = ASCIIEncoding.ASCII.GetString(DecryptBytes(message.MessageBytes));
+                if (ascii == CommunicationPrimitives.AcceptEncryptionKey)
+                {
+                    connectionState = ConnectionState.Encrypted;
+                    return true;
+                }
+                else
+                {
+                    connectionState = ConnectionState.Initial;
+                    return false;
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Called on every tick by the client object.
+        /// Performs regular operations.
+        /// </summary>
+        /// <param name="tcpClient">Client connection.</param>
+        void IHandler.Tick(Client client)
+        {
+            if (connectionState == ConnectionState.Initial)
+            {
+
+                client.QueueMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.RequestPublicKey));
+                this.connectionState = ConnectionState.RequestingPublicKey;
+            }
         }
         #endregion
     }

@@ -10,11 +10,11 @@ namespace MTSC_TestClient
         static void Main(string[] args)
         {
             Client client = new Client(true);
-            BroadcastHandler broadcastHandler = new BroadcastHandler(client);
+            BroadcastHandler broadcastHandler = new BroadcastHandler();
             client
                 .SetServerAddress("127.0.0.1")
                 .SetPort(555)
-                .AddHandler(new EncryptionHandler(client))
+                .AddHandler(new EncryptionHandler())
                 .AddHandler(broadcastHandler)
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
@@ -22,7 +22,7 @@ namespace MTSC_TestClient
             while (true)
             {
                 string line = Console.ReadLine();
-                broadcastHandler.Broadcast(line);
+                broadcastHandler.Broadcast(client, line);
             }
         }
     }
