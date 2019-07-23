@@ -43,6 +43,11 @@ namespace MTSC.Server
         /// List of clients currently connected to the server.
         /// </summary>
         public List<ClientData> Clients { get => clients; set => clients = value; }
+        /// <summary>
+        /// If set to true, the server will use an algorithm to lower or increase the CPU usage
+        /// based on demands.
+        /// </summary>
+        public bool ScaleUsage { get; set; }
         #endregion
         #region Constructors
         /// <summary>
@@ -305,15 +310,18 @@ namespace MTSC.Server
                 {
                     try
                     {
-                        Tuple<ClientData, byte[]> queuedOrder = messageQueue.Dequeue();
-                        Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
-                        for (int i = handlers.Count - 1; i >= 0; i--)
+                        while (messageQueue.Count > 0)
                         {
-                            IHandler handler = handlers[i];
-                            ClientData client = queuedOrder.Item1;
-                            handler.HandleSendMessage(this, client, ref sendMessage);
+                            Tuple<ClientData, byte[]> queuedOrder = messageQueue.Dequeue();
+                            Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
+                            for (int i = handlers.Count - 1; i >= 0; i--)
+                            {
+                                IHandler handler = handlers[i];
+                                ClientData client = queuedOrder.Item1;
+                                handler.HandleSendMessage(this, client, ref sendMessage);
+                            }
+                            CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
                         }
-                        CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
                     }
                     catch (Exception e)
                     {
