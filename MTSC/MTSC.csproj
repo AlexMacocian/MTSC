@@ -15,8 +15,4 @@
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Common\WebSockets\ClientModules\" />
-  </ItemGroup>
-
 </Project>

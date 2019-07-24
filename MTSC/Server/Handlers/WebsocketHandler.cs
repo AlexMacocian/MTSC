@@ -23,10 +23,11 @@ namespace MTSC.Server.Handlers
             Established,
             Closed
         }
+        #region Fields
         ConcurrentDictionary<ClientData, SocketState> webSockets = new ConcurrentDictionary<ClientData, SocketState>();
         ConcurrentQueue<Tuple<ClientData, byte[]>> messageQueue = new ConcurrentQueue<Tuple<ClientData, byte[]>>();
         List<IWebsocketModule> websocketModules = new List<IWebsocketModule>();
-
+        #endregion
         #region Public Methods
         /// <summary>
         /// Add a webSocket module onto the server.
@@ -100,6 +101,7 @@ namespace MTSC.Server.Handlers
                         break;
                     }
                 }
+                return true;
             }
             return false;
         }

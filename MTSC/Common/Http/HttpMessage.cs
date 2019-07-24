@@ -222,7 +222,7 @@ namespace MTSC.Common.Http
         public byte[] GetRequest()
         {
             StringBuilder requestString = new StringBuilder();
-            requestString.Append(Method.ToString()).Append(SP).Append(RequestURI.ToString()).Append(SP).Append(HTTPVER).Append(CRLF);
+            requestString.Append(methods[(int)Method]).Append(SP).Append(RequestURI.ToString()).Append(SP).Append(HTTPVER).Append(CRLF);
             foreach(KeyValuePair<string, string> header in headers)
             {
                 requestString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
@@ -525,7 +525,7 @@ namespace MTSC.Common.Http
         #region Private Methods
         private MethodEnum GetMethod(string methodString)
         {
-            int index = Array.IndexOf(methods, methodString);
+            int index = Array.IndexOf(methods, methodString.ToUpper());
             return (MethodEnum)index;
         }
 
