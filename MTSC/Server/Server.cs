@@ -296,13 +296,13 @@ namespace MTSC.Server
                         }
                     }
                 });
-                foreach(IHandler handler in handlers)
+                Parallel.ForEach(handlers, (handler) =>
                 {
                     try
                     {
                         handler.Tick(this);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         LogDebug("Exception: " + e.Message);
                         LogDebug("Stacktrace: " + e.StackTrace);
@@ -314,7 +314,7 @@ namespace MTSC.Server
                             }
                         }
                     }
-                }
+                });
                 /*
                  * Check if there are messages queued to be sent.
                  */

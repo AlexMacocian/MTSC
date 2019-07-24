@@ -15,7 +15,7 @@ namespace MTSC_TestServer
         static void Main(string[] args)
         {
             X509Certificate2 certificate = new X509Certificate2("localhost.pfx", "psdsd");
-            Server server = new Server(555);
+            Server server = new Server(80);
             server.TickRate = 60;
             server.ScaleUsage = true;
             RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);

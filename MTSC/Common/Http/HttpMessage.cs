@@ -186,7 +186,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddGeneralHeader(GeneralHeadersEnum header, string value)
         {
-            headers.Add(generalHeaders[(int)header], value);
+            headers[generalHeaders[(int)header]] = value;
         }
         /// <summary>
         /// Add a request header to the message.
@@ -195,7 +195,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddRequestHeader(RequestHeadersEnum requestHeader, string value)
         {
-            headers.Add(requestHeaders[(int)requestHeader], value);
+            headers[requestHeaders[(int)requestHeader]] = value;
         }
         /// <summary>
         /// Add a response header to the message.
@@ -204,7 +204,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddResponseHeader(ResponseHeadersEnum responseHeader, string value)
         {
-            headers.Add(responseHeaders[(int)responseHeader], value);
+            headers[responseHeaders[(int)responseHeader]] = value;
         }
         /// <summary>
         /// Add an entity header to the message.
@@ -213,7 +213,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddEntityHeaders(EntityHeadersEnum entityHeader, string value)
         {
-            headers.Add(entityHeaders[(int)entityHeader], value);
+            headers[entityHeaders[(int)entityHeader]] = value;
         }
         /// <summary>
         /// Build the request bytes based on the message contents.

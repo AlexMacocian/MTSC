@@ -2,8 +2,10 @@
 using MTSC.Common.Http;
 using MTSC.Common.Http.ServerModules;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace MTSC.Server.Handlers
 {
@@ -14,7 +16,8 @@ namespace MTSC.Server.Handlers
     {
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
-        Queue<Tuple<ClientData,HttpMessage>> messageQueue = new Queue<Tuple<ClientData, HttpMessage>>();
+        ConcurrentQueue<Tuple<ClientData,HttpMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpMessage>>();
+        object queueLock = new object();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -37,7 +40,7 @@ namespace MTSC.Server.Handlers
         /// Send a response back to the client.
         /// </summary>
         /// <param name="response">Message containing the response.</param>
-        public void SendResponse(ClientData client, HttpMessage response)
+        public void QueueResponse(ClientData client, HttpMessage response)
         {
             messageQueue.Enqueue(new Tuple<ClientData, HttpMessage>(client, response));
         }
@@ -88,7 +91,7 @@ namespace MTSC.Server.Handlers
                     break;
                 }
             }
-            SendResponse(client, responseMessage);
+            QueueResponse(client, responseMessage);
             return false;
         }
         /// <summary>
@@ -116,10 +119,13 @@ namespace MTSC.Server.Handlers
         /// </summary>
         void IHandler.Tick(Server server)
         {
-            while(messageQueue.Count > 0)
+            while (messageQueue.Count > 0)
             {
-                Tuple<ClientData, HttpMessage> tuple = messageQueue.Dequeue();
-                server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse(true));
+                Tuple<ClientData, HttpMessage> tuple = null;
+                if (messageQueue.TryDequeue(out tuple))
+                {
+                    server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse(true));
+                }
             }
         }
         #endregion
