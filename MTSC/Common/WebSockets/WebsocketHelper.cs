@@ -18,38 +18,45 @@ namespace MTSC.Common.WebSockets
         /// <returns>String containing the received message.</returns>
         public static string DecodeMessage(byte[] bytes)
         {
-            if(bytes[0] != 129)
+            byte b = bytes[1];
+            int dataLength = 0;
+            int totalLength = 0;
+            int keyIndex = 0;
+
+            if (b - 128 <= 125)
             {
-                throw new InvalidFirstByteException();
+                dataLength = b - 128;
+                keyIndex = 2;
+                totalLength = dataLength + 6;
             }
-            int startIndex = 1;
-            int length = 0;
-            if(bytes[1] <= 125)
+
+            if (b - 128 == 126)
             {
-                startIndex = 2;
-                length = bytes[1];
+                dataLength = BitConverter.ToInt16(new byte[] { bytes[3], bytes[2] }, 0);
+                keyIndex = 4;
+                totalLength = dataLength + 8;
             }
-            else if(bytes[1] == 126)
+
+            if (b - 128 == 127)
             {
-                startIndex = 4;
-                length = bytes[2] << 8;
-                length += bytes[3];
+                dataLength = (int)BitConverter.ToInt64(new byte[] { bytes[9], bytes[8], bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2] }, 0);
+                keyIndex = 10;
+                totalLength = dataLength + 14;
             }
-            else if(bytes[1] == 127)
+
+            if (totalLength > bytes.Length)
+                throw new Exception("The buffer length is small than the data length");
+
+            byte[] key = new byte[] { bytes[keyIndex], bytes[keyIndex + 1], bytes[keyIndex + 2], bytes[keyIndex + 3] };
+
+            int dataIndex = keyIndex + 4;
+            int count = 0;
+            for (int i = dataIndex; i < totalLength; i++)
             {
-                startIndex = 10;
-                length = bytes[2] << 56;
-                length += bytes[3] << 48;
-                length += bytes[4] << 40;
-                length += bytes[5] << 32;
-                length += bytes[6] << 24;
-                length += bytes[7] << 16;
-                length += bytes[8] << 8;
-                length += bytes[9];
+                bytes[i] = (byte)(bytes[i] ^ key[count % 4]);
+                count++;
             }
-            byte[] message = new byte[length];
-            Array.Copy(bytes, startIndex, message, 0, length);
-            return Encoding.UTF8.GetString(message);
+            return Encoding.ASCII.GetString(bytes, dataIndex, dataLength);
         }
         /// <summary>
         /// Encode text websocket message.

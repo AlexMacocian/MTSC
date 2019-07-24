@@ -35,7 +35,7 @@
   function onMessage(evt)
   {
     writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
-    websocket.close();
+    //websocket.close();
   }
 
   function onError(evt)
@@ -56,12 +56,19 @@
     pre.innerHTML = message;
     output.appendChild(pre);
   }
-
+	
+  function sendMessage(){
+	var message = document.getElementById("textarea").value;
+	doSend(message);
+  }
+	
   window.addEventListener("load", init, false);
 
   </script>
 
   <h2>WebSocket Test</h2>
-
+  
+  <textarea id="textarea" rows="4" cols="50">Write here messages.</textarea>
+  <button type="button" onclick="sendMessage()">Send!</button>
   <div id="output"></div>
           
