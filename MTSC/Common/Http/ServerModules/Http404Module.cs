@@ -23,7 +23,6 @@ namespace MTSC.Common.Http.ServerModules
         {
             if(request.Method == HttpMessage.MethodEnum.Get)
             {
-                response.AddGeneralHeader(HttpMessage.GeneralHeadersEnum.Connection, "keep-alive");
                 //client.ToBeRemoved = true;
                 response.StatusCode = HttpMessage.StatusCodes.NotFound;
                 response[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();

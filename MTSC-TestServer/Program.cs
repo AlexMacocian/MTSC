@@ -26,7 +26,7 @@ namespace MTSC_TestServer
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 //.AddHandler(new BroadcastHandler())
-                .AddHandler(new HttpHandler().AddHttpModule(new Http404Module()))
+                .AddHandler(new HttpHandler().AddHttpModule(new HelloWorldModule()))
                 .Run();
         }
 
