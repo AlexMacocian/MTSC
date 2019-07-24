@@ -47,6 +47,7 @@ namespace MTSC
                 stream = client.GetStream();
             }
             stream.Write(message.MessageBytes, 0, (int)message.MessageLength);
+            stream.Flush();
         }
 
         public static Message BuildMessage(byte[] msgData)

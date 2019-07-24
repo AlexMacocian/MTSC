@@ -174,6 +174,12 @@ namespace MTSC.Common.Http
         /// <returns>Value of the header.</returns>
         public string this[RequestHeadersEnum headerKey] { get => headers[requestHeaders[(int)headerKey]]; set => headers[requestHeaders[(int)headerKey]] = value; }
         /// <summary>
+        /// Headers dictionary.
+        /// </summary>
+        /// <param name="headerKey">Key of the header.</param>
+        /// <returns>Value of the header.</returns>
+        public string this[EntityHeadersEnum headerKey] { get => headers[entityHeaders[(int)headerKey]]; set => headers[entityHeaders[(int)headerKey]] = value; }
+        /// <summary>
         /// Add a general header to the message.
         /// </summary>
         /// <param name="header">Header key.</param>
@@ -317,9 +323,20 @@ namespace MTSC.Common.Http
         /// <summary>
         /// Build the response bytes based on the message contents.
         /// </summary>
+        /// <param name="includeContentLengthHeader">
+        /// If set to true, add an extra Content-Length header specifying the length of the body.
+        /// </param>
         /// <returns>Array of bytes.</returns>
-        public byte[] GetResponse()
+        public byte[] GetResponse(bool includeContentLengthHeader)
         {
+            if (includeContentLengthHeader)
+            {
+                /*
+                 * If there is a body, include the size of the body. If there is no body,
+                 * set the value of the content length to 0.
+                 */
+                this[EntityHeadersEnum.ContentLength] = Body == null ? "0" : Body.Length.ToString();
+            }
             StringBuilder responseString = new StringBuilder();
             responseString.Append(HTTPVER).Append(SP).Append((int)this.StatusCode).Append(SP).Append(this.StatusCode.ToString()).Append(CRLF);
             foreach (KeyValuePair<string, string> header in headers)

@@ -11,25 +11,24 @@ namespace MTSC.Common.Http.ServerModules
     /// </summary>
     public class Http404Module : IHttpModule
     {
-        bool IHttpModule.HandleRequest(HttpHandler handler, ClientData client, HttpMessage request)
+        /// <summary>
+        /// Check the request and construct the response.
+        /// </summary>
+        /// <param name="handler"></param>
+        /// <param name="client"></param>
+        /// <param name="request"></param>
+        /// <param name="response"></param>
+        /// <returns>True so no other handler modifies the response, so the response contains the 404 return status code.</returns>
+        bool IHttpModule.HandleRequest(HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
         {
             if(request.Method == HttpMessage.MethodEnum.Get)
             {
-                HttpMessage response = new HttpMessage();
-                if (request.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) &&
-                    request[HttpMessage.GeneralHeadersEnum.Connection] == "Keep-Alive")
-                {
-                    response[HttpMessage.GeneralHeadersEnum.Connection] = "Keep-Alive";
-                }
-                else
-                {
-                    client.ToBeRemoved = true;
-                }
+                response.AddGeneralHeader(HttpMessage.GeneralHeadersEnum.Connection, "keep-alive");
+                //client.ToBeRemoved = true;
                 response.StatusCode = HttpMessage.StatusCodes.NotFound;
                 response[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
-                handler.SendResponse(client, response);
             }
-            return false;
+            return true;
         }
     }
 }

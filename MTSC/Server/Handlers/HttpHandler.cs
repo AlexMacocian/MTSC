@@ -69,14 +69,26 @@ namespace MTSC.Server.Handlers
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
             HttpMessage httpMessage = new HttpMessage();
+            HttpMessage responseMessage = new HttpMessage();
             httpMessage.ParseRequest(message.MessageBytes);
+            if(httpMessage.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) && 
+                httpMessage[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "close")
+            {
+                responseMessage[HttpMessage.GeneralHeadersEnum.Connection] = "close";
+                client.ToBeRemoved = true;
+            }
+            else
+            {
+                responseMessage[HttpMessage.GeneralHeadersEnum.Connection] = "keep-alive";
+            }
             foreach(IHttpModule module in httpModules)
             {
-                if(module.HandleRequest(this, client, httpMessage))
+                if(module.HandleRequest(this, client, httpMessage, ref responseMessage))
                 {
                     break;
                 }
             }
+            SendResponse(client, responseMessage);
             return false;
         }
         /// <summary>
@@ -107,7 +119,7 @@ namespace MTSC.Server.Handlers
             while(messageQueue.Count > 0)
             {
                 Tuple<ClientData, HttpMessage> tuple = messageQueue.Dequeue();
-                server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse());
+                server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse(true));
             }
         }
         #endregion

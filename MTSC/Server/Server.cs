@@ -29,6 +29,7 @@ namespace MTSC.Server
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         Queue<Tuple<ClientData, byte[]>> messageQueue = new Queue<Tuple<ClientData, byte[]>>();
+        int loopMillis = 16;
         #endregion
         #region Properties
         /// <summary>
@@ -48,6 +49,16 @@ namespace MTSC.Server
         /// based on demands.
         /// </summary>
         public bool ScaleUsage { get; set; }
+        /// <summary>
+        /// How many times does the server proc per second. Cannot be set higher than 1000.
+        /// This tickrate will be respected if either the ForceTickrate is set to true or 
+        /// ScaleUsage is set to true and the server is in power saving mode.
+        /// </summary>
+        public int TickRate { get => 1000 / loopMillis; set => loopMillis = 1000 / Math.Min(value, 1000); }
+        /// <summary>
+        /// If set to true, the server will respect the provided TickRate, regardless of current server load.
+        /// </summary>
+        public bool ForceTickrate { get; set; }
         #endregion
         #region Constructors
         /// <summary>
@@ -158,8 +169,11 @@ namespace MTSC.Server
             listener.Start();
             running = true;
             Log("Server started on: " + listener.LocalEndpoint.ToString());
+            DateTime lastLoad = DateTime.Now;
+            DateTime startLoopTime;
             while (running)
             {
+                startLoopTime = DateTime.Now;
                 /*
                  * Check the client states. If a client is disconnected, 
                  * remove it from the list of clients.
@@ -206,6 +220,7 @@ namespace MTSC.Server
                 {
                     if (listener.Pending())
                     {
+                        lastLoad = DateTime.Now;
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
                         if (certificate != null)
@@ -248,6 +263,7 @@ namespace MTSC.Server
                     {
                         if (client.TcpClient.Available > 0)
                         {
+                            lastLoad = DateTime.Now;
                             Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
                             LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                     "\nMessage length: " + message.MessageLength);
@@ -302,12 +318,9 @@ namespace MTSC.Server
                 /*
                  * Check if there are messages queued to be sent.
                  */
-                if (messageQueue.Count == 0)
+                if(messageQueue.Count > 0)
                 {
-                    Thread.Sleep(33);
-                }
-                else
-                {
+                    lastLoad = DateTime.Now;
                     try
                     {
                         while (messageQueue.Count > 0)
@@ -335,6 +348,15 @@ namespace MTSC.Server
                             }
                         }
                     }
+                }
+                /*
+                 * If the server load is low or the server has a forced tickrate,
+                 * sleep an amount of milliseconds to lower the CPU usage.
+                 */
+                if(((DateTime.Now - lastLoad).TotalMilliseconds > 1000) && ScaleUsage || 
+                    ForceTickrate)
+                {
+                    Thread.Sleep((int)Math.Max(loopMillis - (DateTime.Now - startLoopTime).TotalMilliseconds, 0));
                 }
             }
         }
