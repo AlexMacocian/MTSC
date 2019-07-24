@@ -1,4 +1,5 @@
 ﻿using MTSC.Common.Http.ServerModules;
+using MTSC.Common.WebSockets.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server;
@@ -26,7 +27,7 @@ namespace MTSC_TestServer
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 //.AddHandler(new BroadcastHandler())
-                .AddHandler(new HttpHandler().AddHttpModule(new HelloWorldModule()))
+                .AddHandler(new WebsocketHandler().AddWebsocketHandler(new EchoModule()))
                 .Run();
         }
 

@@ -2,6 +2,7 @@
 using MTSC.Logging;
 using MTSC.Server.Handlers;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
@@ -28,7 +29,7 @@ namespace MTSC.Server
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
-        Queue<Tuple<ClientData, byte[]>> messageQueue = new Queue<Tuple<ClientData, byte[]>>();
+        ConcurrentQueue<Tuple<ClientData, byte[]>> messageQueue = new ConcurrentQueue<Tuple<ClientData, byte[]>>();
         int loopMillis = 16;
         #endregion
         #region Properties
@@ -325,15 +326,18 @@ namespace MTSC.Server
                     {
                         while (messageQueue.Count > 0)
                         {
-                            Tuple<ClientData, byte[]> queuedOrder = messageQueue.Dequeue();
-                            Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
-                            for (int i = handlers.Count - 1; i >= 0; i--)
+                            Tuple<ClientData, byte[]> queuedOrder = null;
+                            if (messageQueue.TryDequeue(out queuedOrder))
                             {
-                                IHandler handler = handlers[i];
-                                ClientData client = queuedOrder.Item1;
-                                handler.HandleSendMessage(this, client, ref sendMessage);
+                                Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
+                                for (int i = handlers.Count - 1; i >= 0; i--)
+                                {
+                                    IHandler handler = handlers[i];
+                                    ClientData client = queuedOrder.Item1;
+                                    handler.HandleSendMessage(this, client, ref sendMessage);
+                                }
+                                CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
                             }
-                            CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
                         }
                     }
                     catch (Exception e)
