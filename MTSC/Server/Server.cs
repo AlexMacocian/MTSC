@@ -262,7 +262,15 @@ namespace MTSC.Server
                 {
                     try
                     {
-                        if (client.TcpClient.Available > 0)
+                        /*
+                         * If the connection has been lost, mark the client to be removed.
+                         * Else, check if there is data to be read.
+                         */
+                        if (!client.TcpClient.Connected)
+                        {
+                            client.ToBeRemoved = true;
+                        }
+                        else if (client.TcpClient.Available > 0)
                         {
                             lastLoad = DateTime.Now;
                             Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
@@ -297,6 +305,9 @@ namespace MTSC.Server
                         }
                     }
                 });
+                /*
+                 * Iterate through all the handlers, running periodic operations.
+                 */
                 Parallel.ForEach(handlers, (handler) =>
                 {
                     try
