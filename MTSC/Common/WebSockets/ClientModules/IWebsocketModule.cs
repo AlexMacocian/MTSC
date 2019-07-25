@@ -17,6 +17,6 @@ namespace MTSC.Common.WebSockets.ClientModules
         /// <param name="handler">Handler currently processing the message.</param>
         /// <param name="messageBytes">Array containing the message.</param>
         /// <returns>True if no other module should handle this message.</returns>
-        bool HandleReceivedMessage(Client.Client client, IHandler handler, byte[] messageBytes);
+        bool HandleReceivedMessage(Client.Client client, IHandler handler, WebsocketMessage messageBytes);
     }
 }

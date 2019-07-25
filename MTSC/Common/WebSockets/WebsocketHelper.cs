@@ -18,7 +18,7 @@ namespace MTSC.Common.WebSockets
         /// </summary>
         /// <param name="bytes">Byte array containing the received message.</param>
         /// <returns>String containing the received message.</returns>
-        public static string DecodeMessage(byte[] bytes)
+        public static string DecodeTextMessage(byte[] bytes)
         {
             byte b = bytes[1];
             int dataLength = 0;
@@ -72,7 +72,7 @@ namespace MTSC.Common.WebSockets
         /// </summary>
         /// <param name="message">Message to encode.</param>
         /// <returns>Byte array containing the encoded message.</returns>
-        public static byte[] EncodeMessage(string message, bool masked = false)
+        public static byte[] EncodeTextMessage(string message, bool masked = false)
         {
             byte[] response;
             byte[] bytesRaw = Encoding.UTF8.GetBytes(message);

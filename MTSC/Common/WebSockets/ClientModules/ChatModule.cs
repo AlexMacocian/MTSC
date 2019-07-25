@@ -10,15 +10,15 @@ namespace MTSC.Common.WebSockets.ClientModules
         #region Public Methods
         public void SendMessage(WebsocketHandler websocketHandler, string message)
         {
-            byte[] encodedMessage = WebsocketHelper.EncodeMessage(message, true);
+            byte[] encodedMessage = WebsocketHelper.EncodeTextMessage(message, true);
             websocketHandler.QueueMessage(encodedMessage);
         }
         #endregion
         #region Interface Implementation
-        bool IWebsocketModule.HandleReceivedMessage(Client.Client client, IHandler handler, byte[] messageBytes)
+        bool IWebsocketModule.HandleReceivedMessage(Client.Client client, IHandler handler, WebsocketMessage receivedMessage)
         {
-            string receivedMessage = WebsocketHelper.DecodeMessage(messageBytes);
-            client.Log(">" + receivedMessage);
+            string messageString = Encoding.UTF8.GetString(receivedMessage.Data);
+            client.Log(">" + messageString);
             return false;
         }
         #endregion

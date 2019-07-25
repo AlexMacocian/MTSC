@@ -1,4 +1,5 @@
 ﻿using MTSC.Common.Http;
+using MTSC.Common.WebSockets;
 using MTSC.Common.WebSockets.ClientModules;
 using System;
 using System.Collections.Generic;
@@ -84,9 +85,10 @@ namespace MTSC.Client.Handlers
             }
             else if(state == SocketState.Established)
             {
+                WebsocketMessage receivedMessage = new WebsocketMessage(message.MessageBytes);
                 foreach(IWebsocketModule websocketModule in websocketModules)
                 {
-                    if(websocketModule.HandleReceivedMessage(client, this, message.MessageBytes))
+                    if(websocketModule.HandleReceivedMessage(client, this, receivedMessage))
                     {
                         break;
                     }

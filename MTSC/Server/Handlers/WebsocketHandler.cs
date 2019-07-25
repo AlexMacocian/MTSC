@@ -1,4 +1,5 @@
 ﻿using MTSC.Common.Http;
+using MTSC.Common.WebSockets;
 using MTSC.Common.WebSockets.ServerModules;
 using System;
 using System.Collections.Concurrent;
@@ -16,6 +17,7 @@ namespace MTSC.Server.Handlers
         private static string WebsocketProtocolVersionKey = "Sec-WebSocket-Version";
         private static string GlobalUniqueIdentifier = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         private static SHA1 sha1Provider = SHA1.Create();
+        private static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
         private enum SocketState
         {
             Initial,
@@ -45,7 +47,12 @@ namespace MTSC.Server.Handlers
         /// <param name="message">Message to be sent to client.</param>
         public void QueueMessage(ClientData client, byte[] message)
         {
-            messageQueue.Enqueue(new Tuple<ClientData, byte[]>(client, message));
+            WebsocketMessage sendMessage = new WebsocketMessage();
+            sendMessage.Data = message;
+            sendMessage.FIN = true;
+            rng.GetBytes(sendMessage.Mask);
+            sendMessage.Opcode = WebsocketMessage.Opcodes.Text;
+            messageQueue.Enqueue(new Tuple<ClientData, byte[]>(client, sendMessage.GetMessageBytes()));
         }
         #endregion
         #region Handler Implementation
@@ -95,9 +102,10 @@ namespace MTSC.Server.Handlers
             }
             else if(webSockets[client] == SocketState.Established)
             {
-                foreach(IWebsocketModule websocketModule in websocketModules)
+                WebsocketMessage receivedMessage = new WebsocketMessage(message.MessageBytes);
+                foreach (IWebsocketModule websocketModule in websocketModules)
                 {
-                    if(websocketModule.HandleReceivedMessage(this, client, message.MessageBytes))
+                    if(websocketModule.HandleReceivedMessage(server, this, client, receivedMessage))
                     {
                         break;
                     }
