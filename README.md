@@ -5,7 +5,7 @@ https://www.nuget.org/packages/MTSC/
 ## Examples
 Functional Examples are provided in the TestClient and TestServer projects.
 # Brief description
-![Scheme](FunctioningScheme.png)
+![Scheme](docs/FunctioningScheme.png)
 ## Main Idea
 The main idea is the implemention of a modular solution so as to be able to add functionality to tcp communication by simply adding handlers.
 ## Overview of functionality
@@ -20,7 +20,7 @@ Refer to the wiki for implementation specific details.
 ## HTTP Handler functionality
 MTSC features an implemented handler for HTTP messages.
 
-![Scheme2](HttpScheme.png)
+![Scheme2](docs/HttpScheme.png)
 
 The main idea of operation is similar to handlers. The HTTP handler receives and parses the message and then the modules receive the requset and response structures, being given the opportunity to modify them.
 
@@ -31,7 +31,7 @@ The order in which they get to process a message is the same order as they were 
 ## Websocket Handler functionality
 MTSC features an implemented handler for Websocket communication.
 
-![Scheme3](WebsocketScheme.png)
+![Scheme3](docs/WebsocketScheme.png)
 
 Similar to the HTTP handler, the Websocket handler features modules to extend functionality. After the handler finishes the websocket handshake, the communication will be passed through the modules in the order they were added into the list of modules.
 
