@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace MTSC.Common.WebSockets
@@ -11,6 +12,7 @@ namespace MTSC.Common.WebSockets
     /// </summary>
     public class WebsocketHelper
     {
+        private static RNGCryptoServiceProvider rngCryptoServiceProvider = new RNGCryptoServiceProvider();
         /// <summary>
         /// Decode text websocket message.
         /// </summary>
@@ -22,48 +24,55 @@ namespace MTSC.Common.WebSockets
             int dataLength = 0;
             int totalLength = 0;
             int keyIndex = 0;
-
-            if (b - 128 <= 125)
+            bool masked = false;
+            if((b & 128) > 127)
             {
-                dataLength = b - 128;
-                keyIndex = 2;
-                totalLength = dataLength + 6;
+                /*
+                 * Message is masked.
+                 */
+                b -= (byte)128;
+                masked = true;
             }
-
-            if (b - 128 == 126)
+            if (b <= 125)
+            {
+                dataLength = b;
+                keyIndex = 2;
+                totalLength = dataLength + 2 + (masked == true ? 4 : 0);
+            }
+            else if (b == 126)
             {
                 dataLength = BitConverter.ToInt16(new byte[] { bytes[3], bytes[2] }, 0);
                 keyIndex = 4;
-                totalLength = dataLength + 8;
+                totalLength = dataLength + 4 + (masked == true ? 4 : 0);
             }
-
-            if (b - 128 == 127)
+            else if (b == 127)
             {
                 dataLength = (int)BitConverter.ToInt64(new byte[] { bytes[9], bytes[8], bytes[7], bytes[6], bytes[5], bytes[4], bytes[3], bytes[2] }, 0);
                 keyIndex = 10;
-                totalLength = dataLength + 14;
+                totalLength = dataLength + 10 +(masked == true ? 4 : 0);
             }
 
             if (totalLength > bytes.Length)
-                throw new Exception("The buffer length is small than the data length");
+                throw new Exception("The buffer length is smaller than the data length");
 
-            byte[] key = new byte[] { bytes[keyIndex], bytes[keyIndex + 1], bytes[keyIndex + 2], bytes[keyIndex + 3] };
-
-            int dataIndex = keyIndex + 4;
-            int count = 0;
-            for (int i = dataIndex; i < totalLength; i++)
+            int dataIndex = keyIndex;
+            if (masked)
             {
-                bytes[i] = (byte)(bytes[i] ^ key[count % 4]);
-                count++;
+                dataIndex += 4;
+                for (int i = dataIndex, count = 0; i < totalLength; i++, count++)
+                {
+                    bytes[i] = (byte)(bytes[i] ^ bytes[keyIndex + (count % 4)]);
+                }
             }
-            return Encoding.ASCII.GetString(bytes, dataIndex, dataLength);
+
+            return Encoding.UTF8.GetString(bytes, dataIndex, dataLength);
         }
         /// <summary>
         /// Encode text websocket message.
         /// </summary>
         /// <param name="message">Message to encode.</param>
         /// <returns>Byte array containing the encoded message.</returns>
-        public static byte[] EncodeMessage(string message)
+        public static byte[] EncodeMessage(string message, bool masked = false)
         {
             byte[] response;
             byte[] bytesRaw = Encoding.UTF8.GetBytes(message);
@@ -71,23 +80,32 @@ namespace MTSC.Common.WebSockets
 
             int indexStartRawData = -1;
             int length = bytesRaw.Length;
+            int maskLength = 0;
+            if (masked)
+            {
+                maskLength = 4;
+            }
 
             frame[0] = (byte)129;
+            if (masked)
+            {
+                frame[1] = (byte)128;
+            }
             if (length <= 125)
             {
-                frame[1] = (byte)length;
+                frame[1] += (byte)length;
                 indexStartRawData = 2;
             }
             else if (length >= 126 && length <= 65535)
             {
-                frame[1] = (byte)126;
+                frame[1] += (byte)126;
                 frame[2] = (byte)((length >> 8) & 255);
                 frame[3] = (byte)(length & 255);
                 indexStartRawData = 4;
             }
             else
             {
-                frame[1] = (byte)127;
+                frame[1] += (byte)127;
                 frame[2] = (byte)((length >> 56) & 255);
                 frame[3] = (byte)((length >> 48) & 255);
                 frame[4] = (byte)((length >> 40) & 255);
@@ -100,22 +118,27 @@ namespace MTSC.Common.WebSockets
                 indexStartRawData = 10;
             }
 
-            response = new byte[indexStartRawData + length];
+            response = new byte[indexStartRawData + maskLength + length];
 
-            int i, reponseIdx = 0;
+            int responseIdx = 0;
 
             //Add the frame bytes to the reponse
-            for (i = 0; i < indexStartRawData; i++)
+            for (int i = 0; i < indexStartRawData; i++)
             {
-                response[reponseIdx] = frame[i];
-                reponseIdx++;
+                response[responseIdx] = frame[i];
+                responseIdx++;
             }
 
+            rngCryptoServiceProvider.GetBytes(response, responseIdx, maskLength);
+
+            responseIdx += maskLength;
+
+
             //Add the data bytes to the response
-            for (i = 0; i < length; i++)
+            for (int i = 0; i < length; i++)
             {
-                response[reponseIdx] = bytesRaw[i];
-                reponseIdx++;
+                response[responseIdx] = (byte)(bytesRaw[i] ^ (masked == true ? response[indexStartRawData + (i % 4)] : 0));
+                responseIdx++;
             }
             return response;
         }

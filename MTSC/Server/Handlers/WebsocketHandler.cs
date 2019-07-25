@@ -89,6 +89,7 @@ namespace MTSC.Server.Handlers
                     response[WebsocketHeaderAcceptKey] = returnBase64Key;
                     server.QueueMessage(client, response.GetResponse(true));
                     webSockets[client] = SocketState.Established;
+                    server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
                     return true;
                 }
             }

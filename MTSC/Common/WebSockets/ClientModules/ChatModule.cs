@@ -10,7 +10,7 @@ namespace MTSC.Common.WebSockets.ClientModules
         #region Public Methods
         public void SendMessage(WebsocketHandler websocketHandler, string message)
         {
-            byte[] encodedMessage = WebsocketHelper.EncodeMessage(message);
+            byte[] encodedMessage = WebsocketHelper.EncodeMessage(message, true);
             websocketHandler.QueueMessage(encodedMessage);
         }
         #endregion
