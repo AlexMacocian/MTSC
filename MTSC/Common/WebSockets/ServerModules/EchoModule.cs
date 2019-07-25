@@ -25,12 +25,12 @@ namespace MTSC.Common.WebSockets.ServerModules
 
         void IWebsocketModule.ConnectionClosed(Server.Server server, IHandler handler, ClientData client)
         {
-            throw new NotImplementedException();
+            
         }
 
         void IWebsocketModule.ConnectionInitialized(Server.Server server, IHandler handler, ClientData client)
         {
-            throw new NotImplementedException();
+            
         }
         #endregion
     }

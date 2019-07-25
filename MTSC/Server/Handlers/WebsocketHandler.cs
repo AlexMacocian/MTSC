@@ -27,7 +27,7 @@ namespace MTSC.Server.Handlers
         }
         #region Fields
         ConcurrentDictionary<ClientData, SocketState> webSockets = new ConcurrentDictionary<ClientData, SocketState>();
-        ConcurrentQueue<Tuple<ClientData, byte[]>> messageQueue = new ConcurrentQueue<Tuple<ClientData, byte[]>>();
+        ConcurrentQueue<Tuple<ClientData,WebsocketMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, WebsocketMessage>>();
         List<IWebsocketModule> websocketModules = new List<IWebsocketModule>();
         #endregion
         #region Public Methods
@@ -52,7 +52,28 @@ namespace MTSC.Server.Handlers
             sendMessage.FIN = true;
             rng.GetBytes(sendMessage.Mask);
             sendMessage.Opcode = WebsocketMessage.Opcodes.Text;
-            messageQueue.Enqueue(new Tuple<ClientData, byte[]>(client, sendMessage.GetMessageBytes()));
+            messageQueue.Enqueue(new Tuple<ClientData, WebsocketMessage>(client, sendMessage));
+        }
+        /// <summary>
+        /// Send a message to the client.
+        /// </summary>
+        /// <param name="client">Client object.</param>
+        /// <param name="message">Message packet.</param>
+        public void QueueMessage(ClientData client, WebsocketMessage message)
+        {
+            messageQueue.Enqueue(new Tuple<ClientData, WebsocketMessage>(client, message));
+        }
+        /// <summary>
+        /// Signals that the connetion is closing.
+        /// </summary>
+        /// <param name="client">Client to be disconnected.</param>
+        public void CloseConnection(ClientData client)
+        {
+            WebsocketMessage websocketMessage = new WebsocketMessage();
+            websocketMessage.FIN = true;
+            websocketMessage.Opcode = WebsocketMessage.Opcodes.Close;
+            websocketMessage.Masked = false;
+            QueueMessage(client, websocketMessage);
         }
         #endregion
         #region Handler Implementation
@@ -97,17 +118,32 @@ namespace MTSC.Server.Handlers
                     server.QueueMessage(client, response.GetResponse(true));
                     webSockets[client] = SocketState.Established;
                     server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    {
+                        websocketModule.ConnectionInitialized(server, this, client);
+                    }
                     return true;
                 }
             }
             else if(webSockets[client] == SocketState.Established)
             {
                 WebsocketMessage receivedMessage = new WebsocketMessage(message.MessageBytes);
-                foreach (IWebsocketModule websocketModule in websocketModules)
+                if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Close)
                 {
-                    if(websocketModule.HandleReceivedMessage(server, this, client, receivedMessage))
+                    foreach (IWebsocketModule websocketModule in websocketModules)
                     {
-                        break;
+                        websocketModule.ConnectionClosed(server, this, client);
+                    }
+                    client.ToBeRemoved = true;
+                }
+                else
+                {
+                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    {
+                        if (websocketModule.HandleReceivedMessage(server, this, client, receivedMessage))
+                        {
+                            break;
+                        }
                     }
                 }
                 return true;
@@ -129,10 +165,18 @@ namespace MTSC.Server.Handlers
         {
             while (messageQueue.Count > 0)
             {
-                Tuple<ClientData, byte[]> tuple = null;
+                Tuple<ClientData, WebsocketMessage> tuple = null;
                 if (messageQueue.TryDequeue(out tuple))
                 {
-                    server.QueueMessage(tuple.Item1, tuple.Item2);
+                    server.QueueMessage(tuple.Item1, tuple.Item2.GetMessageBytes());
+                    if(tuple.Item2.Opcode == WebsocketMessage.Opcodes.Close)
+                    {
+                        foreach (IWebsocketModule websocketModule in websocketModules)
+                        {
+                            websocketModule.ConnectionClosed(server, this, tuple.Item1);
+                        }
+                        tuple.Item1.ToBeRemoved = true;
+                    }
                 }
             }
         }

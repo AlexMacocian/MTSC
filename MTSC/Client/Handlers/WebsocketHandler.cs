@@ -29,7 +29,7 @@ namespace MTSC.Client.Handlers
 
         #region Fields
         SocketState state = SocketState.Initial;
-        Queue<byte[]> messageQueue = new Queue<byte[]>();
+        Queue<WebsocketMessage> messageQueue = new Queue<WebsocketMessage>();
         List<IWebsocketModule> websocketModules = new List<IWebsocketModule>();
         string expectedguid = string.Empty;
         #endregion
@@ -57,7 +57,7 @@ namespace MTSC.Client.Handlers
         /// Add a message to the queue to be sent.
         /// </summary>
         /// <param name="message">Message to be sent.</param>
-        public void QueueMessage(byte[] message)
+        public void QueueMessage(WebsocketMessage message)
         {
             messageQueue.Enqueue(message);
         }
@@ -80,17 +80,31 @@ namespace MTSC.Client.Handlers
                     response[WebsocketHeaderAcceptKey].Trim() == expectedguid)
                 {
                     state = SocketState.Established;
+                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    {
+                        websocketModule.ConnectionInitialized(client, this);
+                    }
                 }
                 return true;
             }
             else if(state == SocketState.Established)
             {
                 WebsocketMessage receivedMessage = new WebsocketMessage(message.MessageBytes);
-                foreach(IWebsocketModule websocketModule in websocketModules)
+                if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Close)
                 {
-                    if(websocketModule.HandleReceivedMessage(client, this, receivedMessage))
+                    foreach (IWebsocketModule websocketModule in websocketModules)
                     {
-                        break;
+                        websocketModule.ConnectionClosed(client, this);
+                    }
+                }
+                else
+                {
+                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    {
+                        if (websocketModule.HandleReceivedMessage(client, this, receivedMessage))
+                        {
+                            break;
+                        }
                     }
                 }
                 return true;
@@ -131,8 +145,15 @@ namespace MTSC.Client.Handlers
         {
             while(messageQueue.Count > 0)
             {
-                byte[] message = messageQueue.Dequeue();
-                client.QueueMessage(message);
+                WebsocketMessage message = messageQueue.Dequeue();
+                client.QueueMessage(message.GetMessageBytes());
+                if(message.Opcode == WebsocketMessage.Opcodes.Close)
+                {
+                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    {
+                        websocketModule.ConnectionClosed(client, this);
+                    }
+                }
             }
         }
         #endregion

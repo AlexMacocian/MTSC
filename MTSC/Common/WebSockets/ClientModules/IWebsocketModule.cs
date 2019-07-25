@@ -11,6 +11,12 @@ namespace MTSC.Common.WebSockets.ClientModules
     public interface IWebsocketModule
     {
         /// <summary>
+        /// Called when a new websocket connection has been initialized.
+        /// </summary>
+        /// <param name="client">Client object.</param>
+        /// <param name="handler">Handler that performed the initialization.</param>
+        void ConnectionInitialized(Client.Client client, IHandler handler);
+        /// <summary>
         /// Handle received message.
         /// </summary>
         /// <param name="client">Client object.</param>
@@ -18,5 +24,11 @@ namespace MTSC.Common.WebSockets.ClientModules
         /// <param name="messageBytes">Array containing the message.</param>
         /// <returns>True if no other module should handle this message.</returns>
         bool HandleReceivedMessage(Client.Client client, IHandler handler, WebsocketMessage messageBytes);
+        /// <summary>
+        /// Called when an existing websocket connection is being closed.
+        /// </summary>
+        /// <param name="client">Client object.</param>
+        /// <param name="handler">Handler that closes the connection.</param>
+        void ConnectionClosed(Client.Client client, IHandler handler);
     }
 }

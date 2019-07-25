@@ -12,8 +12,8 @@ namespace MTSC.Common.WebSockets
     {
         public enum Opcodes
         {
-            Data = 1,
-            Text = 2,
+            Text = 1,
+            Binary = 2,
             Close = 8,
             Ping = 9,
             Pong = 10
@@ -35,7 +35,7 @@ namespace MTSC.Common.WebSockets
         /// <summary>
         /// Mask bit.
         /// </summary>
-        public bool Masked { get => (lengthBytes[0] & 0x80) == 0x1; set => lengthBytes[0] = (byte)(value ? lengthBytes[0] | 0x80 : lengthBytes[0] & 0x7F); }
+        public bool Masked { get => (lengthBytes[0] & 0x80) == 0x80; set => lengthBytes[0] = (byte)(value ? lengthBytes[0] | 0x80 : lengthBytes[0] & 0x7F); }
         /// <summary>
         /// Length of message.
         /// </summary>
@@ -199,9 +199,12 @@ namespace MTSC.Common.WebSockets
             Array.Copy(lengthBytes, 0, messageBytes, 1, lengthBytes.Length);
             if (Masked)
             {
-                Array.Copy(Mask, 0, messageBytes, lengthBytes.Length, Mask.Length);
+                Array.Copy(Mask, 0, messageBytes, 1 + lengthBytes.Length, Mask.Length);
             }
-            Array.Copy(data, 0, messageBytes, lengthBytes.Length + (Masked ? 4 : 0), data.Length);
+            for(int i = 0; i < data.Length; i++)
+            {
+                messageBytes[1 + lengthBytes.Length + (Masked ? 4 : 0) + i] = (byte)(Masked ? data[i] ^ Mask[i % 4] : data[i]);
+            }
             return messageBytes;
         }
     }

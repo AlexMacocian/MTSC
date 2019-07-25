@@ -10,20 +10,21 @@ namespace MTSC.Common.WebSockets.ServerModules
     {
         void IWebsocketModule.ConnectionClosed(Server.Server server, IHandler handler, ClientData client)
         {
-            throw new NotImplementedException();
+            
         }
 
         void IWebsocketModule.ConnectionInitialized(Server.Server server, IHandler handler, ClientData client)
         {
-            throw new NotImplementedException();
+            
         }
 
         bool IWebsocketModule.HandleReceivedMessage(Server.Server server, IHandler handler, ClientData client, WebsocketMessage receivedMessage)
         {
             receivedMessage.Masked = false;
+            //receivedMessage.Opcode = WebsocketMessage.Opcodes.Text;
             foreach(ClientData otherClient in server.Clients)
             {
-                (handler as WebsocketHandler).QueueMessage(otherClient, receivedMessage.Data);
+                (handler as WebsocketHandler).QueueMessage(otherClient, receivedMessage);
             }
             return false;
         }
