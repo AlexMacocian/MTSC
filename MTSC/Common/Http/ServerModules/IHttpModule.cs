@@ -19,6 +19,11 @@ namespace MTSC.Common.Http.ServerModules
         /// <param name="client">Client data.</param>
         /// <param name="request">Request message.</param>
         /// <returns>True if no other module should handle the received request.</returns>
-        bool HandleRequest(HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response);
+        bool HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response);
+        /// <summary>
+        /// Perform periodic operations.
+        /// </summary>
+        /// <param name="handler"></param>
+        void Tick(Server.Server server, HttpHandler handler);
     }
 }

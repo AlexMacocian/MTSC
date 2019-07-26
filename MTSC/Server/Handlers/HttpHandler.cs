@@ -17,7 +17,6 @@ namespace MTSC.Server.Handlers
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
         ConcurrentQueue<Tuple<ClientData,HttpMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpMessage>>();
-        object queueLock = new object();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -86,7 +85,7 @@ namespace MTSC.Server.Handlers
             }
             foreach(IHttpModule module in httpModules)
             {
-                if(module.HandleRequest(this, client, httpMessage, ref responseMessage))
+                if(module.HandleRequest(server, this, client, httpMessage, ref responseMessage))
                 {
                     break;
                 }
@@ -126,6 +125,10 @@ namespace MTSC.Server.Handlers
                 {
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse(true));
                 }
+            }
+            foreach (IHttpModule module in httpModules)
+            {
+                module.Tick(server, this);
             }
         }
         #endregion

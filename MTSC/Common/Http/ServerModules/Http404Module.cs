@@ -19,7 +19,7 @@ namespace MTSC.Common.Http.ServerModules
         /// <param name="request"></param>
         /// <param name="response"></param>
         /// <returns>True so no other handler modifies the response, so the response contains the 404 return status code.</returns>
-        bool IHttpModule.HandleRequest(HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
+        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
         {
             if(request.Method == HttpMessage.MethodEnum.Get)
             {
@@ -28,6 +28,11 @@ namespace MTSC.Common.Http.ServerModules
                 response[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
             }
             return true;
+        }
+
+        void IHttpModule.Tick(Server.Server server, HttpHandler handler)
+        {
+            throw new NotImplementedException();
         }
     }
 }

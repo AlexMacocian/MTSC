@@ -23,18 +23,18 @@ namespace MTSC.Common.WebSockets.ClientModules
         }
         #endregion
         #region Interface Implementation
-        bool IWebsocketModule.HandleReceivedMessage(Client.Client client, IHandler handler, WebsocketMessage receivedMessage)
+        bool IWebsocketModule.HandleReceivedMessage(Client.Client client, WebsocketHandler handler, WebsocketMessage receivedMessage)
         {
             string messageString = Encoding.UTF8.GetString(receivedMessage.Data);
             client.Log(">" + messageString);
             return false;
         }
-        void IWebsocketModule.ConnectionClosed(Client.Client client, IHandler handler)
+        void IWebsocketModule.ConnectionClosed(Client.Client client, WebsocketHandler handler)
         {
             
         }
 
-        void IWebsocketModule.ConnectionInitialized(Client.Client client, IHandler handler)
+        void IWebsocketModule.ConnectionInitialized(Client.Client client, WebsocketHandler handler)
         {
             
         }

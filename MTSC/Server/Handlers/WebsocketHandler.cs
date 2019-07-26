@@ -18,7 +18,7 @@ namespace MTSC.Server.Handlers
         private static string GlobalUniqueIdentifier = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         private static SHA1 sha1Provider = SHA1.Create();
         private static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
-        private enum SocketState
+        public enum SocketState
         {
             Initial,
             Handshaking,
@@ -26,7 +26,7 @@ namespace MTSC.Server.Handlers
             Closed
         }
         #region Fields
-        ConcurrentDictionary<ClientData, SocketState> webSockets = new ConcurrentDictionary<ClientData, SocketState>();
+        public ConcurrentDictionary<ClientData, SocketState> webSockets = new ConcurrentDictionary<ClientData, SocketState>();
         ConcurrentQueue<Tuple<ClientData,WebsocketMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, WebsocketMessage>>();
         List<IWebsocketModule> websocketModules = new List<IWebsocketModule>();
         #endregion
@@ -80,7 +80,7 @@ namespace MTSC.Server.Handlers
         void IHandler.ClientRemoved(Server server, ClientData client)
         {
             SocketState state = SocketState.Initial;
-            webSockets.TryRemove(client, out state);
+            webSockets.Remove(client, out state);
         }
 
         bool IHandler.HandleClient(Server server, ClientData client)
@@ -135,6 +135,8 @@ namespace MTSC.Server.Handlers
                         websocketModule.ConnectionClosed(server, this, client);
                     }
                     client.ToBeRemoved = true;
+                    SocketState outSocketState = SocketState.Closed;
+                    webSockets.Remove(client, out outSocketState);
                 }
                 else
                 {
@@ -176,6 +178,8 @@ namespace MTSC.Server.Handlers
                             websocketModule.ConnectionClosed(server, this, tuple.Item1);
                         }
                         tuple.Item1.ToBeRemoved = true;
+                        SocketState outSocketState = SocketState.Closed;
+                        webSockets.Remove(tuple.Item1, out outSocketState);
                     }
                 }
             }

@@ -8,23 +8,23 @@ namespace MTSC.Common.WebSockets.ServerModules
 {
     public class BroadcastModule : IWebsocketModule
     {
-        void IWebsocketModule.ConnectionClosed(Server.Server server, IHandler handler, ClientData client)
+        void IWebsocketModule.ConnectionClosed(Server.Server server, WebsocketHandler handler, ClientData client)
         {
             
         }
 
-        void IWebsocketModule.ConnectionInitialized(Server.Server server, IHandler handler, ClientData client)
+        void IWebsocketModule.ConnectionInitialized(Server.Server server, WebsocketHandler handler, ClientData client)
         {
             
         }
 
-        bool IWebsocketModule.HandleReceivedMessage(Server.Server server, IHandler handler, ClientData client, WebsocketMessage receivedMessage)
+        bool IWebsocketModule.HandleReceivedMessage(Server.Server server, WebsocketHandler handler, ClientData client, WebsocketMessage receivedMessage)
         {
             receivedMessage.Masked = false;
             //receivedMessage.Opcode = WebsocketMessage.Opcodes.Text;
-            foreach(ClientData otherClient in server.Clients)
+            foreach(ClientData otherClient in handler.webSockets.Keys)
             {
-                (handler as WebsocketHandler).QueueMessage(otherClient, receivedMessage);
+                handler.QueueMessage(otherClient, receivedMessage);
             }
             return false;
         }
