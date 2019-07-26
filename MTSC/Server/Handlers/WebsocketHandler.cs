@@ -95,8 +95,8 @@ namespace MTSC.Server.Handlers
             {
                 HttpMessage request = new HttpMessage();
                 request.ParseRequest(message.MessageBytes);
-                if(request.Method == HttpMessage.MethodEnum.Get && 
-                    request[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "upgrade" &&
+                if(request.Method == HttpMessage.MethodEnum.Get && request.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) &&
+                    request[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "upgrade" && request.ContainsHeader(WebsocketProtocolVersionKey) &&
                     request[WebsocketProtocolVersionKey] == "13")
                 {
                     /*
