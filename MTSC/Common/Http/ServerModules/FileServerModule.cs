@@ -58,6 +58,11 @@ namespace MTSC.Common.Http.ServerModules
                     }
                     return true;
                 }
+                else
+                {
+                    server.LogDebug("File not found: " + requestFile);
+                    response.StatusCode = HttpMessage.StatusCodes.NotFound;
+                }
             }
             return false;
         }
