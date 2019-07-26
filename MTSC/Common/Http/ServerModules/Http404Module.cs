@@ -32,7 +32,7 @@ namespace MTSC.Common.Http.ServerModules
 
         void IHttpModule.Tick(Server.Server server, HttpHandler handler)
         {
-            throw new NotImplementedException();
+            
         }
     }
 }
