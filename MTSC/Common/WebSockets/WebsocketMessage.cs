@@ -168,7 +168,7 @@ namespace MTSC.Common.WebSockets
                 Array.Copy(messageBytes, dataIndex, Mask, 0, 4);
                 dataIndex += 4;
             }
-            data = new byte[messageBytes.Length - dataIndex];
+            data = new byte[dataLength];
             for(ulong i = 0; i < dataLength; i++)
             {
                 data[i] = (byte)(messageBytes[(ulong)dataIndex + i] ^ Mask[i % 4]);
