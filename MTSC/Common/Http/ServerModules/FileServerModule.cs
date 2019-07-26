@@ -50,7 +50,8 @@ namespace MTSC.Common.Http.ServerModules
                      * Build the response packet.
                      */
                     response.Body = bodyData;
-                    response.StatusCode = HttpMessage.StatusCodes.Found;
+                    response.StatusCode = HttpMessage.StatusCodes.OK;
+                    response[HttpMessage.EntityHeadersEnum.ContentType] = "text/html";
                     if (!fileCache.ContainsKey(requestFile))
                     {
                         server.LogDebug("Adding " + requestFile + " to server cache.");
