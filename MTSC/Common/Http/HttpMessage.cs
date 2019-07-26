@@ -139,13 +139,16 @@ namespace MTSC.Common.Http
         #region Properties
         public MethodEnum Method { get; set; }
         public string RequestURI { get; set; }
+        public string RequestQuery { get; set; }
         public byte[] Body { get; set; }
         public StatusCodes StatusCode { get; set; }
         #endregion
         #region Constructors
         public HttpMessage()
         {
-
+            RequestQuery = string.Empty;
+            RequestURI = "/";
+            Method = MethodEnum.Get;
         }
         #endregion
         #region Public Methods
@@ -222,7 +225,7 @@ namespace MTSC.Common.Http
         public byte[] GetRequest()
         {
             StringBuilder requestString = new StringBuilder();
-            requestString.Append(methods[(int)Method]).Append(SP).Append(RequestURI.ToString()).Append(SP).Append(HTTPVER).Append(CRLF);
+            requestString.Append(methods[(int)Method]).Append(SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(SP).Append(HTTPVER).Append(CRLF);
             foreach(KeyValuePair<string, string> header in headers)
             {
                 requestString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
@@ -250,7 +253,7 @@ namespace MTSC.Common.Http
             /*
              * Keep the index of the byte array, to identify the message body.
              * Step value indicates at what point the parsing algorithm currently is.
-             * Step 0 - Method, 1 - URI, 2 - HTTPVer, 3 - Header, 4 - Value
+             * Step 0 - Method, 1 - URI, 2 - Query, 3 - HTTPVer, 4 - Header, 5 - Value
              */
             int step = 0;
             string headerKey = string.Empty;
@@ -266,14 +269,26 @@ namespace MTSC.Common.Http
                 else if(step == 1)
                 {
                     RequestURI = ParseRequestURI(requestBytes, ref i);
+                    if(requestBytes[i] == '?')
+                    {
+                        step++;   
+                    }
+                    else
+                    {
+                        step += 2;
+                    }                    
+                }
+                else if(step == 2)
+                {
+                    RequestQuery = ParseRequestQuery(requestBytes, ref i);
                     step++;
                 }
-                else if (step == 2)
+                else if (step == 3)
                 {
                     ParseHTTPVer(requestBytes, ref i);
                     step++;
                 }
-                else if (step == 3)
+                else if (step == 4)
                 {
                     if(requestBytes[i] == CRLF[0])
                     {
@@ -290,7 +305,7 @@ namespace MTSC.Common.Http
                         step++;
                     }
                 }
-                else if (step == 4)
+                else if (step == 5)
                 {
                     if (requestBytes[i] == CRLF[0])
                     {
@@ -572,6 +587,10 @@ namespace MTSC.Common.Http
                     {
                         return parseBuffer.ToString();
                     }
+                    if (buffer[index] == '?')
+                    {
+                        return parseBuffer.ToString();
+                    }
                     else
                     {
                         parseBuffer.Append((char)buffer[index]);
@@ -583,6 +602,33 @@ namespace MTSC.Common.Http
                 }
             }
             throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString());
+        }
+
+        private string ParseRequestQuery(byte[] buffer, ref int index)
+        {
+            /*
+             * Get each character one by one. When meeting a SP character, parse the URI and clear the buffer.
+             */
+            StringBuilder parseBuffer = new StringBuilder();
+            for (; index < buffer.Length; index++)
+            {
+                try
+                {
+                    if (buffer[index] == (byte)SP)
+                    {
+                        return parseBuffer.ToString();
+                    }
+                    else
+                    {
+                        parseBuffer.Append((char)buffer[index]);
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString(), e);
+                }
+            }
+            throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString());
         }
 
         private void ParseHTTPVer(byte[] buffer, ref int index)
