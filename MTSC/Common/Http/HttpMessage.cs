@@ -486,6 +486,15 @@ namespace MTSC.Common.Http
         /// </summary>
         /// <param name="header">Key of the header.</param>
         /// <returns>True if the message contains a header with the provided key.</returns>
+        public bool ContainsHeader(EntityHeadersEnum header)
+        {
+            return ContainsHeader(entityHeaders[(int)header]);
+        }
+        /// <summary>
+        /// Check if the message contains a header.
+        /// </summary>
+        /// <param name="header">Key of the header.</param>
+        /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(string header)
         {
             return headers.ContainsKey(header);
