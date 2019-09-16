@@ -80,7 +80,10 @@ namespace MTSC.Server.Handlers
         void IHandler.ClientRemoved(Server server, ClientData client)
         {
             SocketState state = SocketState.Initial;
-            while(!webSockets.TryRemove(client, out state));
+            while (webSockets.ContainsKey(client))
+            {
+                webSockets.TryRemove(client, out state);
+            }
         }
 
         bool IHandler.HandleClient(Server server, ClientData client)
@@ -136,7 +139,10 @@ namespace MTSC.Server.Handlers
                     }
                     client.ToBeRemoved = true;
                     SocketState outSocketState = SocketState.Closed;
-                    while(!webSockets.TryRemove(client, out outSocketState));
+                    while (webSockets.ContainsKey(client))
+                    {
+                        webSockets.TryRemove(client, out outSocketState);
+                    }
                 }
                 else
                 {
@@ -179,7 +185,10 @@ namespace MTSC.Server.Handlers
                         }
                         tuple.Item1.ToBeRemoved = true;
                         SocketState outSocketState = SocketState.Closed;
-                        while(!webSockets.TryRemove(tuple.Item1, out outSocketState));
+                        while (webSockets.ContainsKey(tuple.Item1))
+                        {
+                            webSockets.TryRemove(tuple.Item1, out outSocketState);
+                        }
                     }
                 }
             }

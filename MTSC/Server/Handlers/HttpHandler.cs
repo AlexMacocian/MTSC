@@ -14,6 +14,8 @@ namespace MTSC.Server.Handlers
     /// </summary>
     public class HttpHandler : IHandler
     {
+        private static string urlEncodedHeader = "application/x-www-form-urlencoded";
+        private static string multipartHeader = "multipart/form-data";
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
         ConcurrentQueue<Tuple<ClientData,HttpMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpMessage>>();
