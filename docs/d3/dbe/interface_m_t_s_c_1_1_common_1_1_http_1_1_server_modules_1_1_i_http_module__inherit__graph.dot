@@ -1,0 +1,14 @@
+digraph "MTSC.Common.Http.ServerModules.IHttpModule"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node0 [label="MTSC.Common.Http.ServerModules.\lIHttpModule",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip="Interface for Http modules used by the server http handler."];
+  Node0 -> Node1 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node1 [label="MTSC.Common.Http.ServerModules.\lFileServerModule",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d8/d56/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_file_server_module.html",tooltip=" "];
+  Node0 -> Node2 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="MTSC.Common.Http.ServerModules.\lHelloWorldModule",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d6/d98/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_hello_world_module.html",tooltip=" "];
+  Node0 -> Node3 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node3 [label="MTSC.Common.Http.ServerModules.\lHttp404Module",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$dc/dd3/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_http404_module.html",tooltip="Simple module that returns status code 404."];
+}

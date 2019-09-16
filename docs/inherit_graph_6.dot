@@ -1,0 +1,12 @@
+digraph "Graphical Class Hierarchy"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node0 [label="MTSC.Common.WebSockets.Server\lModules.IWebsocketModule",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d9/dc0/interface_m_t_s_c_1_1_common_1_1_web_sockets_1_1_server_modules_1_1_i_websocket_module.html",tooltip=" "];
+  Node0 -> Node1 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node1 [label="MTSC.Common.WebSockets.Server\lModules.BroadcastModule",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d5/d0c/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_server_modules_1_1_broadcast_module.html",tooltip=" "];
+  Node0 -> Node2 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="MTSC.Common.WebSockets.Server\lModules.EchoModule",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d4/d10/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_server_modules_1_1_echo_module.html",tooltip=" "];
+}

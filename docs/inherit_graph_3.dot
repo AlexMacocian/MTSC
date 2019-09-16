@@ -1,0 +1,8 @@
+digraph "Graphical Class Hierarchy"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  rankdir="LR";
+  Node0 [label="MTSC.Common.Http.HttpMessage",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html",tooltip=" "];
+}

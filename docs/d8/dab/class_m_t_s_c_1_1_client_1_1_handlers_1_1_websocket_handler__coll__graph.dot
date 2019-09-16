@@ -1,0 +1,9 @@
+digraph "MTSC.Client.Handlers.WebsocketHandler"
+{
+ // LATEX_PDF_SIZE
+  edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
+  node [fontname="Helvetica",fontsize="10",shape=record];
+  Node2 [label="MTSC.Client.Handlers.Websocket\lHandler",height=0.2,width=0.4,color="black", fillcolor="grey75", style="filled", fontcolor="black",tooltip="Handler implementing websocket protocol."];
+  Node3 -> Node2 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node3 [label="IHandler",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$df/d4e/interface_m_t_s_c_1_1_client_1_1_handlers_1_1_i_handler.html",tooltip="Handler interface for client communication."];
+}
