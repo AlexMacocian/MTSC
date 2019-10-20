@@ -9,5 +9,6 @@ var searchData=
   ['addmodule',['AddModule',['../d5/d58/class_m_t_s_c_1_1_client_1_1_handlers_1_1_http_handler.html#ae292eccc409b08c21abb9a5100e7af91',1,'MTSC.Client.Handlers.HttpHandler.AddModule()'],['../df/d3b/class_m_t_s_c_1_1_client_1_1_handlers_1_1_websocket_handler.html#a30f0f192ec1d875f28a7e07529feecb8',1,'MTSC.Client.Handlers.WebsocketHandler.AddModule()']]],
   ['addrequestheader',['AddRequestHeader',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a598978cd10bc3160ab2656d59596b27e',1,'MTSC::Common::Http::HttpMessage']]],
   ['addresponseheader',['AddResponseHeader',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a354738dd74b0be81f81f2ce25e02f39e',1,'MTSC::Common::Http::HttpMessage']]],
-  ['addwebsockethandler',['AddWebsocketHandler',['../da/dc7/class_m_t_s_c_1_1_server_1_1_handlers_1_1_websocket_handler.html#a9052e4deaf71384b7c3906cdc04e5eea',1,'MTSC::Server::Handlers::WebsocketHandler']]]
+  ['addwebsockethandler',['AddWebsocketHandler',['../da/dc7/class_m_t_s_c_1_1_server_1_1_handlers_1_1_websocket_handler.html#a9052e4deaf71384b7c3906cdc04e5eea',1,'MTSC::Server::Handlers::WebsocketHandler']]],
+  ['attributes',['Attributes',['../d0/dc5/class_m_t_s_c_1_1_common_1_1_http_1_1_cookie.html#a4894bfb3eb0a07374a1b2e6f24e98a3d',1,'MTSC::Common::Http::Cookie']]]
 ];

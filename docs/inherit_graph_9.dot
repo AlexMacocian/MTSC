@@ -4,23 +4,9 @@ digraph "Graphical Class Hierarchy"
   edge [fontname="Helvetica",fontsize="10",labelfontname="Helvetica",labelfontsize="10"];
   node [fontname="Helvetica",fontsize="10",shape=record];
   rankdir="LR";
-  Node31 [label="Exception",height=0.2,width=0.4,color="grey75", fillcolor="white", style="filled",tooltip=" "];
-  Node31 -> Node0 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node0 [label="MTSC.Exceptions.InvalidFirst\lByteException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d7/d18/class_m_t_s_c_1_1_exceptions_1_1_invalid_first_byte_exception.html",tooltip="Exception in case of first invalid byte for websocket communication."];
-  Node31 -> Node33 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node33 [label="MTSC.Exceptions.InvalidHeader\lException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d0/d0e/class_m_t_s_c_1_1_exceptions_1_1_invalid_header_exception.html",tooltip="Exception for invalid headers."];
-  Node31 -> Node34 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node34 [label="MTSC.Exceptions.InvalidHttp\lVersionException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d3/d73/class_m_t_s_c_1_1_exceptions_1_1_invalid_http_version_exception.html",tooltip="Exception in case of Invalid HTTP Version."];
-  Node31 -> Node35 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node35 [label="MTSC.Exceptions.InvalidPost\lFormException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d9/dea/class_m_t_s_c_1_1_exceptions_1_1_invalid_post_form_exception.html",tooltip="Exception for invalid post forms."];
-  Node31 -> Node36 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node36 [label="MTSC.Exceptions.InvalidRequest\lURIException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d6/dab/class_m_t_s_c_1_1_exceptions_1_1_invalid_request_u_r_i_exception.html",tooltip="Exception cause by an invalid request URI."];
-  Node31 -> Node37 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node37 [label="MTSC.Exceptions.InvalidStatus\lCodeException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$dd/d91/class_m_t_s_c_1_1_exceptions_1_1_invalid_status_code_exception.html",tooltip="Exception for invalid response status code."];
-  Node31 -> Node38 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node38 [label="MTSC.Exceptions.InvalidWebsocket\lFormatException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d6/d77/class_m_t_s_c_1_1_exceptions_1_1_invalid_websocket_format_exception.html",tooltip=" "];
-  Node31 -> Node39 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node39 [label="MTSC.Exceptions.MethodInvalid\lException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$de/dab/class_m_t_s_c_1_1_exceptions_1_1_method_invalid_exception.html",tooltip="Invalid HTTP Method Exception."];
-  Node31 -> Node40 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
-  Node40 [label="MTSC.Exceptions.NoDataException",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$da/d6f/class_m_t_s_c_1_1_exceptions_1_1_no_data_exception.html",tooltip=" "];
+  Node0 [label="MTSC.Exceptions.IException\lHandler",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$d8/d5c/interface_m_t_s_c_1_1_exceptions_1_1_i_exception_handler.html",tooltip="Handler to be used for handling exception."];
+  Node0 -> Node1 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node1 [label="MTSC.Exceptions.Exception\lConsoleLogger",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$df/d86/class_m_t_s_c_1_1_exceptions_1_1_exception_console_logger.html",tooltip="Logs the received exceptions to the console."];
+  Node0 -> Node2 [dir="back",color="midnightblue",fontsize="10",style="solid",fontname="Helvetica"];
+  Node2 [label="MTSC.Exceptions.Exception\lThrower",height=0.2,width=0.4,color="black", fillcolor="white", style="filled",URL="$dc/d94/class_m_t_s_c_1_1_exceptions_1_1_exception_thrower.html",tooltip="Throws all handled exceptions."];
 }

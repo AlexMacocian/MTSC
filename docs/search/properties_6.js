@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['running',['Running',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#af7425affecbc0039273437e4ebb3fde1',1,'MTSC::Server::Server']]]
+  ['opcode',['Opcode',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#a2f63f3604fa46cc17133590b1e33eec9',1,'MTSC::Common::WebSockets::WebsocketMessage']]]
 ];

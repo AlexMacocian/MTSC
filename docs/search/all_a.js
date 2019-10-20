@@ -1,19 +1,5 @@
 var searchData=
 [
-  ['client',['Client',['../d3/dc6/namespace_m_t_s_c_1_1_client.html',1,'MTSC']]],
-  ['clientmodules',['ClientModules',['../da/db3/namespace_m_t_s_c_1_1_common_1_1_http_1_1_client_modules.html',1,'MTSC.Common.Http.ClientModules'],['../df/d15/namespace_m_t_s_c_1_1_common_1_1_web_sockets_1_1_client_modules.html',1,'MTSC.Common.WebSockets.ClientModules']]],
-  ['common',['Common',['../db/dca/namespace_m_t_s_c_1_1_common.html',1,'MTSC']]],
-  ['exceptions',['Exceptions',['../d1/d56/namespace_m_t_s_c_1_1_exceptions.html',1,'MTSC']]],
-  ['handlers',['Handlers',['../da/d82/namespace_m_t_s_c_1_1_client_1_1_handlers.html',1,'MTSC.Client.Handlers'],['../d4/d86/namespace_m_t_s_c_1_1_server_1_1_handlers.html',1,'MTSC.Server.Handlers']]],
-  ['http',['Http',['../d2/dd3/namespace_m_t_s_c_1_1_common_1_1_http.html',1,'MTSC::Common']]],
-  ['logging',['Logging',['../db/dbe/namespace_m_t_s_c_1_1_logging.html',1,'MTSC']]],
-  ['mask',['Mask',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#a6df2b0cb35d260167860bc8700019351',1,'MTSC::Common::WebSockets::WebsocketMessage']]],
-  ['masked',['Masked',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#ad079fde84aeb3af5ba52a844e136dcf1',1,'MTSC::Common::WebSockets::WebsocketMessage']]],
-  ['message',['Message',['../dc/dd4/struct_m_t_s_c_1_1_message.html',1,'MTSC']]],
-  ['messagelength',['MessageLength',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#a600fffeaf9f28648333a380b13231e1f',1,'MTSC::Common::WebSockets::WebsocketMessage']]],
-  ['methodinvalidexception',['MethodInvalidException',['../de/dab/class_m_t_s_c_1_1_exceptions_1_1_method_invalid_exception.html',1,'MTSC::Exceptions']]],
-  ['mtsc',['MTSC',['../d7/dcd/namespace_m_t_s_c.html',1,'']]],
-  ['server',['Server',['../d3/d97/namespace_m_t_s_c_1_1_server.html',1,'MTSC']]],
-  ['servermodules',['ServerModules',['../df/dda/namespace_m_t_s_c_1_1_common_1_1_http_1_1_server_modules.html',1,'MTSC.Common.Http.ServerModules'],['../d2/d2f/namespace_m_t_s_c_1_1_common_1_1_web_sockets_1_1_server_modules.html',1,'MTSC.Common.WebSockets.ServerModules']]],
-  ['websockets',['WebSockets',['../de/d91/namespace_m_t_s_c_1_1_common_1_1_web_sockets.html',1,'MTSC::Common']]]
+  ['log',['Log',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#a180b7a8c584e5c073c2ecbd8fde44e8b',1,'MTSC.Client.Client.Log()'],['../de/dd8/class_m_t_s_c_1_1_logging_1_1_console_logger.html#a9fd52d789f68285f284aa902175638b7',1,'MTSC.Logging.ConsoleLogger.Log()'],['../da/dd0/class_m_t_s_c_1_1_logging_1_1_debug_console_logger.html#ac99a610520e156791de0b74368af616d',1,'MTSC.Logging.DebugConsoleLogger.Log()'],['../d6/dcb/interface_m_t_s_c_1_1_logging_1_1_i_logger.html#a4a07ceb983932f65b2b73ec4f0fb1018',1,'MTSC.Logging.ILogger.Log()'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a3452d98e3588375075ba2e9a872ce545',1,'MTSC.Server.Server.Log()']]],
+  ['logdebug',['LogDebug',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#ac4b8e6be3de6ad2e646815c577f5a7e3',1,'MTSC.Client.Client.LogDebug()'],['../de/dd8/class_m_t_s_c_1_1_logging_1_1_console_logger.html#aa52943a8f24372455b11ede5ee236f55',1,'MTSC.Logging.ConsoleLogger.LogDebug()'],['../da/dd0/class_m_t_s_c_1_1_logging_1_1_debug_console_logger.html#a6863b58170d01b798634ee9fee83e917',1,'MTSC.Logging.DebugConsoleLogger.LogDebug()'],['../d6/dcb/interface_m_t_s_c_1_1_logging_1_1_i_logger.html#a82ab01fbbdc30f20f89369bdc7f6e438',1,'MTSC.Logging.ILogger.LogDebug()'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a917f430c6dc56d51cd21ab207cb8a4cf',1,'MTSC.Server.Server.LogDebug()']]]
 ];

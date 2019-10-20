@@ -31,7 +31,7 @@
   <td id="projectlogo"><img alt="Logo" src="../../MTSC_Logo_small.png"/></td>
   <td id="projectalign" style="padding-left: 0.5em;">
    <div id="projectname">MTSC
-   &#160;<span id="projectnumber">1.0.0</span>
+   &#160;<span id="projectnumber">1.0.5</span>
    </div>
    <div id="projectbrief">Build TCP servers out of modules with handlers for communication, exception and logging.</div>
   </td>
@@ -256,15 +256,15 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:abe600f8b5b6dcff10ec21999229ec4ba"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#abe600f8b5b6dcff10ec21999229ec4ba">AddEntityHeaders</a> (EntityHeadersEnum entityHeader, string value)</td></tr>
 <tr class="memdesc:abe600f8b5b6dcff10ec21999229ec4ba"><td class="mdescLeft">&#160;</td><td class="mdescRight">Add an entity header to the message.  <a href="#abe600f8b5b6dcff10ec21999229ec4ba">More...</a><br /></td></tr>
 <tr class="separator:abe600f8b5b6dcff10ec21999229ec4ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acef383459a1111f43d8912a8d386ff7b"><td class="memItemLeft" align="right" valign="top">byte []&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#acef383459a1111f43d8912a8d386ff7b">GetRequest</a> ()</td></tr>
-<tr class="memdesc:acef383459a1111f43d8912a8d386ff7b"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build the request bytes based on the message contents.  <a href="#acef383459a1111f43d8912a8d386ff7b">More...</a><br /></td></tr>
-<tr class="separator:acef383459a1111f43d8912a8d386ff7b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a74eae4074bc8e72795e89fcd50675c4d"><td class="memItemLeft" align="right" valign="top">byte []&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a74eae4074bc8e72795e89fcd50675c4d">BuildRequest</a> ()</td></tr>
+<tr class="memdesc:a74eae4074bc8e72795e89fcd50675c4d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build the request bytes based on the message contents.  <a href="#a74eae4074bc8e72795e89fcd50675c4d">More...</a><br /></td></tr>
+<tr class="separator:a74eae4074bc8e72795e89fcd50675c4d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a85656b5625b7572777ab218ba345f612"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a85656b5625b7572777ab218ba345f612">ParseRequest</a> (byte[] requestBytes)</td></tr>
 <tr class="memdesc:a85656b5625b7572777ab218ba345f612"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse the received bytes and populate the message contents.  <a href="#a85656b5625b7572777ab218ba345f612">More...</a><br /></td></tr>
 <tr class="separator:a85656b5625b7572777ab218ba345f612"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a27858b4066156d6ad11c3c38694fa7b5"><td class="memItemLeft" align="right" valign="top">byte []&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a27858b4066156d6ad11c3c38694fa7b5">GetResponse</a> (bool includeContentLengthHeader)</td></tr>
-<tr class="memdesc:a27858b4066156d6ad11c3c38694fa7b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build the response bytes based on the message contents.  <a href="#a27858b4066156d6ad11c3c38694fa7b5">More...</a><br /></td></tr>
-<tr class="separator:a27858b4066156d6ad11c3c38694fa7b5"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5d4b2e7f5e232037fba3e60870567232"><td class="memItemLeft" align="right" valign="top">byte []&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a5d4b2e7f5e232037fba3e60870567232">BuildResponse</a> (bool includeContentLengthHeader)</td></tr>
+<tr class="memdesc:a5d4b2e7f5e232037fba3e60870567232"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build the response bytes based on the message contents.  <a href="#a5d4b2e7f5e232037fba3e60870567232">More...</a><br /></td></tr>
+<tr class="separator:a5d4b2e7f5e232037fba3e60870567232"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a039d2c6c8d2a0d26ca0432fbe0a372cf"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a039d2c6c8d2a0d26ca0432fbe0a372cf">ParseResponse</a> (byte[] responseBytes)</td></tr>
 <tr class="memdesc:a039d2c6c8d2a0d26ca0432fbe0a372cf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Parse the received bytes and populate the message contents.  <a href="#a039d2c6c8d2a0d26ca0432fbe0a372cf">More...</a><br /></td></tr>
 <tr class="separator:a039d2c6c8d2a0d26ca0432fbe0a372cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -277,6 +277,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a5d224be02f00fc5793efdfd9bc659725"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a5d224be02f00fc5793efdfd9bc659725">ContainsHeader</a> (GeneralHeadersEnum header)</td></tr>
 <tr class="memdesc:a5d224be02f00fc5793efdfd9bc659725"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if the message contains a header.  <a href="#a5d224be02f00fc5793efdfd9bc659725">More...</a><br /></td></tr>
 <tr class="separator:a5d224be02f00fc5793efdfd9bc659725"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac44c53de0f98bf7c8246e36e1d06e45d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#ac44c53de0f98bf7c8246e36e1d06e45d">ContainsHeader</a> (EntityHeadersEnum header)</td></tr>
+<tr class="memdesc:ac44c53de0f98bf7c8246e36e1d06e45d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if the message contains a header.  <a href="#ac44c53de0f98bf7c8246e36e1d06e45d">More...</a><br /></td></tr>
+<tr class="separator:ac44c53de0f98bf7c8246e36e1d06e45d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a020cf8a3319bad005fb7dc66cfe40ce6"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a020cf8a3319bad005fb7dc66cfe40ce6">ContainsHeader</a> (string header)</td></tr>
 <tr class="memdesc:a020cf8a3319bad005fb7dc66cfe40ce6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if the message contains a header.  <a href="#a020cf8a3319bad005fb7dc66cfe40ce6">More...</a><br /></td></tr>
 <tr class="separator:a020cf8a3319bad005fb7dc66cfe40ce6"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -316,6 +319,9 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 <tr class="memitem:ab321ca65351ec6f136003703c0149535"><td class="memItemLeft" align="right" valign="top">string&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#ab321ca65351ec6f136003703c0149535">this[EntityHeadersEnum headerKey]</a><code> [get, set]</code></td></tr>
 <tr class="memdesc:ab321ca65351ec6f136003703c0149535"><td class="mdescLeft">&#160;</td><td class="mdescRight">Headers dictionary.  <a href="#ab321ca65351ec6f136003703c0149535">More...</a><br /></td></tr>
 <tr class="separator:ab321ca65351ec6f136003703c0149535"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6674eb6c05cc4d37c05d3c530af56e2a"><td class="memItemLeft" align="right" valign="top">List&lt; <a class="el" href="../../d0/dc5/class_m_t_s_c_1_1_common_1_1_http_1_1_cookie.html">Cookie</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="../../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a6674eb6c05cc4d37c05d3c530af56e2a">Cookies</a><code> [get]</code></td></tr>
+<tr class="memdesc:a6674eb6c05cc4d37c05d3c530af56e2a"><td class="mdescLeft">&#160;</td><td class="mdescRight">List of cookies.  <a href="#a6674eb6c05cc4d37c05d3c530af56e2a">More...</a><br /></td></tr>
+<tr class="separator:a6674eb6c05cc4d37c05d3c530af56e2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock">
@@ -356,7 +362,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00217">217</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00224">224</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -395,7 +401,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00190">190</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00197">197</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -434,7 +440,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00199">199</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00206">206</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -473,12 +479,63 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00208">208</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00215">215</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+
+</div>
+</div>
+<a id="a74eae4074bc8e72795e89fcd50675c4d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a74eae4074bc8e72795e89fcd50675c4d">&#9670;&nbsp;</a></span>BuildRequest()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">byte [] MTSC.Common.Http.HttpMessage.BuildRequest </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Build the request bytes based on the message contents. </p>
+<dl class="section return"><dt>Returns</dt><dd>Array of bytes.</dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00232">232</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+
+</div>
+</div>
+<a id="a5d4b2e7f5e232037fba3e60870567232"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d4b2e7f5e232037fba3e60870567232">&#9670;&nbsp;</a></span>BuildResponse()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">byte [] MTSC.Common.Http.HttpMessage.BuildResponse </td>
+          <td>(</td>
+          <td class="paramtype">bool&#160;</td>
+          <td class="paramname"><em>includeContentLengthHeader</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Build the response bytes based on the message contents. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">includeContentLengthHeader</td><td>If set to true, add an extra Content-Length header specifying the length of the body. </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>Array of bytes.</dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00372">372</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
 <a id="ab2112e24bfb1830b9061d9f804246316"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab2112e24bfb1830b9061d9f804246316">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[1/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#ab2112e24bfb1830b9061d9f804246316">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[1/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -502,12 +559,12 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the message contains a header with the provided key.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00462">462</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00500">500</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
 <a id="a97021b8cc907ff0a9dc47ad5cbd37a89"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a97021b8cc907ff0a9dc47ad5cbd37a89">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[2/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a97021b8cc907ff0a9dc47ad5cbd37a89">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[2/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -531,12 +588,12 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the message contains a header with the provided key.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00471">471</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00509">509</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
 <a id="a5d224be02f00fc5793efdfd9bc659725"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a5d224be02f00fc5793efdfd9bc659725">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[3/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a5d224be02f00fc5793efdfd9bc659725">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[3/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -560,12 +617,41 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the message contains a header with the provided key.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00480">480</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00518">518</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+
+</div>
+</div>
+<a id="ac44c53de0f98bf7c8246e36e1d06e45d"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac44c53de0f98bf7c8246e36e1d06e45d">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[4/5]</span></h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool MTSC.Common.Http.HttpMessage.ContainsHeader </td>
+          <td>(</td>
+          <td class="paramtype">EntityHeadersEnum&#160;</td>
+          <td class="paramname"><em>header</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>Check if the message contains a header. </p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramname">header</td><td>Key of the header.</td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd>True if the message contains a header with the provided key.</dd></dl>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00527">527</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
 <a id="a020cf8a3319bad005fb7dc66cfe40ce6"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a020cf8a3319bad005fb7dc66cfe40ce6">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[4/4]</span></h2>
+<h2 class="memtitle"><span class="permalink"><a href="#a020cf8a3319bad005fb7dc66cfe40ce6">&#9670;&nbsp;</a></span>ContainsHeader() <span class="overload">[5/5]</span></h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -589,7 +675,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>True if the message contains a header with the provided key.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00489">489</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00536">536</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -611,58 +697,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 <p>Parse the body into a posted from respecting the reference manual. </p>
 <dl class="section return"><dt>Returns</dt><dd>Dictionary with posted from.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00497">497</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
-
-</div>
-</div>
-<a id="acef383459a1111f43d8912a8d386ff7b"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#acef383459a1111f43d8912a8d386ff7b">&#9670;&nbsp;</a></span>GetRequest()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">byte [] MTSC.Common.Http.HttpMessage.GetRequest </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Build the request bytes based on the message contents. </p>
-<dl class="section return"><dt>Returns</dt><dd>Array of bytes.</dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00225">225</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
-
-</div>
-</div>
-<a id="a27858b4066156d6ad11c3c38694fa7b5"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a27858b4066156d6ad11c3c38694fa7b5">&#9670;&nbsp;</a></span>GetResponse()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">byte [] MTSC.Common.Http.HttpMessage.GetResponse </td>
-          <td>(</td>
-          <td class="paramtype">bool&#160;</td>
-          <td class="paramname"><em>includeContentLengthHeader</em></td><td>)</td>
-          <td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Build the response bytes based on the message contents. </p>
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramname">includeContentLengthHeader</td><td>If set to true, add an extra Content-Length header specifying the length of the body. </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd>Array of bytes.</dd></dl>
-
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00345">345</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00544">544</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -690,7 +725,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00247">247</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00267">267</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -718,11 +753,37 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00375">375</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00406">406</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
 <h2 class="groupheader">Property Documentation</h2>
+<a id="a6674eb6c05cc4d37c05d3c530af56e2a"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a6674eb6c05cc4d37c05d3c530af56e2a">&#9670;&nbsp;</a></span>Cookies</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">List&lt;<a class="el" href="../../d0/dc5/class_m_t_s_c_1_1_common_1_1_http_1_1_cookie.html">Cookie</a>&gt; MTSC.Common.Http.HttpMessage.Cookies</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">get</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>List of cookies. </p>
+
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00191">191</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+
+</div>
+</div>
 <a id="ab321ca65351ec6f136003703c0149535"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#ab321ca65351ec6f136003703c0149535">&#9670;&nbsp;</a></span>this[EntityHeadersEnum headerKey]</h2>
 
@@ -752,7 +813,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of the header.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00184">184</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00187">187</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -785,7 +846,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of the header.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00166">166</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00169">169</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -818,7 +879,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of the header.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00178">178</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00181">181</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -851,7 +912,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of the header.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00172">172</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00175">175</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>
@@ -884,7 +945,7 @@ StatusCodes&#160;</td><td class="memItemRight" valign="bottom"><b>StatusCode</b>
 </dl>
 <dl class="section return"><dt>Returns</dt><dd>Value of the header.</dd></dl>
 
-<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00160">160</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
+<p class="definition">Definition at line <a class="el" href="../../d5/d98/_http_message_8cs_source.html#l00163">163</a> of file <a class="el" href="../../d5/d98/_http_message_8cs_source.html">HttpMessage.cs</a>.</p>
 
 </div>
 </div>

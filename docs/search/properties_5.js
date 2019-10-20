@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['port',['Port',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#adc95de3549415e7dd8332710f3f1461e',1,'MTSC::Server::Server']]]
+  ['mask',['Mask',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#a6df2b0cb35d260167860bc8700019351',1,'MTSC::Common::WebSockets::WebsocketMessage']]],
+  ['masked',['Masked',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#ad079fde84aeb3af5ba52a844e136dcf1',1,'MTSC::Common::WebSockets::WebsocketMessage']]],
+  ['messagelength',['MessageLength',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#a600fffeaf9f28648333a380b13231e1f',1,'MTSC::Common::WebSockets::WebsocketMessage']]]
 ];

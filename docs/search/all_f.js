@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['run',['Run',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#af4bb64b680d23d398f3f7e289569189d',1,'MTSC::Server::Server']]],
-  ['runasync',['RunAsync',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#ad56ca49ea0918f37248b0e40bf4a4907',1,'MTSC::Server::Server']]],
-  ['running',['Running',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#af7425affecbc0039273437e4ebb3fde1',1,'MTSC::Server::Server']]]
+  ['queuemessage',['QueueMessage',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#ab4ebbd8217aea0c1d57ede542c404183',1,'MTSC.Client.Client.QueueMessage()'],['../df/d3b/class_m_t_s_c_1_1_client_1_1_handlers_1_1_websocket_handler.html#aab375ecfc0b27c0a0ed8355c5904eb15',1,'MTSC.Client.Handlers.WebsocketHandler.QueueMessage()'],['../da/dc7/class_m_t_s_c_1_1_server_1_1_handlers_1_1_websocket_handler.html#a4ba115e772f3c30814b21c508ef2cf61',1,'MTSC.Server.Handlers.WebsocketHandler.QueueMessage(ClientData client, byte[] message)'],['../da/dc7/class_m_t_s_c_1_1_server_1_1_handlers_1_1_websocket_handler.html#a14849ffda41c01d12dd7ef87bd77f539',1,'MTSC.Server.Handlers.WebsocketHandler.QueueMessage(ClientData client, WebsocketMessage message)'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a4231d59cf9d26d7f9eda14d2bf1e27ee',1,'MTSC.Server.Server.QueueMessage()']]],
+  ['queueresponse',['QueueResponse',['../d5/dde/class_m_t_s_c_1_1_server_1_1_handlers_1_1_http_handler.html#abee4834854edfd4920ce31ba08a649a8',1,'MTSC::Server::Handlers::HttpHandler']]]
 ];

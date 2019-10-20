@@ -1,5 +1,4 @@
 var searchData=
 [
-  ['certificatevalidationcallback',['CertificateValidationCallback',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#aedd2779b640467b253fa48152c0ec22b',1,'MTSC::Client::Client']]],
-  ['clients',['Clients',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#aa54bab2059f42b5329db361476a40a31',1,'MTSC::Server::Server']]]
+  ['attributes',['Attributes',['../d0/dc5/class_m_t_s_c_1_1_common_1_1_http_1_1_cookie.html#a4894bfb3eb0a07374a1b2e6f24e98a3d',1,'MTSC::Common::Http::Cookie']]]
 ];

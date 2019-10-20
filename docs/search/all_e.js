@@ -1,5 +1,8 @@
 var searchData=
 [
-  ['queuemessage',['QueueMessage',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#ab4ebbd8217aea0c1d57ede542c404183',1,'MTSC.Client.Client.QueueMessage()'],['../df/d3b/class_m_t_s_c_1_1_client_1_1_handlers_1_1_websocket_handler.html#aab375ecfc0b27c0a0ed8355c5904eb15',1,'MTSC.Client.Handlers.WebsocketHandler.QueueMessage()'],['../da/dc7/class_m_t_s_c_1_1_server_1_1_handlers_1_1_websocket_handler.html#a4ba115e772f3c30814b21c508ef2cf61',1,'MTSC.Server.Handlers.WebsocketHandler.QueueMessage(ClientData client, byte[] message)'],['../da/dc7/class_m_t_s_c_1_1_server_1_1_handlers_1_1_websocket_handler.html#a14849ffda41c01d12dd7ef87bd77f539',1,'MTSC.Server.Handlers.WebsocketHandler.QueueMessage(ClientData client, WebsocketMessage message)'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a4231d59cf9d26d7f9eda14d2bf1e27ee',1,'MTSC.Server.Server.QueueMessage()']]],
-  ['queueresponse',['QueueResponse',['../d5/dde/class_m_t_s_c_1_1_server_1_1_handlers_1_1_http_handler.html#abee4834854edfd4920ce31ba08a649a8',1,'MTSC::Server::Handlers::HttpHandler']]]
+  ['parserequest',['ParseRequest',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a85656b5625b7572777ab218ba345f612',1,'MTSC::Common::Http::HttpMessage']]],
+  ['parseresponse',['ParseResponse',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a039d2c6c8d2a0d26ca0432fbe0a372cf',1,'MTSC::Common::Http::HttpMessage']]],
+  ['port',['Port',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#adc95de3549415e7dd8332710f3f1461e',1,'MTSC::Server::Server']]],
+  ['postmodule',['PostModule',['../d0/d69/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_post_module.html',1,'MTSC::Common::Http::ServerModules']]],
+  ['prehandlereceivedmessage',['PreHandleReceivedMessage',['../df/d4e/interface_m_t_s_c_1_1_client_1_1_handlers_1_1_i_handler.html#acd8845050e973018c1a57e23a3e06247',1,'MTSC.Client.Handlers.IHandler.PreHandleReceivedMessage()'],['../da/d7d/interface_m_t_s_c_1_1_server_1_1_handlers_1_1_i_handler.html#ad90301b90fdf8fdebcccec08a086358d',1,'MTSC.Server.Handlers.IHandler.PreHandleReceivedMessage()']]]
 ];

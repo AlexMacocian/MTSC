@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['opcode',['Opcode',['../d8/d92/class_m_t_s_c_1_1_common_1_1_web_sockets_1_1_websocket_message.html#a2f63f3604fa46cc17133590b1e33eec9',1,'MTSC::Common::WebSockets::WebsocketMessage']]]
+  ['key',['Key',['../d0/dc5/class_m_t_s_c_1_1_common_1_1_http_1_1_cookie.html#a1bbc642ddd7413051fcf97a12fde7532',1,'MTSC::Common::Http::Cookie']]]
 ];

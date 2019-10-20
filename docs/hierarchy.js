@@ -2,6 +2,7 @@ var hierarchy =
 [
     [ "MTSC.Client.Client", "dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html", null ],
     [ "MTSC.Server.ClientData", "d4/dbb/class_m_t_s_c_1_1_server_1_1_client_data.html", null ],
+    [ "MTSC.Common.Http.Cookie", "d0/dc5/class_m_t_s_c_1_1_common_1_1_http_1_1_cookie.html", null ],
     [ "Exception", null, [
       [ "MTSC.Exceptions.InvalidFirstByteException", "d7/d18/class_m_t_s_c_1_1_exceptions_1_1_invalid_first_byte_exception.html", null ],
       [ "MTSC.Exceptions.InvalidHeaderException", "d0/d0e/class_m_t_s_c_1_1_exceptions_1_1_invalid_header_exception.html", null ],
@@ -33,7 +34,8 @@ var hierarchy =
     [ "MTSC.Common.Http.ServerModules.IHttpModule", "d8/da0/interface_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_i_http_module.html", [
       [ "MTSC.Common.Http.ServerModules.FileServerModule", "d8/d56/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_file_server_module.html", null ],
       [ "MTSC.Common.Http.ServerModules.HelloWorldModule", "d6/d98/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_hello_world_module.html", null ],
-      [ "MTSC.Common.Http.ServerModules.Http404Module", "dc/dd3/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_http404_module.html", null ]
+      [ "MTSC.Common.Http.ServerModules.Http404Module", "dc/dd3/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_http404_module.html", null ],
+      [ "MTSC.Common.Http.ServerModules.PostModule", "d0/d69/class_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_post_module.html", null ]
     ] ],
     [ "MTSC.Common.Http.ClientModules.IHttpModule", "d5/d66/interface_m_t_s_c_1_1_common_1_1_http_1_1_client_modules_1_1_i_http_module.html", null ],
     [ "MTSC.Logging.ILogger", "d6/dcb/interface_m_t_s_c_1_1_logging_1_1_i_logger.html", [

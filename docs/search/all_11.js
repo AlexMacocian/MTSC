@@ -1,10 +1,9 @@
 var searchData=
 [
-  ['this_5bentityheadersenum_20headerkey_5d',['this[EntityHeadersEnum headerKey]',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#ab321ca65351ec6f136003703c0149535',1,'MTSC::Common::Http::HttpMessage']]],
-  ['this_5bgeneralheadersenum_20headerkey_5d',['this[GeneralHeadersEnum headerKey]',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a7feec018ede979bceaa2526ae31e9b49',1,'MTSC::Common::Http::HttpMessage']]],
-  ['this_5brequestheadersenum_20headerkey_5d',['this[RequestHeadersEnum headerKey]',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a7d39f260b970569a93b19005abf5006a',1,'MTSC::Common::Http::HttpMessage']]],
-  ['this_5bresponseheadersenum_20headerkey_5d',['this[ResponseHeadersEnum headerKey]',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a6346e2f51cb58303646014cef59393c9',1,'MTSC::Common::Http::HttpMessage']]],
-  ['this_5bstring_20headerkey_5d',['this[string headerKey]',['../df/dff/class_m_t_s_c_1_1_common_1_1_http_1_1_http_message.html#a7a7505189a9f2a15ce0a563fcf1ac246',1,'MTSC::Common::Http::HttpMessage']]],
-  ['tick',['Tick',['../df/d4e/interface_m_t_s_c_1_1_client_1_1_handlers_1_1_i_handler.html#ab03755cacb365c29a3bc6dbe17884b64',1,'MTSC.Client.Handlers.IHandler.Tick()'],['../d8/da0/interface_m_t_s_c_1_1_common_1_1_http_1_1_server_modules_1_1_i_http_module.html#a544defcb7ffcfc6008fd85d0997258a6',1,'MTSC.Common.Http.ServerModules.IHttpModule.Tick()'],['../da/d7d/interface_m_t_s_c_1_1_server_1_1_handlers_1_1_i_handler.html#a24f493fa3d89d960a635f0dc36e64b3d',1,'MTSC.Server.Handlers.IHandler.Tick()']]],
-  ['tickrate',['TickRate',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a11711d9464da010154adc781a3e0bf71',1,'MTSC::Server::Server']]]
+  ['scaleusage',['ScaleUsage',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a4bd784eb59c4a81a346a09d31146eef3',1,'MTSC::Server::Server']]],
+  ['sendrequest',['SendRequest',['../d5/d58/class_m_t_s_c_1_1_client_1_1_handlers_1_1_http_handler.html#a3717b229ef4fe6137b480fcde8d61b37',1,'MTSC::Client::Handlers::HttpHandler']]],
+  ['server',['Server',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html',1,'MTSC.Server.Server'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a39681d659b0b0b78d64ceb200346b572',1,'MTSC.Server.Server.Server()'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a1cb1d11b255666395b92dcd0ea8afdee',1,'MTSC.Server.Server.Server(int port)'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a9ba78600a4f4f3d46d11181a4b6b50eb',1,'MTSC.Server.Server.Server(X509Certificate2 certificate, int port)']]],
+  ['setport',['SetPort',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#afe946bd8ea5c8d02db19175e5fbe95e0',1,'MTSC.Client.Client.SetPort()'],['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a53cde7840246a76cf72389665c4ff9f7',1,'MTSC.Server.Server.SetPort()']]],
+  ['setserveraddress',['SetServerAddress',['../dc/d7c/class_m_t_s_c_1_1_client_1_1_client.html#ae4eab6784f731a25a4ed47fa2dc5c217',1,'MTSC::Client::Client']]],
+  ['stop',['Stop',['../d3/d7e/class_m_t_s_c_1_1_server_1_1_server.html#a1f2742b5f0ac908cc75baf9490f4d9fb',1,'MTSC::Server::Server']]]
 ];
