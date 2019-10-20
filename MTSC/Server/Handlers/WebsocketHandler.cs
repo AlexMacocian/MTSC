@@ -118,7 +118,7 @@ namespace MTSC.Server.Handlers
                     response[HttpMessage.GeneralHeadersEnum.Upgrade] = "websocket";
                     response[HttpMessage.GeneralHeadersEnum.Connection] = "Upgrade";
                     response[WebsocketHeaderAcceptKey] = returnBase64Key;
-                    server.QueueMessage(client, response.GetResponse(true));
+                    server.QueueMessage(client, response.BuildResponse(true));
                     webSockets[client] = SocketState.Established;
                     server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
                     foreach (IWebsocketModule websocketModule in websocketModules)

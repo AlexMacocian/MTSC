@@ -132,7 +132,7 @@ namespace MTSC.Client.Handlers
             beginRequest["Origin"] = client.Address;
             beginRequest[WebsocketProtocolKey] = "chat";
             beginRequest[WebsocketProtocolVersionKey] = "13";
-            client.QueueMessage(beginRequest.GetRequest());
+            client.QueueMessage(beginRequest.BuildRequest());
             return true;
         }
 

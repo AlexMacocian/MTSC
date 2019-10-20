@@ -133,8 +133,11 @@ namespace MTSC.Common.Http
         private static char HT = '\t';
         private static string CRLF = "\r\n";
         private static string HTTPVER = "HTTP/1.1";
+        private static string RequestCookieHeader = "Cookie";
+        private static string ResponseCookieHeader = "Set-Cookie";
 
         private Dictionary<string, string> headers = new Dictionary<string, string>();
+        private List<Cookie> cookies = new List<Cookie>();
 
         #region Properties
         public MethodEnum Method { get; set; }
@@ -183,6 +186,10 @@ namespace MTSC.Common.Http
         /// <returns>Value of the header.</returns>
         public string this[EntityHeadersEnum headerKey] { get => headers[entityHeaders[(int)headerKey]]; set => headers[entityHeaders[(int)headerKey]] = value; }
         /// <summary>
+        /// List of cookies.
+        /// </summary>
+        public List<Cookie> Cookies { get => cookies; }
+        /// <summary>
         /// Add a general header to the message.
         /// </summary>
         /// <param name="header">Header key.</param>
@@ -222,7 +229,7 @@ namespace MTSC.Common.Http
         /// Build the request bytes based on the message contents.
         /// </summary>
         /// <returns>Array of bytes.</returns>
-        public byte[] GetRequest()
+        public byte[] BuildRequest()
         {
             StringBuilder requestString = new StringBuilder();
             requestString.Append(methods[(int)Method]).Append(SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(SP).Append(HTTPVER).Append(CRLF);
@@ -231,6 +238,19 @@ namespace MTSC.Common.Http
                 requestString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
             }
             requestString.Append(CRLF);
+            if(Cookies.Count > 0)
+            {
+                requestString.Append(RequestCookieHeader).Append(':').Append(SP);
+                for(int i = 0; i < Cookies.Count; i++)
+                {
+                    Cookie cookie = Cookies[i];
+                    requestString.Append(cookie.BuildCookieString());
+                    if(i < Cookies.Count - 1)
+                    {
+                        requestString.Append(';');
+                    }
+                }
+            }
             byte[] request = new byte[requestString.Length + (Body == null ? 0 : Body.Length)];
             byte[] requestBytes = ASCIIEncoding.ASCII.GetBytes(requestString.ToString());
             Array.Copy(requestBytes, 0, request, 0, requestBytes.Length);
@@ -319,7 +339,14 @@ namespace MTSC.Common.Http
                     else
                     {
                         headerValue = ParseHeaderValue(requestBytes, ref i);
-                        headers.Add(headerKey, headerValue);
+                        if (headerKey == RequestCookieHeader)
+                        {
+                            Cookies.Add(new Cookie(headerValue));
+                        }
+                        else
+                        {
+                            headers.Add(headerKey, headerValue);
+                        }
                         step--;
                     }
                 }
@@ -342,7 +369,7 @@ namespace MTSC.Common.Http
         /// If set to true, add an extra Content-Length header specifying the length of the body.
         /// </param>
         /// <returns>Array of bytes.</returns>
-        public byte[] GetResponse(bool includeContentLengthHeader)
+        public byte[] BuildResponse(bool includeContentLengthHeader)
         {
             if (includeContentLengthHeader)
             {
@@ -359,6 +386,10 @@ namespace MTSC.Common.Http
                 responseString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
             }
             responseString.Append(CRLF);
+            foreach(Cookie cookie in Cookies)
+            {
+                responseString.Append(ResponseCookieHeader).Append(':').Append(SP).Append(cookie.BuildCookieString()).Append(CRLF);
+            }
             byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
             byte[] responseBytes = ASCIIEncoding.ASCII.GetBytes(responseString.ToString());
             Array.Copy(responseBytes, 0, response, 0, responseBytes.Length);
@@ -438,7 +469,14 @@ namespace MTSC.Common.Http
                     else
                     {
                         headerValue = ParseHeaderValue(responseBytes, ref i);
-                        headers.Add(headerKey, headerValue);
+                        if (headerKey == ResponseCookieHeader)
+                        {
+                            Cookies.Add(new Cookie(headerValue));
+                        }
+                        else
+                        {
+                            headers.Add(headerKey, headerValue);
+                        }
                         step--;
                     }
                 }

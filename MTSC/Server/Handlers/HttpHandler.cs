@@ -125,7 +125,7 @@ namespace MTSC.Server.Handlers
                 Tuple<ClientData, HttpMessage> tuple = null;
                 if (messageQueue.TryDequeue(out tuple))
                 {
-                    server.QueueMessage(tuple.Item1, tuple.Item2.GetResponse(true));
+                    server.QueueMessage(tuple.Item1, tuple.Item2.BuildResponse(true));
                 }
             }
             foreach (IHttpModule module in httpModules)

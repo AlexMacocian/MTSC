@@ -28,7 +28,7 @@ namespace MTSC.Client.Handlers
         /// <param name="request">Request to be sent.</param>
         public void SendRequest(Client client, HttpMessage request)
         {
-            client.QueueMessage(request.GetRequest());
+            client.QueueMessage(request.BuildRequest());
         }
         /// <summary>
         /// Add a http module.

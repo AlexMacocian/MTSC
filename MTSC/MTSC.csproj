@@ -5,17 +5,22 @@
     <TargetFrameworks>netcoreapp2.1;net48</TargetFrameworks>
     <ApplicationIcon />
     <StartupObject />
-    <Version>1.0.1</Version>
+    <Version>1.0.5</Version>
     <Authors>Alexandru-Victor Macocian</Authors>
     <Product>MTSC</Product>
     <Description>Modular TCP Server and Client</Description>
-    <AssemblyVersion>0.1.0.1</AssemblyVersion>
-    <FileVersion>0.1.0.1</FileVersion>
+    <AssemblyVersion>0.1.0.5</AssemblyVersion>
+    <FileVersion>0.1.0.5</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Platforms>AnyCPU;x64</Platforms>
     <PackageProjectUrl>https://github.com/AlexMacocian/MTSC</PackageProjectUrl>
     <PackageIconUrl>https://github.com/AlexMacocian/MTSC/blob/master/docs/MTSC_Logo.png</PackageIconUrl>
     <RepositoryUrl>https://github.com/AlexMacocian/MTSC</RepositoryUrl>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp2.1|AnyCPU'">
+    <DocumentationFile>D:\Projects\MTSC\MTSC\MTSC.xml</DocumentationFile>
+    <Optimize>true</Optimize>
   </PropertyGroup>
 
 </Project>
