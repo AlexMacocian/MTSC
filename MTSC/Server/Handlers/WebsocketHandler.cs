@@ -45,13 +45,14 @@ namespace MTSC.Server.Handlers
         /// Send a message to the client.
         /// </summary>
         /// <param name="message">Message to be sent to client.</param>
-        public void QueueMessage(ClientData client, byte[] message)
+        public void QueueMessage(ClientData client, byte[] message, WebsocketMessage.Opcodes opcode = WebsocketMessage.Opcodes.Text)
         {
             WebsocketMessage sendMessage = new WebsocketMessage();
             sendMessage.Data = message;
             sendMessage.FIN = true;
+            sendMessage.Masked = false;
             rng.GetBytes(sendMessage.Mask);
-            sendMessage.Opcode = WebsocketMessage.Opcodes.Text;
+            sendMessage.Opcode = opcode;
             messageQueue.Enqueue(new Tuple<ClientData, WebsocketMessage>(client, sendMessage));
         }
         /// <summary>
