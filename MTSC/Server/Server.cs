@@ -274,6 +274,7 @@ namespace MTSC.Server
                         {
                             lastLoad = DateTime.Now;
                             Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
+                            client.LastMessageTime = DateTime.Now;
                             LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                     "\nMessage length: " + message.MessageLength);
                             foreach (IHandler handler in handlers)
