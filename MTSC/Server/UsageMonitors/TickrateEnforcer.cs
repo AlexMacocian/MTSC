@@ -31,8 +31,11 @@ namespace MTSC.Server.UsageMonitors
         {
             if((DateTime.Now - lastTickTime).TotalMilliseconds < 1000f / TicksPerSecond)
             {
-                Thread.Sleep((int)(1000f / TicksPerSecond - (DateTime.Now - lastTickTime).TotalMilliseconds));
+                int sleepTime = (int)Math.Ceiling(Math.Max(1000f / TicksPerSecond - (DateTime.Now - lastTickTime).TotalMilliseconds, 0)) + 1;
+                server.LogDebug($"Sleeping thread for {sleepTime} ms due to throttling!");
+                Thread.Sleep(sleepTime);
             }
+            lastTickTime = DateTime.Now;
         }
     }
 }

@@ -16,8 +16,8 @@ namespace MTSC_TestServer
     {
         static void Main(string[] args)
         {
-            X509Certificate2 certificate = new X509Certificate2("localhost.pfx", "psdsd");
-            Server server = new Server(80);
+            //X509Certificate2 certificate = new X509Certificate2("localhost.pfx", "psdsd");
+            Server server = new Server(500);
             RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
             EncryptionHandler encryptionHandler = new EncryptionHandler(rsa);
             server
