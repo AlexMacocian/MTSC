@@ -1,6 +1,7 @@
 ﻿using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server.Handlers;
+using MTSC.Server.UsageMonitors;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,14 +24,14 @@ namespace MTSC.Server
         bool running;
         X509Certificate2 certificate;
         TcpListener listener;
-        int port = 50;
+        int port = 80;
         List<ClientData> toRemove = new List<ClientData>();
         List<ClientData> clients = new List<ClientData>();
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
+        List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
         ConcurrentQueue<Tuple<ClientData, byte[]>> messageQueue = new ConcurrentQueue<Tuple<ClientData, byte[]>>();
-        int loopMillis = 16;
         #endregion
         #region Properties
         /// <summary>
@@ -45,21 +46,6 @@ namespace MTSC.Server
         /// List of clients currently connected to the server.
         /// </summary>
         public List<ClientData> Clients { get => clients; set => clients = value; }
-        /// <summary>
-        /// If set to true, the server will use an algorithm to lower or increase the CPU usage
-        /// based on demands.
-        /// </summary>
-        public bool ScaleUsage { get; set; }
-        /// <summary>
-        /// How many times does the server proc per second. Cannot be set higher than 1000.
-        /// This tickrate will be respected if either the ForceTickrate is set to true or 
-        /// ScaleUsage is set to true and the server is in power saving mode.
-        /// </summary>
-        public int TickRate { get => 1000 / loopMillis; set => loopMillis = 1000 / Math.Min(value, 1000); }
-        /// <summary>
-        /// If set to true, the server will respect the provided TickRate, regardless of current server load.
-        /// </summary>
-        public bool ForceTickrate { get; set; }
         #endregion
         #region Constructors
         /// <summary>
@@ -100,7 +86,7 @@ namespace MTSC.Server
             return this;
         }
         /// <summary>
-        /// Adds a handler to the server.
+        /// Adds a <see cref="IHandler"/> to the server.
         /// </summary>
         /// <param name="handler">Handler to be added.</param>
         /// <returns>This server object.</returns>
@@ -110,7 +96,7 @@ namespace MTSC.Server
             return this;
         }
         /// <summary>
-        /// Adds a logger to the server.
+        /// Adds a <see cref="ILogger"/> to the server.
         /// </summary>
         /// <param name="logger">Logger to be added.</param>
         /// <returns>This server object.</returns>
@@ -120,13 +106,23 @@ namespace MTSC.Server
             return this;
         }
         /// <summary>
-        /// Adds an exception handler to the server.
+        /// Adds an <see cref="IExceptionHandler"/> to the server.
         /// </summary>
         /// <param name="handler">Handler to be added.</param>
         /// <returns>This server object.</returns>
         public Server AddExceptionHandler(IExceptionHandler handler)
         {
             exceptionHandlers.Add(handler);
+            return this;
+        }
+        /// <summary>
+        /// Adds a <see cref="IServerUsageMonitor"/> to the server.
+        /// </summary>
+        /// <param name="serverUsageMonitor">Monitor to be added.</param>
+        /// <returns>This server object.</returns>
+        public Server AddServerUsageMonitor(IServerUsageMonitor serverUsageMonitor)
+        {
+            serverUsageMonitors.Add(serverUsageMonitor);
             return this;
         }
         /// <summary>
@@ -141,7 +137,7 @@ namespace MTSC.Server
         /// <summary>
         /// Adds a message to be logged by the associated loggers.
         /// </summary>
-        /// <param name="">Message to be logged</param>
+        /// <param name="log">Message to be logged</param>
         public void Log(string log)
         {
             foreach (ILogger logger in loggers)
@@ -152,7 +148,7 @@ namespace MTSC.Server
         /// <summary>
         /// Adds a debug message to be logged by the associated loggers.
         /// </summary>
-        /// <param name="">Debug message to be logged</param>
+        /// <param name="debugMessage">Debug message to be logged</param>
         public void LogDebug(string debugMessage)
         {
             foreach (ILogger logger in loggers)
@@ -366,13 +362,11 @@ namespace MTSC.Server
                     }
                 }
                 /*
-                 * If the server load is low or the server has a forced tickrate,
-                 * sleep an amount of milliseconds to lower the CPU usage.
+                 * Call the usage monitors and let them scale or determine current resource usage.
                  */
-                if(((DateTime.Now - lastLoad).TotalMilliseconds > 1000) && ScaleUsage || 
-                    ForceTickrate)
+                foreach(IServerUsageMonitor usageMonitor in serverUsageMonitors)
                 {
-                    Thread.Sleep((int)Math.Max(loopMillis - (DateTime.Now - startLoopTime).TotalMilliseconds, 0));
+                    usageMonitor.Tick(this);
                 }
             }
         }
