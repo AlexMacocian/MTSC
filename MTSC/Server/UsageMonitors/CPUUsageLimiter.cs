@@ -41,6 +41,7 @@ namespace MTSC.Server.UsageMonitors
             PollCPUUsage();
             while(cpuUsage > cpuUsageLimit)
             {
+                server.LogDebug($"Throttling server due to CPUUsage = {cpuUsage}%!");
                 Thread.Sleep(10);
                 PollCPUUsage();
             }
