@@ -42,6 +42,7 @@ namespace MTSC.Server.UsageMonitors
             while(cpuUsage > cpuUsageLimit)
             {
                 Thread.Sleep(10);
+                PollCPUUsage();
             }
         }
 
