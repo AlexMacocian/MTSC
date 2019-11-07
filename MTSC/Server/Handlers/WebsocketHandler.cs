@@ -174,21 +174,19 @@ namespace MTSC.Server.Handlers
         {
             while (messageQueue.Count > 0)
             {
-                Tuple<ClientData, WebsocketMessage> tuple = null;
-                if (messageQueue.TryDequeue(out tuple))
+                if (messageQueue.TryDequeue(out Tuple<ClientData, WebsocketMessage> tuple))
                 {
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetMessageBytes());
-                    if(tuple.Item2.Opcode == WebsocketMessage.Opcodes.Close)
+                    if (tuple.Item2.Opcode == WebsocketMessage.Opcodes.Close)
                     {
                         foreach (IWebsocketModule websocketModule in websocketModules)
                         {
                             websocketModule.ConnectionClosed(server, this, tuple.Item1);
                         }
                         tuple.Item1.ToBeRemoved = true;
-                        SocketState outSocketState = SocketState.Closed;
                         while (webSockets.ContainsKey(tuple.Item1))
                         {
-                            webSockets.TryRemove(tuple.Item1, out outSocketState);
+                            webSockets.TryRemove(tuple.Item1, out _);
                         }
                     }
                 }

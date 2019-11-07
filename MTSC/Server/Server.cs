@@ -345,6 +345,8 @@ namespace MTSC.Server
                                     handler.HandleSendMessage(this, client, ref sendMessage);
                                 }
                                 CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
+                                LogDebug("Sent message to " + queuedOrder.Item1.TcpClient.Client.RemoteEndPoint.ToString() +
+                                    "\nMessage length: " + sendMessage.MessageLength);
                             }
                         }
                     }
