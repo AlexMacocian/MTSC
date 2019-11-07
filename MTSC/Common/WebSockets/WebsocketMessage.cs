@@ -63,6 +63,7 @@ namespace MTSC.Common.WebSockets
             }
             set
             {
+                byte[] valueBytes = BitConverter.GetBytes(value);
                 if(value <= 125)
                 {
                     if(lengthBytes.Length != 1)
@@ -71,7 +72,7 @@ namespace MTSC.Common.WebSockets
                         newLengthBytes[0] = lengthBytes[0];
                         lengthBytes = newLengthBytes;
                     }
-                    lengthBytes[0] = (byte)((lengthBytes[0] & 0x80) | ((byte)value & 0x7F));
+                    lengthBytes[0] = (byte)((lengthBytes[0] & 0x80) | (valueBytes[0] & 0x7F));
                 }
                 else if(value <= UInt16.MaxValue)
                 {
