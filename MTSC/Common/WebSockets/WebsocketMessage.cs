@@ -49,12 +49,12 @@ namespace MTSC.Common.WebSockets
                 }
                 else if ((lengthBytes[0] & 0x7F) == 126)
                 {
-                    return (ulong)((lengthBytes[2] << 8) + lengthBytes[1]);
+                    return (ulong)((lengthBytes[1] << 8) + lengthBytes[2]);
                 }
                 else if ((lengthBytes[0] & 0x7F) == 127)
                 {
-                    return (ulong)((lengthBytes[8] << 56) + (lengthBytes[7] << 48) + (lengthBytes[6] << 40) + (lengthBytes[5] << 32) + 
-                        (lengthBytes[4] << 24) + (lengthBytes[3] << 16) + (lengthBytes[2] << 8) + lengthBytes[1]);
+                    return (ulong)((lengthBytes[1] << 56) + (lengthBytes[2] << 48) + (lengthBytes[3] << 40) + (lengthBytes[4] << 32) + 
+                        (lengthBytes[5] << 24) + (lengthBytes[6] << 16) + (lengthBytes[7] << 8) + lengthBytes[8]);
                 }
                 else
                 {
@@ -63,7 +63,6 @@ namespace MTSC.Common.WebSockets
             }
             set
             {
-                byte[] valueBytes = BitConverter.GetBytes(value);
                 if(value <= 125)
                 {
                     if(lengthBytes.Length != 1)
@@ -72,7 +71,7 @@ namespace MTSC.Common.WebSockets
                         newLengthBytes[0] = lengthBytes[0];
                         lengthBytes = newLengthBytes;
                     }
-                    lengthBytes[0] = (byte)((lengthBytes[0] & 0x80) | (valueBytes[0] & 0x7F));
+                    lengthBytes[0] = (byte)((lengthBytes[0] & 0x80) | ((byte)value & 0x7F));
                 }
                 else if(value <= UInt16.MaxValue)
                 {
@@ -85,7 +84,7 @@ namespace MTSC.Common.WebSockets
                     }
                     for(int i = 1; i < 3; i++)
                     {
-                        lengthBytes[i] = (byte)(value & 0xFF);
+                        lengthBytes[3 - i] = (byte)(value & 0xFF);
                         value >>= 8;
                     }
                 }
@@ -100,7 +99,7 @@ namespace MTSC.Common.WebSockets
                     }
                     for (int i = 1; i < 9; i++)
                     {
-                        lengthBytes[i] = (byte)(value & 0xFF);
+                        lengthBytes[9 - i] = (byte)(value & 0xFF);
                         value >>= 8;
                     }
                 }
