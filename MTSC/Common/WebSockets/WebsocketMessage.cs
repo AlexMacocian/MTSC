@@ -145,15 +145,15 @@ namespace MTSC.Common.WebSockets
             }
             else if ((messageBytes[1] & 0x7F) == 126)
             {
-                dataLength = (ulong)((messageBytes[3] << 8) + messageBytes[2]);
+                dataLength = (ulong)((messageBytes[2] << 8) + messageBytes[3]);
                 lengthBytes = new byte[3];
                 Array.Copy(messageBytes, 1, lengthBytes, 0, 3);
                 dataIndex = 4;
             }
             else if ((messageBytes[1] & 0x7F) == 127)
             {
-                dataLength = (ulong)((messageBytes[9] << 56) + (messageBytes[8] << 48) + (messageBytes[7] << 40) + (messageBytes[6] << 32) +
-                    (messageBytes[5] << 24) + (messageBytes[4] << 16) + (messageBytes[3] << 8) + messageBytes[2]);
+                dataLength = (ulong)((messageBytes[3] << 56) + (messageBytes[3] << 48) + (messageBytes[4] << 40) + (messageBytes[5] << 32) +
+                    (messageBytes[6] << 24) + (messageBytes[7] << 16) + (messageBytes[8] << 8) + messageBytes[9]);
                 dataIndex = 10;
                 lengthBytes = new byte[9];
                 Array.Copy(messageBytes, 1, lengthBytes, 0, 9);
