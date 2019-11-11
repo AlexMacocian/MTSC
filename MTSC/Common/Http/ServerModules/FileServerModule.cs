@@ -18,7 +18,7 @@ namespace MTSC.Common.Http.ServerModules
             this.rootFolder = Path.GetFullPath(rootFolder);
         }
         #region Interface Implementation
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
+        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if(request.Method == HttpMessage.MethodEnum.Get)
             {
@@ -51,7 +51,7 @@ namespace MTSC.Common.Http.ServerModules
                      */
                     response.Body = bodyData;
                     response.StatusCode = HttpMessage.StatusCodes.OK;
-                    response[HttpMessage.EntityHeadersEnum.ContentType] = "text/html";
+                    response.Headers[HttpMessage.EntityHeadersEnum.ContentType] = "text/html";
                     if (!fileCache.ContainsKey(requestFile))
                     {
                         server.LogDebug("Adding " + requestFile + " to server cache.");

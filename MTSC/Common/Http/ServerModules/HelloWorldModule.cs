@@ -9,15 +9,15 @@ namespace MTSC.Common.Http.ServerModules
     public class HelloWorldModule : IHttpModule
     {
         byte[] response = ASCIIEncoding.ASCII.GetBytes("Hello, World!");
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
+        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if (request.Method == HttpMessage.MethodEnum.Get)
             {
                 //client.ToBeRemoved = true;
                 response.StatusCode = HttpMessage.StatusCodes.OK;
-                response[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
-                response[HttpMessage.EntityHeadersEnum.ContentType] = "text/plain; charset=UTF-8";
-                response["Server"] = "MTSC";
+                response.Headers[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
+                response.Headers[HttpMessage.EntityHeadersEnum.ContentType] = "text/plain; charset=UTF-8";
+                response.Headers["Server"] = "MTSC";
                 response.Body = this.response;
             }
             return true;

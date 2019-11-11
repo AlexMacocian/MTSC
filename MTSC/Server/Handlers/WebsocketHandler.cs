@@ -11,11 +11,11 @@ namespace MTSC.Server.Handlers
 {
     public class WebsocketHandler : IHandler
     {
-        private static string WebsocketHeaderAcceptKey = "Sec-WebSocket-Accept";
-        private static string WebsocketHeaderKey = "Sec-WebSocket-Key";
-        private static string WebsocketProtocolKey = "Sec-WebSocket-Protocol";
-        private static string WebsocketProtocolVersionKey = "Sec-WebSocket-Version";
-        private static string GlobalUniqueIdentifier = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        private static readonly string WebsocketHeaderAcceptKey = "Sec-WebSocket-Accept";
+        private static readonly string WebsocketHeaderKey = "Sec-WebSocket-Key";
+        private static readonly string WebsocketProtocolKey = "Sec-WebSocket-Protocol";
+        private static readonly string WebsocketProtocolVersionKey = "Sec-WebSocket-Version";
+        private static readonly string GlobalUniqueIdentifier = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         private static SHA1 sha1Provider = SHA1.Create();
         private static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
         public enum SocketState

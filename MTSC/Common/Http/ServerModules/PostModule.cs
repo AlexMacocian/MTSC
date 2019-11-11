@@ -15,16 +15,16 @@ namespace MTSC.Common.Http.ServerModules
         public event EventHandler<Dictionary<string, string>> FormReceived;
 
         #region Private Methods
-        private Dictionary<string, string> ParseFormUrlEncoded(HttpMessage request)
+        private Dictionary<string, string> ParseFormUrlEncoded(HttpRequest request)
         {
-            if (!request.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentLength))
+            if (!request.Headers.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentLength))
             {
                 throw new InvalidPostFormException("Form is missing content-length header!");
             }
             else
             {
                 Dictionary<string, string> formData = new Dictionary<string, string>();
-                int length = int.Parse(request[HttpMessage.EntityHeadersEnum.ContentLength]);
+                int length = int.Parse(request.Headers[HttpMessage.EntityHeadersEnum.ContentLength]);
                 int step = 0, parsedLength = 0;
                 StringBuilder fieldBuilder = new StringBuilder();
                 StringBuilder valueBuilder = new StringBuilder();
@@ -34,14 +34,14 @@ namespace MTSC.Common.Http.ServerModules
                  */
                 for (int i = 0; i < request.Body.Length; i++)
                 {
-                    if(request.Body[i] == '\n')
+                    if (request.Body[i] == '\n')
                     {
                         continue;
                     }
-                    else if(step == 0)
+                    else if (step == 0)
                     {
                         parsedLength++;
-                        if(request.Body[i] == '=')
+                        if (request.Body[i] == '=')
                         {
                             step = 1;
                         }
@@ -53,7 +53,7 @@ namespace MTSC.Common.Http.ServerModules
                     else
                     {
                         parsedLength++;
-                        if(request.Body[i] == '&')
+                        if (request.Body[i] == '&')
                         {
                             step = 0;
                             formData[fieldBuilder.ToString()] = valueBuilder.ToString();
@@ -63,7 +63,7 @@ namespace MTSC.Common.Http.ServerModules
                         else
                         {
                             valueBuilder.Append((char)request.Body[i]);
-                            if(parsedLength == length)
+                            if (parsedLength == length)
                             {
                                 formData[fieldBuilder.ToString()] = valueBuilder.ToString();
                             }
@@ -74,26 +74,26 @@ namespace MTSC.Common.Http.ServerModules
             }
         }
 
-        private Dictionary<string, string> ParseFormMultipart(HttpMessage request)
+        private Dictionary<string, string> ParseFormMultipart(HttpRequest request)
         {
             throw new NotImplementedException("Multipart form parsing not implemented yet.");
         }
         #endregion
 
         #region Interface Implementation
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
+        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
-            if(request.Method == HttpMessage.MethodEnum.Post &&
-               request.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentType))
+            if (request.Method == HttpMessage.MethodEnum.Post &&
+               request.Headers.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentType))
             {
-                if (request[HttpMessage.EntityHeadersEnum.ContentType].Contains(urlEncodedHeader))
+                if (request.Headers[HttpMessage.EntityHeadersEnum.ContentType].Contains(urlEncodedHeader))
                 {
                     Dictionary<string, string> form = ParseFormUrlEncoded(request);
                     FormReceived?.Invoke(this, form);
                     server.LogDebug("Received POST form of " + form.Keys.Count + " keys!");
                     return true;
                 }
-                else if (request[HttpMessage.EntityHeadersEnum.ContentType].Contains(multipartHeader))
+                else if (request.Headers[HttpMessage.EntityHeadersEnum.ContentType].Contains(multipartHeader))
                 {
                     Dictionary<string, string> form = ParseFormMultipart(request);
                     FormReceived?.Invoke(this, form);
@@ -113,7 +113,7 @@ namespace MTSC.Common.Http.ServerModules
 
         void IHttpModule.Tick(Server.Server server, HttpHandler handler)
         {
-            
+
         }
         #endregion
     }

@@ -19,13 +19,13 @@ namespace MTSC.Common.Http.ServerModules
         /// <param name="request"></param>
         /// <param name="response"></param>
         /// <returns>True so no other handler modifies the response, so the response contains the 404 return status code.</returns>
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpMessage request, ref HttpMessage response)
+        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if(request.Method == HttpMessage.MethodEnum.Get)
             {
                 //client.ToBeRemoved = true;
                 response.StatusCode = HttpMessage.StatusCodes.NotFound;
-                response[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
+                response.Headers[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
             }
             return true;
         }

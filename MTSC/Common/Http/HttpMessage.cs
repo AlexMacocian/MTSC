@@ -1,6 +1,7 @@
 ﻿using MTSC.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MTSC.Common.Http
@@ -121,20 +122,6 @@ namespace MTSC.Common.Http
             Expired = 8,
             LastModified = 9
         }
-        private static string[] methods = new string[] { "OPTIONS", "GET", "HEAD", "POST", "PUT", "DELETE", "TRACE", "CONNECT", "extension-method" };
-        private static string[] generalHeaders = new string[] { "Cache-Control", "Connection", "Date", "Pragma", "Trailer", "Transfer-Encoding", "Upgrade", "Via", "Warning" };
-        private static string[] requestHeaders = new string[] { "Accept", "Accept-Charset", "Accept-Encoding", "Accept-Language", "Authorization", "Expect", "From", "Host", "If-Match",
-        "If-Modified-Since", "If-None-Match", "If-Range", "If-Unmodified-Since", "Max-Forwards", "Proxy-Authorizatio", "Range", "Referer", "TE", "User-Agent"};
-        private static string[] responseHeaders = new string[] { "Accept-Ranges", "Age", "ETag", "Location", "Retry-After", "Server", "Vary", "WWW-Authenticate" };
-        private static string[] entityHeaders = new string[] { "Allow", "Content-Encoding", "Content-Language", "Content-Length", "Content-Location", "Content-MD5", "Content-Range", "Content-Type",
-        "Expires", "Last-Modified" };
-
-        private static char SP = ' ';
-        private static char HT = '\t';
-        private static string CRLF = "\r\n";
-        private static string HTTPVER = "HTTP/1.1";
-        private static string RequestCookieHeader = "Cookie";
-        private static string ResponseCookieHeader = "Set-Cookie";
 
         private Dictionary<string, string> headers = new Dictionary<string, string>();
         private List<Cookie> cookies = new List<Cookie>();
@@ -166,25 +153,25 @@ namespace MTSC.Common.Http
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[GeneralHeadersEnum headerKey] { get => headers[generalHeaders[(int)headerKey]]; set => headers[generalHeaders[(int)headerKey]] = value; }
+        public string this[GeneralHeadersEnum headerKey] { get => headers[HttpHeaders.generalHeaders[(int)headerKey]]; set => headers[HttpHeaders.generalHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// Headers dictionary.
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[ResponseHeadersEnum headerKey] { get => headers[responseHeaders[(int)headerKey]]; set => headers[responseHeaders[(int)headerKey]] = value; }
+        public string this[ResponseHeadersEnum headerKey] { get => headers[HttpHeaders.responseHeaders[(int)headerKey]]; set => headers[HttpHeaders.responseHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// Headers dictionary.
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[RequestHeadersEnum headerKey] { get => headers[requestHeaders[(int)headerKey]]; set => headers[requestHeaders[(int)headerKey]] = value; }
+        public string this[RequestHeadersEnum headerKey] { get => headers[HttpHeaders.requestHeaders[(int)headerKey]]; set => headers[HttpHeaders.requestHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// Headers dictionary.
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[EntityHeadersEnum headerKey] { get => headers[entityHeaders[(int)headerKey]]; set => headers[entityHeaders[(int)headerKey]] = value; }
+        public string this[EntityHeadersEnum headerKey] { get => headers[HttpHeaders.entityHeaders[(int)headerKey]]; set => headers[HttpHeaders.entityHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// List of cookies.
         /// </summary>
@@ -196,7 +183,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddGeneralHeader(GeneralHeadersEnum header, string value)
         {
-            headers[generalHeaders[(int)header]] = value;
+            headers[HttpHeaders.generalHeaders[(int)header]] = value;
         }
         /// <summary>
         /// Add a request header to the message.
@@ -205,7 +192,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddRequestHeader(RequestHeadersEnum requestHeader, string value)
         {
-            headers[requestHeaders[(int)requestHeader]] = value;
+            headers[HttpHeaders.requestHeaders[(int)requestHeader]] = value;
         }
         /// <summary>
         /// Add a response header to the message.
@@ -214,7 +201,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddResponseHeader(ResponseHeadersEnum responseHeader, string value)
         {
-            headers[responseHeaders[(int)responseHeader]] = value;
+            headers[HttpHeaders.responseHeaders[(int)responseHeader]] = value;
         }
         /// <summary>
         /// Add an entity header to the message.
@@ -223,7 +210,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Header value.</param>
         public void AddEntityHeaders(EntityHeadersEnum entityHeader, string value)
         {
-            headers[entityHeaders[(int)entityHeader]] = value;
+            headers[HttpHeaders.entityHeaders[(int)entityHeader]] = value;
         }
         /// <summary>
         /// Build the request bytes based on the message contents.
@@ -232,15 +219,15 @@ namespace MTSC.Common.Http
         public byte[] BuildRequest()
         {
             StringBuilder requestString = new StringBuilder();
-            requestString.Append(methods[(int)Method]).Append(SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(SP).Append(HTTPVER).Append(CRLF);
+            requestString.Append(HttpHeaders.methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
             foreach(KeyValuePair<string, string> header in headers)
             {
-                requestString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
+                requestString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
             }
-            requestString.Append(CRLF);
+            requestString.Append(HttpHeaders.CRLF);
             if(Cookies.Count > 0)
             {
-                requestString.Append(RequestCookieHeader).Append(':').Append(SP);
+                requestString.Append(HttpHeaders.RequestCookieHeader).Append(':').Append(HttpHeaders.SP);
                 for(int i = 0; i < Cookies.Count; i++)
                 {
                     Cookie cookie = Cookies[i];
@@ -310,11 +297,11 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 4)
                 {
-                    if(requestBytes[i] == CRLF[0])
+                    if(requestBytes[i] == HttpHeaders.CRLF[0])
                     {
                         continue;
                     }
-                    else if(requestBytes[i] == CRLF[1])
+                    else if(requestBytes[i] == HttpHeaders.CRLF[1])
                     {
                         bodyIndex = i;
                         break;
@@ -327,11 +314,11 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 5)
                 {
-                    if (requestBytes[i] == CRLF[0])
+                    if (requestBytes[i] == HttpHeaders.CRLF[0])
                     {
                         continue;
                     }
-                    else if (requestBytes[i] == CRLF[1])
+                    else if (requestBytes[i] == HttpHeaders.CRLF[1])
                     {
                         bodyIndex = i;
                         break;
@@ -339,7 +326,7 @@ namespace MTSC.Common.Http
                     else
                     {
                         headerValue = ParseHeaderValue(requestBytes, ref i);
-                        if (headerKey == RequestCookieHeader)
+                        if (headerKey == HttpHeaders.RequestCookieHeader)
                         {
                             Cookies.Add(new Cookie(headerValue));
                         }
@@ -380,15 +367,15 @@ namespace MTSC.Common.Http
                 this[EntityHeadersEnum.ContentLength] = Body == null ? "0" : Body.Length.ToString();
             }
             StringBuilder responseString = new StringBuilder();
-            responseString.Append(HTTPVER).Append(SP).Append((int)this.StatusCode).Append(SP).Append(this.StatusCode.ToString()).Append(CRLF);
+            responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP).Append((int)this.StatusCode).Append(HttpHeaders.SP).Append(this.StatusCode.ToString()).Append(HttpHeaders.CRLF);
             foreach (KeyValuePair<string, string> header in headers)
             {
-                responseString.Append(header.Key).Append(':').Append(SP).Append(header.Value).Append(CRLF);
+                responseString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
             }
-            responseString.Append(CRLF);
+            responseString.Append(HttpHeaders.CRLF);
             foreach(Cookie cookie in Cookies)
             {
-                responseString.Append(ResponseCookieHeader).Append(':').Append(SP).Append(cookie.BuildCookieString()).Append(CRLF);
+                responseString.Append(HttpHeaders.ResponseCookieHeader).Append(':').Append(HttpHeaders.SP).Append(cookie.BuildCookieString()).Append(HttpHeaders.CRLF);
             }
             byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
             byte[] responseBytes = ASCIIEncoding.ASCII.GetBytes(responseString.ToString());
@@ -440,11 +427,11 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 3)
                 {
-                    if (responseBytes[i] == CRLF[0])
+                    if (responseBytes[i] == HttpHeaders.CRLF[0])
                     {
                         continue;
                     }
-                    else if (responseBytes[i] == CRLF[1])
+                    else if (responseBytes[i] == HttpHeaders.CRLF[1])
                     {
                         bodyIndex = i;
                         break;
@@ -457,11 +444,11 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 4)
                 {
-                    if (responseBytes[i] == CRLF[0])
+                    if (responseBytes[i] == HttpHeaders.CRLF[0])
                     {
                         continue;
                     }
-                    else if (responseBytes[i] == CRLF[1])
+                    else if (responseBytes[i] == HttpHeaders.CRLF[1])
                     {
                         bodyIndex = i;
                         break;
@@ -469,7 +456,7 @@ namespace MTSC.Common.Http
                     else
                     {
                         headerValue = ParseHeaderValue(responseBytes, ref i);
-                        if (headerKey == ResponseCookieHeader)
+                        if (headerKey == HttpHeaders.ResponseCookieHeader)
                         {
                             Cookies.Add(new Cookie(headerValue));
                         }
@@ -499,7 +486,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(ResponseHeadersEnum header)
         {
-            return ContainsHeader(responseHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.responseHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -508,7 +495,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(RequestHeadersEnum header)
         {
-            return ContainsHeader(requestHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.requestHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -517,7 +504,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(GeneralHeadersEnum header)
         {
-            return ContainsHeader(generalHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.generalHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -526,7 +513,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(EntityHeadersEnum header)
         {
-            return ContainsHeader(entityHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.entityHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -587,7 +574,7 @@ namespace MTSC.Common.Http
         #region Private Methods
         private MethodEnum GetMethod(string methodString)
         {
-            int index = Array.IndexOf(methods, methodString.ToUpper());
+            int index = Array.IndexOf(HttpHeaders.methods, methodString.ToUpper());
             return (MethodEnum)index;
         }
 
@@ -602,7 +589,7 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == (byte)SP)
+                    if (buffer[index] == (byte)HttpHeaders.SP)
                     {
                         string methodString = parseBuffer.ToString();
                         return GetMethod(methodString);
@@ -630,7 +617,7 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == (byte)SP)
+                    if (buffer[index] == (byte)HttpHeaders.SP)
                     {
                         return parseBuffer.ToString();
                     }
@@ -661,7 +648,7 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == (byte)SP)
+                    if (buffer[index] == (byte)HttpHeaders.SP)
                     {
                         return parseBuffer.ToString();
                     }
@@ -690,16 +677,16 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == CRLF[1] || buffer[index] == SP)
+                    if (buffer[index] == HttpHeaders.CRLF[1] || buffer[index] == HttpHeaders.SP)
                     {
                         string httpVer = parseBuffer.ToString();
-                        if (httpVer != HTTPVER)
+                        if (httpVer != HttpHeaders.HTTPVER)
                         {
                             throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString());
                         }
                         return;
                     }
-                    else if(buffer[index] == CRLF[0])
+                    else if(buffer[index] == HttpHeaders.CRLF[0])
                     {
                         /*
                          * If a termination character is detected, ignore it and wait for the full terminator.
@@ -755,11 +742,11 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == CRLF[1])
+                    if (buffer[index] == HttpHeaders.CRLF[1])
                     {
                         return parseBuffer.ToString().Trim();
                     }
-                    else if (buffer[index] == CRLF[0])
+                    else if (buffer[index] == HttpHeaders.CRLF[0])
                     {
                         /*
                          * If a termination character is detected, ignore it and wait for the full terminator.
@@ -789,7 +776,7 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == SP)
+                    if (buffer[index] == HttpHeaders.SP)
                     {
                         return int.Parse(parseBuffer.ToString());
                     }
@@ -816,11 +803,11 @@ namespace MTSC.Common.Http
             {
                 try
                 {
-                    if (buffer[index] == CRLF[1])
+                    if (buffer[index] == HttpHeaders.CRLF[1])
                     {
                         return (StatusCodes)Enum.Parse(typeof(StatusCodes), parseBuffer.ToString().Trim());
                     }
-                    else if (buffer[index] == CRLF[0])
+                    else if (buffer[index] == HttpHeaders.CRLF[0])
                     {
                         /*
                          * If a termination character is detected, ignore it and wait for the full terminator.

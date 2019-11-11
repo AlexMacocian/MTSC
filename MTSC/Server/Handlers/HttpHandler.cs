@@ -14,11 +14,11 @@ namespace MTSC.Server.Handlers
     /// </summary>
     public class HttpHandler : IHandler
     {
-        private static string urlEncodedHeader = "application/x-www-form-urlencoded";
-        private static string multipartHeader = "multipart/form-data";
+        private static readonly string urlEncodedHeader = "application/x-www-form-urlencoded";
+        private static readonly string multipartHeader = "multipart/form-data";
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
-        ConcurrentQueue<Tuple<ClientData,HttpMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpMessage>>();
+        ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -41,9 +41,9 @@ namespace MTSC.Server.Handlers
         /// Send a response back to the client.
         /// </summary>
         /// <param name="response">Message containing the response.</param>
-        public void QueueResponse(ClientData client, HttpMessage response)
+        public void QueueResponse(ClientData client, HttpResponse response)
         {
-            messageQueue.Enqueue(new Tuple<ClientData, HttpMessage>(client, response));
+            messageQueue.Enqueue(new Tuple<ClientData, HttpResponse>(client, response));
         }
         #endregion
         #region Interface Implementation
@@ -72,27 +72,26 @@ namespace MTSC.Server.Handlers
         /// <returns></returns>
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            HttpMessage httpMessage = new HttpMessage();
-            HttpMessage responseMessage = new HttpMessage();
-            httpMessage.ParseRequest(message.MessageBytes);
-            if(httpMessage.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) && 
-                httpMessage[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "close")
+            HttpRequest request = HttpRequest.FromBytes(message.MessageBytes);
+            HttpResponse response = new HttpResponse();
+            if(request.Headers.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) && 
+                request.Headers[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "close")
             {
-                responseMessage[HttpMessage.GeneralHeadersEnum.Connection] = "close";
+                response.Headers[HttpMessage.GeneralHeadersEnum.Connection] = "close";
                 client.ToBeRemoved = true;
             }
             else
             {
-                responseMessage[HttpMessage.GeneralHeadersEnum.Connection] = "keep-alive";
+                response.Headers[HttpMessage.GeneralHeadersEnum.Connection] = "keep-alive";
             }
             foreach(IHttpModule module in httpModules)
             {
-                if(module.HandleRequest(server, this, client, httpMessage, ref responseMessage))
+                if(module.HandleRequest(server, this, client, request, ref response))
                 {
                     break;
                 }
             }
-            QueueResponse(client, responseMessage);
+            QueueResponse(client, response);
             return false;
         }
         /// <summary>
@@ -122,10 +121,9 @@ namespace MTSC.Server.Handlers
         {
             while (messageQueue.Count > 0)
             {
-                Tuple<ClientData, HttpMessage> tuple = null;
-                if (messageQueue.TryDequeue(out tuple))
+                if (messageQueue.TryDequeue(out Tuple<ClientData, HttpResponse> tuple))
                 {
-                    server.QueueMessage(tuple.Item1, tuple.Item2.BuildResponse(true));
+                    server.QueueMessage(tuple.Item1, tuple.Item2.GetPackedResponse(true));
                 }
             }
             foreach (IHttpModule module in httpModules)
