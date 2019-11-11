@@ -19,8 +19,8 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netcoreapp2.1|AnyCPU'">
-    <DocumentationFile>D:\Projects\MTSC\MTSC\MTSC.xml</DocumentationFile>
-    <Optimize>true</Optimize>
+    <DocumentationFile></DocumentationFile>
+    <Optimize>false</Optimize>
   </PropertyGroup>
 
 </Project>
