@@ -12,8 +12,7 @@ namespace MTSC.Common.WebSockets.ServerModules
         #region Public Methods
         public void SendMessage(WebsocketHandler handler, ClientData client, WebsocketMessage message)
         {
-            byte[] encodedMessage = message.GetMessageBytes();
-            handler.QueueMessage(client, encodedMessage);
+            handler.QueueMessage(client, message.Data, WebsocketMessage.Opcodes.Binary);
         }
         #endregion
         #region Interface Implementation
