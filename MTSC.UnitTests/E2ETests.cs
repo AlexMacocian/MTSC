@@ -12,12 +12,14 @@ using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace MTSC.UnitTests
 {
     [TestClass]
     public class E2ETests
     {
+        private static int stressIterations = 100000;
         public TestContext TestContext { get; set; }
         static Server.Server Server { get; set; }
 
@@ -57,6 +59,29 @@ namespace MTSC.UnitTests
             client.ReceiveAsync(bytes, CancellationToken.None).Wait();
             var resultString = ASCIIEncoding.ASCII.GetString(bytes, 0, 12);
             Assert.AreEqual(resultString, "Hello world!");
+        }
+
+        [TestMethod]
+        public void HTTPStressTest()
+        {
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://localhost:800");
+            for(int i = 0; i < stressIterations; i++)
+            {
+                var startTime = DateTime.Now;
+                var tasks = new Task[Environment.ProcessorCount];
+                for(int j = 0; j < Environment.ProcessorCount; j++)
+                {
+                    tasks[j] = httpClient.GetAsync("");
+                }
+                Task.WaitAll(tasks);
+                var duration = DateTime.Now - startTime;
+                foreach(Task<HttpResponseMessage> t in tasks)
+                {
+                    Assert.AreEqual(t.Result.StatusCode, System.Net.HttpStatusCode.OK);
+                }
+                TestContext.WriteLine($"{i}: Processed {tasks.Length} requests in {duration.TotalMilliseconds} ms.");
+            }           
         }
 
         [ClassCleanup]

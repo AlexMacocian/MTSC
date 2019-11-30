@@ -26,7 +26,6 @@ namespace MTSC.Server
         TcpListener listener;
         int port = 80;
         List<ClientData> toRemove = new List<ClientData>();
-        List<ClientData> clients = new List<ClientData>();
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
@@ -45,7 +44,7 @@ namespace MTSC.Server
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
-        public List<ClientData> Clients { get => clients; set => clients = value; }
+        public List<ClientData> Clients { get; set; } = new List<ClientData>();
         #endregion
         #region Constructors
         /// <summary>
@@ -177,7 +176,7 @@ namespace MTSC.Server
                  */
                 try
                 {
-                    foreach (ClientData client in clients)
+                    foreach (ClientData client in Clients)
                     {
                         if (!client.TcpClient.Connected || client.ToBeRemoved)
                         {
@@ -193,7 +192,7 @@ namespace MTSC.Server
                         LogDebug("Client removed: " + client.TcpClient.Client.RemoteEndPoint.ToString());
                         client.SslStream?.Dispose();
                         client.TcpClient?.Dispose();
-                        clients.Remove(client);
+                        Clients.Remove(client);
                     }
                     toRemove.Clear();
                 }
@@ -235,7 +234,7 @@ namespace MTSC.Server
                                 break;
                             }
                         }
-                        clients.Add(clientStruct);
+                        Clients.Add(clientStruct);
                         Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
                     }
                 }
@@ -254,7 +253,7 @@ namespace MTSC.Server
                 /*
                  * Process in parallel all clients.
                  */
-                Parallel.ForEach(clients, (client) =>
+                Parallel.ForEach(Clients, (client) =>
                 {
                     try
                     {
