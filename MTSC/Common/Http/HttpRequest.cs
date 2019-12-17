@@ -23,6 +23,7 @@ namespace MTSC.Common.Http
         public string RequestURI { get; set; }
         public string RequestQuery { get; set; }
         public byte[] Body { get; set; } = new byte[0];
+        public string BodyString { get => ASCIIEncoding.ASCII.GetString(Body); set => Body = ASCIIEncoding.ASCII.GetBytes(value); }
 
         public HttpRequest()
         {

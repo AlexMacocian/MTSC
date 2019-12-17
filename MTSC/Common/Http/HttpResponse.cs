@@ -13,6 +13,7 @@ namespace MTSC.Common.Http
         /// </summary>
         public List<Cookie> Cookies { get; } = new List<Cookie>();
         public byte[] Body { get; set; } = new byte[0];
+        public string BodyString { get => ASCIIEncoding.ASCII.GetString(Body); set => Body = ASCIIEncoding.ASCII.GetBytes(value); }
         public StatusCodes StatusCode { get; set; }
         public HttpResponseHeaderDictionary Headers { get; } = new HttpResponseHeaderDictionary();
 
