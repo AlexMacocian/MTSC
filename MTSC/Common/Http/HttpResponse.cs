@@ -46,23 +46,13 @@ namespace MTSC.Common.Http
         /// <returns>Array of bytes.</returns>
         private byte[] BuildResponse(bool includeContentLengthHeader)
         {
-            /*
-             * Since set-cookie is being put into the body, first calculate the length of set-cookie lines
-             * in order to obtain the correct contentlength header value.
-             */ 
-            var cookieString = new StringBuilder();
-            foreach (Cookie cookie in Cookies)
-            {
-                cookieString.Append(HttpHeaders.ResponseCookieHeader).Append(':').Append(HttpHeaders.SP).Append(cookie.BuildCookieString()).Append(HttpHeaders.CRLF);
-            }
-
             if (includeContentLengthHeader)
             {
                 /*
                  * If there is a body, include the size of the body. If there is no body,
                  * set the value of the content length to 0.
                  */
-                Headers[EntityHeadersEnum.ContentLength] = Body == null ? "0" : (Body.Length + cookieString.Length).ToString();
+                Headers[EntityHeadersEnum.ContentLength] = Body == null ? "0" : Body.Length.ToString();
             }
             StringBuilder responseString = new StringBuilder();
             responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP).Append((int)this.StatusCode).Append(HttpHeaders.SP).Append(this.StatusCode.ToString()).Append(HttpHeaders.CRLF);
@@ -70,7 +60,10 @@ namespace MTSC.Common.Http
             {
                 responseString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
             }
-            responseString.Append(cookieString);
+            foreach (Cookie cookie in Cookies)
+            {
+                responseString.Append(HttpHeaders.ResponseCookieHeader).Append(':').Append(HttpHeaders.SP).Append(cookie.BuildCookieString()).Append(HttpHeaders.CRLF);
+            }
             responseString.Append(HttpHeaders.CRLF);
             byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
             byte[] responseBytes = ASCIIEncoding.ASCII.GetBytes(responseString.ToString());
