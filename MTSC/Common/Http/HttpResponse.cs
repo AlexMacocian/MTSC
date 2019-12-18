@@ -70,8 +70,8 @@ namespace MTSC.Common.Http
             {
                 responseString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
             }
-            responseString.Append(HttpHeaders.CRLF);
             responseString.Append(cookieString);
+            responseString.Append(HttpHeaders.CRLF);
             byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
             byte[] responseBytes = ASCIIEncoding.ASCII.GetBytes(responseString.ToString());
             Array.Copy(responseBytes, 0, response, 0, responseBytes.Length);
