@@ -114,5 +114,15 @@ namespace MTSC
             return (length < value.Length) ? value.Substring(value.Length - length) : value;
         }
         #endregion
+
+        public static byte[] ReadRemainingBytes(this MemoryStream ms)
+        {
+            var buffer = new byte[ms.Length - ms.Position];
+            for(int i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = (byte)ms.ReadByte();
+            }
+            return buffer;
+        }
     }
 }

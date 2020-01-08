@@ -84,8 +84,7 @@ namespace MTSC.Server.Handlers
             }
             else
             {
-                request = HttpRequest.FromBytes(message.MessageBytes);
-                
+                request = HttpRequest.FromBytes(message.MessageBytes);                
             }
 
             /*

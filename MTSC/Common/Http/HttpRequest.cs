@@ -94,11 +94,11 @@ namespace MTSC.Common.Http
                 catch (Exception e)
                 {
                     throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString(),
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer()), e));
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
             throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString(),
-                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer())));
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
 
         private string ParseRequestURI(MemoryStream ms)
@@ -128,11 +128,11 @@ namespace MTSC.Common.Http
                 catch (Exception e)
                 {
                     throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString(),
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer()), e));
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
             throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString(),
-                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer())));
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
 
         private string ParseRequestQuery(MemoryStream ms)
@@ -158,11 +158,11 @@ namespace MTSC.Common.Http
                 catch (Exception e)
                 {
                     throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString(),
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer()), e));
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
             throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString(),
-                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer())));
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
 
         private void ParseHTTPVer(MemoryStream ms)
@@ -202,7 +202,7 @@ namespace MTSC.Common.Http
                 catch (Exception e)
                 {
                     throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString(),
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer()), e));
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
         }
@@ -230,11 +230,11 @@ namespace MTSC.Common.Http
                 catch (Exception e)
                 {
                     throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString(), 
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer()), e));
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
             throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString(),
-                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer())));
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
 
         private string ParseHeaderValue(MemoryStream ms)
@@ -267,11 +267,11 @@ namespace MTSC.Common.Http
                 catch (Exception e)
                 {
                     throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString(),
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer()), e));
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
             throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString(),
-                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.GetBuffer())));
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
 
         /// <summary>
@@ -341,10 +341,12 @@ namespace MTSC.Common.Http
                     if (ms.ReadByte() == '?')
                     {
                         step++;
+                        ms.Seek(-1, SeekOrigin.Current);
                     }
                     else
                     {
                         step += 2;
+                        ms.Seek(-1, SeekOrigin.Current);
                     }
                 }
                 else if (step == 2)
@@ -408,8 +410,7 @@ namespace MTSC.Common.Http
                  * If the message contains a body, copy it into a different array
                  * and save it into the HTTP message;
                  */
-                this.Body = new byte[requestBytes.Length - ms.Position];
-                Array.Copy(requestBytes, ms.Position, this.Body, 0, this.Body.Length);
+                this.Body = ms.ReadRemainingBytes();
             }
             return;
         }
