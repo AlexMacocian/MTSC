@@ -78,10 +78,12 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString(), e);
+                    throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString(),
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer), e));
                 }
             }
-            throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString());
+            throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString(),
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer)));
         }
 
         private string ParseRequestURI(byte[] buffer, ref int index)
@@ -109,10 +111,12 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString(), e);
+                    throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString(),
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer), e));
                 }
             }
-            throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString());
+            throw new InvalidRequestURIException("Invalid request URI. Buffer: " + parseBuffer.ToString(),
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer)));
         }
 
         private string ParseRequestQuery(byte[] buffer, ref int index)
@@ -136,10 +140,12 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString(), e);
+                    throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString(),
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer), e));
                 }
             }
-            throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString());
+            throw new InvalidRequestURIException("Invalid request query. Buffer: " + parseBuffer.ToString(),
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer)));
         }
 
         private void ParseHTTPVer(byte[] buffer, ref int index)
@@ -177,7 +183,8 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString(), e);
+                    throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString(),
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer), e));
                 }
             }
         }
@@ -203,10 +210,12 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString(), e);
+                    throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString(), 
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer), e));
                 }
             }
-            throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString());
+            throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString(),
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer)));
         }
 
         private string ParseHeaderValue(byte[] buffer, ref int index)
@@ -237,10 +246,12 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString(), e);
+                    throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString(),
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer), e));
                 }
             }
-            throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString());
+            throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString(),
+                new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(buffer)));
         }
 
         /// <summary>
