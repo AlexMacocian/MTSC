@@ -19,6 +19,7 @@ namespace MTSC.Server.Handlers
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
         ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
+        ConcurrentDictionary<ClientData, HttpRequest> fragmentedMessages = new ConcurrentDictionary<ClientData, HttpRequest>();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -72,7 +73,40 @@ namespace MTSC.Server.Handlers
         /// <returns></returns>
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            HttpRequest request = HttpRequest.FromBytes(message.MessageBytes);
+            HttpRequest request;
+            /*
+             * If there's an existing fragmented request, get it from the storage.
+             */
+            if (fragmentedMessages.ContainsKey(client))
+            {
+                request = fragmentedMessages[client];
+                request.AddToBody(message.MessageBytes);
+            }
+            else
+            {
+                request = HttpRequest.FromBytes(message.MessageBytes);
+                
+            }
+
+            /*
+             * If the server hasn't received all the bytes specified by the request, 
+             * add the request to storage and wait for the rest of bytes to be received.
+             */
+
+            if (request.Headers.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentLength) &&
+                    request.Body.Length < int.Parse(request.Headers[HttpMessage.EntityHeadersEnum.ContentLength]))
+            {
+                fragmentedMessages[client] = request;
+                var continueResponse = new HttpResponse();
+                continueResponse.StatusCode = HttpMessage.StatusCodes.Continue;
+                QueueResponse(client, continueResponse);
+                return true;
+            }
+            else
+            {
+                fragmentedMessages.TryRemove(client, out _);
+            }
+
             HttpResponse response = new HttpResponse();
             if(request.Headers.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) && 
                 request.Headers[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "close")
@@ -92,7 +126,7 @@ namespace MTSC.Server.Handlers
                 }
             }
             QueueResponse(client, response);
-            return false;
+            return true;
         }
         /// <summary>
         /// Handler interface implementation.
