@@ -319,7 +319,6 @@ namespace MTSC.Common.Http
             /*
              * Parse the bytes one by one, respecting the reference manual.
              */
-            StringBuilder parseBuffer = new StringBuilder();
             MemoryStream ms = new MemoryStream(requestBytes);
             /*
              * Keep the index of the byte array, to identify the message body.
