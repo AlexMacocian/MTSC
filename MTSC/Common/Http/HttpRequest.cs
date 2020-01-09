@@ -61,6 +61,7 @@ namespace MTSC.Common.Http
             {
                 Array.Copy(bytesToBeAdded, 0, newBody, Body.Length, bytesToBeAdded.Length);
             }
+            Body = newBody;
         }
 
         private MethodEnum GetMethod(string methodString)
@@ -348,6 +349,7 @@ namespace MTSC.Common.Http
                         step += 2;
                         ms.Seek(-1, SeekOrigin.Current);
                     }
+                    ms.Seek(-1, SeekOrigin.Current);
                 }
                 else if (step == 2)
                 {
