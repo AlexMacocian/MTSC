@@ -341,12 +341,10 @@ namespace MTSC.Common.Http
                     if (ms.ReadByte() == '?')
                     {
                         step++;
-                        ms.Seek(-1, SeekOrigin.Current);
                     }
                     else
                     {
                         step += 2;
-                        ms.Seek(-1, SeekOrigin.Current);
                     }
                     ms.Seek(-1, SeekOrigin.Current);
                 }
