@@ -97,16 +97,15 @@ namespace MTSC.Server.Handlers
         {
             if (webSockets[client] == SocketState.Initial)
             {
-                HttpMessage request = new HttpMessage();
-                request.ParseRequest(message.MessageBytes);
-                if(request.Method == HttpMessage.MethodEnum.Get && request.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) &&
-                    request[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "upgrade" && request.ContainsHeader(WebsocketProtocolVersionKey) &&
-                    request[WebsocketProtocolVersionKey] == "13")
+                HttpRequest request = new HttpRequest(message.MessageBytes);
+                if(request.Method == HttpMessage.MethodEnum.Get && request.Headers.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) &&
+                    request.Headers[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "upgrade" && request.Headers.ContainsHeader(WebsocketProtocolVersionKey) &&
+                    request.Headers[WebsocketProtocolVersionKey] == "13")
                 {
                     /*
                      * Prepare the handshake string.
                      */
-                    string base64Key = request[WebsocketHeaderKey];
+                    string base64Key = request.Headers[WebsocketHeaderKey];
                     base64Key = base64Key.Trim();
                     string handshakeKey = base64Key + GlobalUniqueIdentifier;
                     string returnBase64Key = Convert.ToBase64String(sha1Provider.ComputeHash(Encoding.UTF8.GetBytes(handshakeKey)));
@@ -114,12 +113,12 @@ namespace MTSC.Server.Handlers
                     /*
                      * Prepare the response.
                      */
-                    HttpMessage response = new HttpMessage();
+                    HttpResponse response = new HttpResponse();
                     response.StatusCode = HttpMessage.StatusCodes.SwitchingProtocols;
-                    response[HttpMessage.GeneralHeadersEnum.Upgrade] = "websocket";
-                    response[HttpMessage.GeneralHeadersEnum.Connection] = "Upgrade";
-                    response[WebsocketHeaderAcceptKey] = returnBase64Key;
-                    server.QueueMessage(client, response.BuildResponse(true));
+                    response.Headers[HttpMessage.GeneralHeadersEnum.Upgrade] = "websocket";
+                    response.Headers[HttpMessage.GeneralHeadersEnum.Connection] = "Upgrade";
+                    response.Headers[WebsocketHeaderAcceptKey] = returnBase64Key;
+                    server.QueueMessage(client, response.GetPackedResponse(true));
                     webSockets[client] = SocketState.Established;
                     server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
                     foreach (IWebsocketModule websocketModule in websocketModules)
@@ -139,10 +138,9 @@ namespace MTSC.Server.Handlers
                         websocketModule.ConnectionClosed(server, this, client);
                     }
                     client.ToBeRemoved = true;
-                    SocketState outSocketState = SocketState.Closed;
                     while (webSockets.ContainsKey(client))
                     {
-                        webSockets.TryRemove(client, out outSocketState);
+                        webSockets.TryRemove(client, out SocketState _);
                     }
                 }
                 else
