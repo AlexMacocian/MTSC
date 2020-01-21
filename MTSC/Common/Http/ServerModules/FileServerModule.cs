@@ -20,11 +20,11 @@ namespace MTSC.Common.Http.ServerModules
         #region Interface Implementation
         bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
-            if(request.Method == HttpMessage.MethodEnum.Get)
+            if(request.Method == HttpMessage.HttpMethods.Get)
             {
-                if(request.RequestURI == @"/")
+                if(request.RequestURI == "/")
                 {
-                    request.RequestURI = @"/index.html";
+                    request.RequestURI = "/index.html";
                 }
                 string requestFile = this.rootFolder + request.RequestURI;
                 if(requestFile.IsSubPathOf(this.rootFolder) && File.Exists(requestFile))
@@ -51,7 +51,7 @@ namespace MTSC.Common.Http.ServerModules
                      */
                     response.Body = bodyData;
                     response.StatusCode = HttpMessage.StatusCodes.OK;
-                    response.Headers[HttpMessage.EntityHeadersEnum.ContentType] = "text/html";
+                    response.Headers[HttpMessage.EntityHeaders.ContentType] = "text/html";
                     if (!fileCache.ContainsKey(requestFile))
                     {
                         server.LogDebug("Adding " + requestFile + " to server cache.");

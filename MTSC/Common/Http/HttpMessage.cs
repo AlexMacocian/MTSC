@@ -51,7 +51,7 @@ namespace MTSC.Common.Http
             GatewayTimeout = 504,
             HTTPVersionNotSupported = 505
         }
-        public enum MethodEnum
+        public enum HttpMethods
         {
             Options = 0,
             Get = 1,
@@ -63,7 +63,7 @@ namespace MTSC.Common.Http
             Connect = 7,
             ExtensionMethod = 8
         }
-        public enum GeneralHeadersEnum
+        public enum GeneralHeaders
         {
             CacheControl = 0,
             Connection = 1,
@@ -75,7 +75,7 @@ namespace MTSC.Common.Http
             Via = 7,
             Warning = 8
         }
-        public enum RequestHeadersEnum
+        public enum RequestHeaders
         {
             Accept = 0,
             AcceptCharset = 1,
@@ -97,7 +97,7 @@ namespace MTSC.Common.Http
             TE = 17,
             UserAgent = 18
         }
-        public enum ResponseHeadersEnum
+        public enum ResponseHeaders
         {
             AcceptRanges = 0,
             Age = 1,
@@ -109,7 +109,7 @@ namespace MTSC.Common.Http
             Vary = 7,
             WWWAuthenticate = 8
         }
-        public enum EntityHeadersEnum
+        public enum EntityHeaders
         {
             Allow = 0,
             ContentEncoding = 1,
@@ -127,7 +127,7 @@ namespace MTSC.Common.Http
         private List<Cookie> cookies = new List<Cookie>();
 
         #region Properties
-        public MethodEnum Method { get; set; }
+        public HttpMethods Method { get; set; }
         public string RequestURI { get; set; }
         public string RequestQuery { get; set; }
         public byte[] Body { get; set; }
@@ -138,7 +138,7 @@ namespace MTSC.Common.Http
         {
             RequestQuery = string.Empty;
             RequestURI = "/";
-            Method = MethodEnum.Get;
+            Method = HttpMethods.Get;
         }
         #endregion
         #region Public Methods
@@ -153,25 +153,25 @@ namespace MTSC.Common.Http
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[GeneralHeadersEnum headerKey] { get => headers[HttpHeaders.generalHeaders[(int)headerKey]]; set => headers[HttpHeaders.generalHeaders[(int)headerKey]] = value; }
+        public string this[GeneralHeaders headerKey] { get => headers[HttpHeaders.GeneralHeaders[(int)headerKey]]; set => headers[HttpHeaders.GeneralHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// Headers dictionary.
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[ResponseHeadersEnum headerKey] { get => headers[HttpHeaders.responseHeaders[(int)headerKey]]; set => headers[HttpHeaders.responseHeaders[(int)headerKey]] = value; }
+        public string this[ResponseHeaders headerKey] { get => headers[HttpHeaders.ResponseHeaders[(int)headerKey]]; set => headers[HttpHeaders.ResponseHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// Headers dictionary.
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[RequestHeadersEnum headerKey] { get => headers[HttpHeaders.requestHeaders[(int)headerKey]]; set => headers[HttpHeaders.requestHeaders[(int)headerKey]] = value; }
+        public string this[RequestHeaders headerKey] { get => headers[HttpHeaders.RequestHeaders[(int)headerKey]]; set => headers[HttpHeaders.RequestHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// Headers dictionary.
         /// </summary>
         /// <param name="headerKey">Key of the header.</param>
         /// <returns>Value of the header.</returns>
-        public string this[EntityHeadersEnum headerKey] { get => headers[HttpHeaders.entityHeaders[(int)headerKey]]; set => headers[HttpHeaders.entityHeaders[(int)headerKey]] = value; }
+        public string this[EntityHeaders headerKey] { get => headers[HttpHeaders.EntityHeaders[(int)headerKey]]; set => headers[HttpHeaders.EntityHeaders[(int)headerKey]] = value; }
         /// <summary>
         /// List of cookies.
         /// </summary>
@@ -181,36 +181,36 @@ namespace MTSC.Common.Http
         /// </summary>
         /// <param name="header">Header key.</param>
         /// <param name="value">Header value.</param>
-        public void AddGeneralHeader(GeneralHeadersEnum header, string value)
+        public void AddGeneralHeader(GeneralHeaders header, string value)
         {
-            headers[HttpHeaders.generalHeaders[(int)header]] = value;
+            headers[HttpHeaders.GeneralHeaders[(int)header]] = value;
         }
         /// <summary>
         /// Add a request header to the message.
         /// </summary>
         /// <param name="requestHeader">Header key.</param>
         /// <param name="value">Header value.</param>
-        public void AddRequestHeader(RequestHeadersEnum requestHeader, string value)
+        public void AddRequestHeader(RequestHeaders requestHeader, string value)
         {
-            headers[HttpHeaders.requestHeaders[(int)requestHeader]] = value;
+            headers[HttpHeaders.RequestHeaders[(int)requestHeader]] = value;
         }
         /// <summary>
         /// Add a response header to the message.
         /// </summary>
         /// <param name="responseHeader">Header key.</param>
         /// <param name="value">Header value.</param>
-        public void AddResponseHeader(ResponseHeadersEnum responseHeader, string value)
+        public void AddResponseHeader(ResponseHeaders responseHeader, string value)
         {
-            headers[HttpHeaders.responseHeaders[(int)responseHeader]] = value;
+            headers[HttpHeaders.ResponseHeaders[(int)responseHeader]] = value;
         }
         /// <summary>
         /// Add an entity header to the message.
         /// </summary>
         /// <param name="entityHeader">Header key.</param>
         /// <param name="value">Header value.</param>
-        public void AddEntityHeaders(EntityHeadersEnum entityHeader, string value)
+        public void AddEntityHeaders(EntityHeaders entityHeader, string value)
         {
-            headers[HttpHeaders.entityHeaders[(int)entityHeader]] = value;
+            headers[HttpHeaders.EntityHeaders[(int)entityHeader]] = value;
         }
         /// <summary>
         /// Build the request bytes based on the message contents.
@@ -219,7 +219,7 @@ namespace MTSC.Common.Http
         public byte[] BuildRequest()
         {
             StringBuilder requestString = new StringBuilder();
-            requestString.Append(HttpHeaders.methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
+            requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
             foreach(KeyValuePair<string, string> header in headers)
             {
                 requestString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
@@ -364,7 +364,7 @@ namespace MTSC.Common.Http
                  * If there is a body, include the size of the body. If there is no body,
                  * set the value of the content length to 0.
                  */
-                this[EntityHeadersEnum.ContentLength] = Body == null ? "0" : Body.Length.ToString();
+                this[EntityHeaders.ContentLength] = Body == null ? "0" : Body.Length.ToString();
             }
             StringBuilder responseString = new StringBuilder();
             responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP).Append((int)this.StatusCode).Append(HttpHeaders.SP).Append(this.StatusCode.ToString()).Append(HttpHeaders.CRLF);
@@ -484,36 +484,36 @@ namespace MTSC.Common.Http
         /// </summary>
         /// <param name="header">Key of the header.</param>
         /// <returns>True if the message contains a header with the provided key.</returns>
-        public bool ContainsHeader(ResponseHeadersEnum header)
+        public bool ContainsHeader(ResponseHeaders header)
         {
-            return ContainsHeader(HttpHeaders.responseHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.ResponseHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
         /// </summary>
         /// <param name="header">Key of the header.</param>
         /// <returns>True if the message contains a header with the provided key.</returns>
-        public bool ContainsHeader(RequestHeadersEnum header)
+        public bool ContainsHeader(RequestHeaders header)
         {
-            return ContainsHeader(HttpHeaders.requestHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.RequestHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
         /// </summary>
         /// <param name="header">Key of the header.</param>
         /// <returns>True if the message contains a header with the provided key.</returns>
-        public bool ContainsHeader(GeneralHeadersEnum header)
+        public bool ContainsHeader(GeneralHeaders header)
         {
-            return ContainsHeader(HttpHeaders.generalHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.GeneralHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
         /// </summary>
         /// <param name="header">Key of the header.</param>
         /// <returns>True if the message contains a header with the provided key.</returns>
-        public bool ContainsHeader(EntityHeadersEnum header)
+        public bool ContainsHeader(EntityHeaders header)
         {
-            return ContainsHeader(HttpHeaders.entityHeaders[(int)header]);
+            return ContainsHeader(HttpHeaders.EntityHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -572,13 +572,13 @@ namespace MTSC.Common.Http
         }
         #endregion
         #region Private Methods
-        private MethodEnum GetMethod(string methodString)
+        private HttpMethods GetMethod(string methodString)
         {
-            int index = Array.IndexOf(HttpHeaders.methods, methodString.ToUpper());
-            return (MethodEnum)index;
+            int index = Array.IndexOf(HttpHeaders.Methods, methodString.ToUpper());
+            return (HttpMethods)index;
         }
 
-        private MethodEnum ParseMethod(byte[] buffer, ref int index)
+        private HttpMethods ParseMethod(byte[] buffer, ref int index)
         {
             /*
              * Get each character one by one. When meeting a SP character, parse the method, clear the buffer

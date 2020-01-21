@@ -98,8 +98,8 @@ namespace MTSC.Server.Handlers
             if (webSockets[client] == SocketState.Initial)
             {
                 HttpRequest request = new HttpRequest(message.MessageBytes);
-                if(request.Method == HttpMessage.MethodEnum.Get && request.Headers.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) &&
-                    request.Headers[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "upgrade" && request.Headers.ContainsHeader(WebsocketProtocolVersionKey) &&
+                if(request.Method == HttpMessage.HttpMethods.Get && request.Headers.ContainsHeader(HttpMessage.GeneralHeaders.Connection) &&
+                    request.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" && request.Headers.ContainsHeader(WebsocketProtocolVersionKey) &&
                     request.Headers[WebsocketProtocolVersionKey] == "13")
                 {
                     /*
@@ -115,8 +115,8 @@ namespace MTSC.Server.Handlers
                      */
                     HttpResponse response = new HttpResponse();
                     response.StatusCode = HttpMessage.StatusCodes.SwitchingProtocols;
-                    response.Headers[HttpMessage.GeneralHeadersEnum.Upgrade] = "websocket";
-                    response.Headers[HttpMessage.GeneralHeadersEnum.Connection] = "Upgrade";
+                    response.Headers[HttpMessage.GeneralHeaders.Upgrade] = "websocket";
+                    response.Headers[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
                     response.Headers[WebsocketHeaderAcceptKey] = returnBase64Key;
                     server.QueueMessage(client, response.GetPackedResponse(true));
                     webSockets[client] = SocketState.Established;

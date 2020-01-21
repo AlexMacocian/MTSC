@@ -21,11 +21,11 @@ namespace MTSC.Common.Http.ServerModules
         /// <returns>True so no other handler modifies the response, so the response contains the 404 return status code.</returns>
         bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
-            if(request.Method == HttpMessage.MethodEnum.Get)
+            if(request.Method == HttpMessage.HttpMethods.Get)
             {
                 //client.ToBeRemoved = true;
                 response.StatusCode = HttpMessage.StatusCodes.NotFound;
-                response.Headers[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
+                response.Headers[HttpMessage.GeneralHeaders.Date] = DateTime.Now.ToString();
             }
             return true;
         }

@@ -1,15 +1,12 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using MTSC.Common.Http.ServerModules;
+using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.WebSockets.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
-using MTSC.Server;
 using MTSC.Server.Handlers;
-using MTSC.Server.UsageMonitors;
 using System;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,11 +25,11 @@ namespace MTSC.UnitTests
         {
             Server = new Server.Server(800)
                 .AddHandler(new WebsocketHandler()
-                    .AddWebsocketHandler(new EchoModule())
-                    )
-                .AddHandler(new HttpHandler()
-                    .AddHttpModule(new HelloWorldModule())
-                    )
+                    .AddWebsocketHandler(new EchoModule()))
+                //.AddHandler(new HttpHandler()
+                //    .AddHttpModule(new HelloWorldModule()))
+                .AddHandler(new HttpRoutingHandler()
+                    .AddModule(Common.Http.HttpMessage.HttpMethods.Get, "/", new Http200Module()))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());

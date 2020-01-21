@@ -76,7 +76,7 @@ namespace MTSC.Client.Handlers
                 response.ParseResponse(message.MessageBytes);
                 if(response.StatusCode == HttpMessage.StatusCodes.SwitchingProtocols &&
                     response["Upgrade"] == "websocket" &&
-                    response[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "upgrade" &&
+                    response[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" &&
                     response[WebsocketHeaderAcceptKey].Trim() == expectedguid)
                 {
                     state = SocketState.Established;
@@ -124,10 +124,10 @@ namespace MTSC.Client.Handlers
             string handshakeKey = handshakeGuid+ GlobalUniqueIdentifier;
             expectedguid = Convert.ToBase64String(sha1Provider.ComputeHash(Encoding.UTF8.GetBytes(handshakeKey)));
             HttpMessage beginRequest = new HttpMessage();
-            beginRequest.Method = HttpMessage.MethodEnum.Get;
+            beginRequest.Method = HttpMessage.HttpMethods.Get;
             beginRequest.RequestURI = WebsocketURI;
-            beginRequest[HttpMessage.RequestHeadersEnum.Host] = client.Address;
-            beginRequest[HttpMessage.GeneralHeadersEnum.Connection] = "Upgrade";
+            beginRequest[HttpMessage.RequestHeaders.Host] = client.Address;
+            beginRequest[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
             beginRequest[WebsocketHeaderKey] = handshakeGuid;
             beginRequest["Origin"] = client.Address;
             beginRequest[WebsocketProtocolKey] = "chat";

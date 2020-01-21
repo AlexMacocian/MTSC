@@ -20,7 +20,7 @@ namespace MTSC.Common.Http
         public List<Cookie> Cookies { get; } = new List<Cookie>();
 
         public Dictionary<string, string> Form { get; } = new Dictionary<string, string>();
-        public MethodEnum Method { get; set; }
+        public HttpMethods Method { get; set; }
         public string RequestURI { get; set; }
         public string RequestQuery { get; set; }
         public byte[] Body { get; set; } = new byte[0];
@@ -34,7 +34,7 @@ namespace MTSC.Common.Http
         public HttpRequest(byte[] requestBytes)
         {
             ParseRequest(requestBytes);
-            if(this.Method == MethodEnum.Post)
+            if(this.Method == HttpMethods.Post)
             {
                 Form = GetPostForm();
             }
@@ -64,13 +64,13 @@ namespace MTSC.Common.Http
             Body = newBody;
         }
 
-        private MethodEnum GetMethod(string methodString)
+        private HttpMethods GetMethod(string methodString)
         {
-            int index = Array.IndexOf(HttpHeaders.methods, methodString.ToUpper());
-            return (MethodEnum)index;
+            int index = Array.IndexOf(HttpHeaders.Methods, methodString.ToUpper());
+            return (HttpMethods)index;
         }
 
-        private MethodEnum ParseMethod(MemoryStream ms)
+        private HttpMethods ParseMethod(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a SP character, parse the method, clear the buffer
@@ -282,7 +282,7 @@ namespace MTSC.Common.Http
         private byte[] BuildRequest()
         {
             StringBuilder requestString = new StringBuilder();
-            requestString.Append(HttpHeaders.methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
+            requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
             foreach (KeyValuePair<string, string> header in Headers)
             {
                 requestString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);

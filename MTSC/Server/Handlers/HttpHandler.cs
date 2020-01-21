@@ -92,8 +92,8 @@ namespace MTSC.Server.Handlers
              * add the request to storage and wait for the rest of bytes to be received.
              */
 
-            if (request.Headers.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentLength) &&
-                    request.Body.Length < int.Parse(request.Headers[HttpMessage.EntityHeadersEnum.ContentLength]))
+            if (request.Headers.ContainsHeader(HttpMessage.EntityHeaders.ContentLength) &&
+                    request.Body.Length < int.Parse(request.Headers[HttpMessage.EntityHeaders.ContentLength]))
             {
                 fragmentedMessages[client] = request;
                 var continueResponse = new HttpResponse();
@@ -107,15 +107,15 @@ namespace MTSC.Server.Handlers
             }
 
             HttpResponse response = new HttpResponse();
-            if(request.Headers.ContainsHeader(HttpMessage.GeneralHeadersEnum.Connection) && 
-                request.Headers[HttpMessage.GeneralHeadersEnum.Connection].ToLower() == "close")
+            if(request.Headers.ContainsHeader(HttpMessage.GeneralHeaders.Connection) && 
+                request.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "close")
             {
-                response.Headers[HttpMessage.GeneralHeadersEnum.Connection] = "close";
+                response.Headers[HttpMessage.GeneralHeaders.Connection] = "close";
                 client.ToBeRemoved = true;
             }
             else
             {
-                response.Headers[HttpMessage.GeneralHeadersEnum.Connection] = "keep-alive";
+                response.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
             }
             foreach(IHttpModule module in httpModules)
             {

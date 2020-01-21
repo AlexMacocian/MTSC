@@ -17,14 +17,14 @@ namespace MTSC.Common.Http.ServerModules
         #region Private Methods
         private Dictionary<string, string> ParseFormUrlEncoded(HttpRequest request)
         {
-            if (!request.Headers.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentLength))
+            if (!request.Headers.ContainsHeader(HttpMessage.EntityHeaders.ContentLength))
             {
                 throw new InvalidPostFormException("Form is missing content-length header!");
             }
             else
             {
                 Dictionary<string, string> formData = new Dictionary<string, string>();
-                int length = int.Parse(request.Headers[HttpMessage.EntityHeadersEnum.ContentLength]);
+                int length = int.Parse(request.Headers[HttpMessage.EntityHeaders.ContentLength]);
                 int step = 0, parsedLength = 0;
                 StringBuilder fieldBuilder = new StringBuilder();
                 StringBuilder valueBuilder = new StringBuilder();
@@ -83,17 +83,17 @@ namespace MTSC.Common.Http.ServerModules
         #region Interface Implementation
         bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
-            if (request.Method == HttpMessage.MethodEnum.Post &&
-               request.Headers.ContainsHeader(HttpMessage.EntityHeadersEnum.ContentType))
+            if (request.Method == HttpMessage.HttpMethods.Post &&
+               request.Headers.ContainsHeader(HttpMessage.EntityHeaders.ContentType))
             {
-                if (request.Headers[HttpMessage.EntityHeadersEnum.ContentType].Contains(urlEncodedHeader))
+                if (request.Headers[HttpMessage.EntityHeaders.ContentType].Contains(urlEncodedHeader))
                 {
                     Dictionary<string, string> form = ParseFormUrlEncoded(request);
                     FormReceived?.Invoke(this, form);
                     server.LogDebug("Received POST form of " + form.Keys.Count + " keys!");
                     return true;
                 }
-                else if (request.Headers[HttpMessage.EntityHeadersEnum.ContentType].Contains(multipartHeader))
+                else if (request.Headers[HttpMessage.EntityHeaders.ContentType].Contains(multipartHeader))
                 {
                     Dictionary<string, string> form = ParseFormMultipart(request);
                     FormReceived?.Invoke(this, form);

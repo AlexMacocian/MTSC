@@ -52,7 +52,7 @@ namespace MTSC.Common.Http
                  * If there is a body, include the size of the body. If there is no body,
                  * set the value of the content length to 0.
                  */
-                Headers[EntityHeadersEnum.ContentLength] = Body == null ? "0" : Body.Length.ToString();
+                Headers[EntityHeaders.ContentLength] = Body == null ? "0" : Body.Length.ToString();
             }
             StringBuilder responseString = new StringBuilder();
             responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP).Append((int)this.StatusCode).Append(HttpHeaders.SP).Append(this.StatusCode.ToString()).Append(HttpHeaders.CRLF);

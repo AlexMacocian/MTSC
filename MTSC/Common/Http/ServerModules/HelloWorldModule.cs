@@ -11,12 +11,12 @@ namespace MTSC.Common.Http.ServerModules
         byte[] response = ASCIIEncoding.ASCII.GetBytes("Hello, World!");
         bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
-            if (request.Method == HttpMessage.MethodEnum.Get)
+            if (request.Method == HttpMessage.HttpMethods.Get)
             {
                 //client.ToBeRemoved = true;
                 response.StatusCode = HttpMessage.StatusCodes.OK;
-                response.Headers[HttpMessage.GeneralHeadersEnum.Date] = DateTime.Now.ToString();
-                response.Headers[HttpMessage.EntityHeadersEnum.ContentType] = "text/plain; charset=UTF-8";
+                response.Headers[HttpMessage.GeneralHeaders.Date] = DateTime.Now.ToString();
+                response.Headers[HttpMessage.EntityHeaders.ContentType] = "text/plain; charset=UTF-8";
                 response.Headers["Server"] = "MTSC";
                 response.Body = this.response;
             }
