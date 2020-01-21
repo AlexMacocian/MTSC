@@ -10,20 +10,24 @@ namespace MTSC.Server.Handlers
     public class HttpRoutingHandler : IHandler
     {
         ConcurrentDictionary<ClientData, HttpRequest> fragmentedMessages = new ConcurrentDictionary<ClientData, HttpRequest>();
-        private Dictionary<HttpMethods, Dictionary<string, IHttpRoutingModule>> moduleDictionary = 
-            new Dictionary<HttpMethods, Dictionary<string, IHttpRoutingModule>>();
+        private Dictionary<HttpMethods, Dictionary<string, (IHttpRoutingModule, IRoutingEnabler)>> moduleDictionary = 
+            new Dictionary<HttpMethods, Dictionary<string, (IHttpRoutingModule, IRoutingEnabler)>>();
 
         public HttpRoutingHandler()
         {
             foreach (HttpMethods method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
-                moduleDictionary[method] = new Dictionary<string, IHttpRoutingModule>();
+                moduleDictionary[method] = new Dictionary<string, (IHttpRoutingModule, IRoutingEnabler)>();
             }
         }
 
-        public HttpRoutingHandler AddModule(HttpMethods method, string route, IHttpRoutingModule module)
+        public HttpRoutingHandler AddModule(HttpMethods method, string route, IHttpRoutingModule module, IRoutingEnabler routingEnabler = null)
         {
-            moduleDictionary[method][route] = module;
+            if(routingEnabler == null)
+            {
+                routingEnabler = new AlwaysEnabledRoutingEnabler();
+            }
+            moduleDictionary[method][route] = (module, routingEnabler);
             return this;
         }
 
@@ -83,8 +87,15 @@ namespace MTSC.Server.Handlers
              */
             if (moduleDictionary[request.Method].ContainsKey(request.RequestURI))
             {
-                server.QueueMessage(client, moduleDictionary[request.Method][request.RequestURI].HandleRequest(request, client).GetPackedResponse(true));
-                return true;
+                (var module, var routingEnabler) = moduleDictionary[request.Method][request.RequestURI];
+                if(routingEnabler.RouteEnabled(request, client))
+                {
+                    server.QueueMessage(client, module.HandleRequest(request, client).GetPackedResponse(true));
+                }
+                else
+                {
+                    return false;
+                }
             }
             return false;
         }
