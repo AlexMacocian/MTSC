@@ -91,6 +91,7 @@ namespace MTSC.Server.Handlers
                 if(routingEnabler.RouteEnabled(request, client))
                 {
                     server.QueueMessage(client, module.HandleRequest(request, client).GetPackedResponse(true));
+                    return true;
                 }
                 else
                 {
