@@ -10,24 +10,24 @@ namespace MTSC.Server.Handlers
     public class HttpRoutingHandler : IHandler
     {
         ConcurrentDictionary<ClientData, HttpRequest> fragmentedMessages = new ConcurrentDictionary<ClientData, HttpRequest>();
-        private Dictionary<HttpMethods, Dictionary<string, (IHttpRoutingModule, IRoutingEnabler)>> moduleDictionary = 
-            new Dictionary<HttpMethods, Dictionary<string, (IHttpRoutingModule, IRoutingEnabler)>>();
+        private Dictionary<HttpMethods, Dictionary<string, (IHttpRoute, Func<HttpRequest, ClientData, bool>)>> moduleDictionary = 
+            new Dictionary<HttpMethods, Dictionary<string, (IHttpRoute, Func<HttpRequest, ClientData, bool>)>>();
 
         public HttpRoutingHandler()
         {
             foreach (HttpMethods method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
-                moduleDictionary[method] = new Dictionary<string, (IHttpRoutingModule, IRoutingEnabler)>();
+                moduleDictionary[method] = new Dictionary<string, (IHttpRoute, Func<HttpRequest, ClientData, bool>)>();
             }
         }
 
-        public HttpRoutingHandler AddModule(HttpMethods method, string route, IHttpRoutingModule module, IRoutingEnabler routingEnabler = null)
+        public HttpRoutingHandler AddRoute(HttpMethods method, string uri, IHttpRoute routeModule, Func<HttpRequest, ClientData, bool> routeEnabler = null)
         {
-            if(routingEnabler == null)
+            if(routeEnabler == null)
             {
-                routingEnabler = new AlwaysEnabledRoutingEnabler();
+                routeEnabler = (request, client) => { return true; };
             }
-            moduleDictionary[method][route] = (module, routingEnabler);
+            moduleDictionary[method][uri] = (routeModule, routeEnabler);
             return this;
         }
 
@@ -87,8 +87,8 @@ namespace MTSC.Server.Handlers
              */
             if (moduleDictionary[request.Method].ContainsKey(request.RequestURI))
             {
-                (var module, var routingEnabler) = moduleDictionary[request.Method][request.RequestURI];
-                if(routingEnabler.RouteEnabled(request, client))
+                (var module, var routeEnabler) = moduleDictionary[request.Method][request.RequestURI];
+                if(routeEnabler.Invoke(request, client))
                 {
                     server.QueueMessage(client, module.HandleRequest(request, client).GetPackedResponse(true));
                     return true;

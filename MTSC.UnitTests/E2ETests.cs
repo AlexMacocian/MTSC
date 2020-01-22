@@ -29,7 +29,7 @@ namespace MTSC.UnitTests
                 //.AddHandler(new HttpHandler()
                 //    .AddHttpModule(new HelloWorldModule()))
                 .AddHandler(new HttpRoutingHandler()
-                    .AddModule(Common.Http.HttpMessage.HttpMethods.Get, "/", new Http200Module()))
+                    .AddRoute(Common.Http.HttpMessage.HttpMethods.Get, "/", new Http200Module()))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());

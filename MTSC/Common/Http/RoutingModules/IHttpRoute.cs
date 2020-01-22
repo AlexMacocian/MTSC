@@ -2,7 +2,7 @@
 
 namespace MTSC.Common.Http.RoutingModules
 {
-    public interface IHttpRoutingModule
+    public interface IHttpRoute
     {
         HttpResponse HandleRequest(HttpRequest request, ClientData client);
     }
