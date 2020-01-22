@@ -4,6 +4,6 @@ namespace MTSC.Common.Http.RoutingModules
 {
     public interface IHttpRoute
     {
-        HttpResponse HandleRequest(HttpRequest request, ClientData client);
+        HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server);
     }
 }

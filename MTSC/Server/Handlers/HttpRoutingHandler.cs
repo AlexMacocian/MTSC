@@ -90,7 +90,7 @@ namespace MTSC.Server.Handlers
                 (var module, var routeEnabler) = moduleDictionary[request.Method][request.RequestURI];
                 if(routeEnabler.Invoke(request, client))
                 {
-                    server.QueueMessage(client, module.HandleRequest(request, client).GetPackedResponse(true));
+                    server.QueueMessage(client, module.HandleRequest(request, client, server).GetPackedResponse(true));
                     return true;
                 }
                 else
