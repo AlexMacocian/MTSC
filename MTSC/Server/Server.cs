@@ -139,7 +139,10 @@ namespace MTSC.Server
         {
             foreach (ILogger logger in loggers)
             {
-                logger.Log(log);
+                if (logger.Log(log))
+                {
+                    break;
+                }
             }
         }
         /// <summary>
@@ -150,7 +153,10 @@ namespace MTSC.Server
         {
             foreach (ILogger logger in loggers)
             {
-                logger.LogDebug(debugMessage);
+                if (logger.LogDebug(debugMessage))
+                {
+                    break;
+                }
             }
         }
         /// <summary>
