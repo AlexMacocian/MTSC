@@ -32,6 +32,18 @@ namespace MTSC.Server
         #endregion
         #region Properties
         /// <summary>
+        /// Remote certificate validation callback.
+        /// </summary>
+        public RemoteCertificateValidationCallback RemoteCertificateValidationCallback { get; set; } = new RemoteCertificateValidationCallback((o, e, s, p) => true);
+        /// <summary>
+        /// Local certificate selection callback.
+        /// </summary>
+        public LocalCertificateSelectionCallback LocalCertificateSelectionCallback { get; set; } = null;
+        /// <summary>
+        /// SSL Encryption policy.
+        /// </summary>
+        public EncryptionPolicy EncryptionPolicy { get; set; } = EncryptionPolicy.RequireEncryption;
+        /// <summary>
         /// Server port.
         /// </summary>
         public int Port { get => port; set => port = value; }
@@ -72,6 +84,46 @@ namespace MTSC.Server
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Sets the server certificate.
+        /// </summary>
+        /// <param name="certificate2">Certificate to be used for SSL.</param>
+        /// <returns>This server object.</returns>
+        public Server WithCertificate(X509Certificate2 certificate2)
+        {
+            this.certificate = certificate2;
+            return this;
+        }
+        /// <summary>
+        /// Sets the remote certificate validation callback.
+        /// </summary>
+        /// <param name="remoteCertificateValidationCallback">RemoteCertificateValidationCallback</param>
+        /// <returns>This server object.</returns>
+        public Server WithRemoteCertificateValidation(RemoteCertificateValidationCallback remoteCertificateValidationCallback)
+        {
+            this.RemoteCertificateValidationCallback = remoteCertificateValidationCallback;
+            return this;
+        }
+        /// <summary>
+        /// Sets the local certificate selection callback.
+        /// </summary>
+        /// <param name="localCertificateSelectionCallback">LocalCertificateSelectionCallback</param>
+        /// <returns>This server object.</returns>
+        public Server WithLocalCertificateSelection(LocalCertificateSelectionCallback localCertificateSelectionCallback)
+        {
+            this.LocalCertificateSelectionCallback = localCertificateSelectionCallback;
+            return this;
+        }
+        /// <summary>
+        /// Sets the encryption policy for SSL streams.
+        /// </summary>
+        /// <param name="encryptionPolicy">EncryptionPolicy</param>
+        /// <returns>This server object.</returns>
+        public Server WithEncryptionPolicy(EncryptionPolicy encryptionPolicy)
+        {
+            this.EncryptionPolicy = encryptionPolicy;
+            return this;
+        }
         /// <summary>
         /// Sets the port to the specified value.
         /// </summary>
@@ -225,9 +277,11 @@ namespace MTSC.Server
                         ClientData clientStruct = new ClientData(tcpClient);
                         if (certificate != null)
                         {
-                            SslStream sslStream = new SslStream(tcpClient.GetStream(), true, new RemoteCertificateValidationCallback((o, c, ch, po) => {
-                                return true;
-                            }), null, EncryptionPolicy.RequireEncryption);
+                            SslStream sslStream = new SslStream(tcpClient.GetStream(), 
+                                true, 
+                                this.RemoteCertificateValidationCallback, 
+                                this.LocalCertificateSelectionCallback, 
+                                this.EncryptionPolicy);
                             clientStruct.SslStream = sslStream;
                             sslStream.AuthenticateAsServer(certificate);
                         }

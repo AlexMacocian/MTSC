@@ -6,7 +6,9 @@ using MTSC.Logging;
 using MTSC.Server.Handlers;
 using System;
 using System.Net.Http;
+using System.Net.Security;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +26,10 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new Server.Server(800)
+                .WithCertificate(new X509Certificate2("localhost.pfx", "psdsd"))
+                .WithRemoteCertificateValidation(new RemoteCertificateValidationCallback((o, certificate, chain, errors) => 
+                    ValidateRemoteCertificate(o, certificate, chain, errors)))
+                .WithEncryptionPolicy(EncryptionPolicy.AllowNoEncryption)
                 .AddHandler(new WebsocketHandler()
                     .AddWebsocketHandler(new EchoModule()))
                 //.AddHandler(new HttpHandler()
@@ -41,7 +47,7 @@ namespace MTSC.UnitTests
         public void HelloWorldHTTP()
         {
             HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://localhost:800");
+            httpClient.BaseAddress = new Uri("https://localhost:800");
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
         }
@@ -51,7 +57,7 @@ namespace MTSC.UnitTests
         {
             byte[] bytes = new byte[100];
             ClientWebSocket client = new ClientWebSocket();
-            client.ConnectAsync(new Uri("ws://localhost:800"), CancellationToken.None).Wait();
+            client.ConnectAsync(new Uri("wss://localhost:800"), CancellationToken.None).Wait();
             client.SendAsync(ASCIIEncoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
             client.ReceiveAsync(bytes, CancellationToken.None).Wait();
             var resultString = ASCIIEncoding.ASCII.GetString(bytes, 0, 12);
@@ -62,7 +68,7 @@ namespace MTSC.UnitTests
         public void HTTPStressTest()
         {
             var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://localhost:800");
+            httpClient.BaseAddress = new Uri("https://localhost:800");
             for(int i = 0; i < stressIterations; i++)
             {
                 var startTime = DateTime.Now;
@@ -85,6 +91,11 @@ namespace MTSC.UnitTests
         public static void CleanupServer()
         {
             Server.Stop();
+        }
+
+        private static bool ValidateRemoteCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors)
+        {
+            return true;
         }
     }
 }
