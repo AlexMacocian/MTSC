@@ -44,7 +44,7 @@ namespace MTSC.UnitTests
         public void HelloWorldHTTP()
         {
             HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("https://localhost:800");
+            httpClient.BaseAddress = new Uri("http://localhost:800");
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
         }
@@ -54,7 +54,7 @@ namespace MTSC.UnitTests
         {
             byte[] bytes = new byte[100];
             ClientWebSocket client = new ClientWebSocket();
-            client.ConnectAsync(new Uri("wss://localhost:800"), CancellationToken.None).Wait();
+            client.ConnectAsync(new Uri("ws://localhost:800"), CancellationToken.None).Wait();
             client.SendAsync(ASCIIEncoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
             client.ReceiveAsync(bytes, CancellationToken.None).Wait();
             var resultString = ASCIIEncoding.ASCII.GetString(bytes, 0, 12);
@@ -65,7 +65,7 @@ namespace MTSC.UnitTests
         public void HTTPStressTest()
         {
             var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("https://localhost:800");
+            httpClient.BaseAddress = new Uri("http://localhost:800");
             for(int i = 0; i < stressIterations; i++)
             {
                 var startTime = DateTime.Now;
