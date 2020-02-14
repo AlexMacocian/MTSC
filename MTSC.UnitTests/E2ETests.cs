@@ -5,6 +5,7 @@ using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server.Handlers;
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.WebSockets;
@@ -26,10 +27,6 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new Server.Server(800)
-                .WithCertificate(new X509Certificate2("localhost.pfx", "psdsd"))
-                .WithRemoteCertificateValidation(new RemoteCertificateValidationCallback((o, certificate, chain, errors) => 
-                    ValidateRemoteCertificate(o, certificate, chain, errors)))
-                .WithEncryptionPolicy(EncryptionPolicy.AllowNoEncryption)
                 .AddHandler(new WebsocketHandler()
                     .AddWebsocketHandler(new EchoModule()))
                 //.AddHandler(new HttpHandler()
@@ -91,11 +88,6 @@ namespace MTSC.UnitTests
         public static void CleanupServer()
         {
             Server.Stop();
-        }
-
-        private static bool ValidateRemoteCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors errors)
-        {
-            return true;
         }
     }
 }
