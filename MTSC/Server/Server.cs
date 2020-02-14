@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -32,6 +33,10 @@ namespace MTSC.Server
         #endregion
         #region Properties
         /// <summary>
+        /// SSL supported protocols.
+        /// </summary>
+        public SslProtocols SslProtocols { get; set; } = SslProtocols.Default;
+        /// <summary>
         /// Remote certificate validation callback.
         /// </summary>
         public RemoteCertificateValidationCallback RemoteCertificateValidationCallback { get; set; } = new RemoteCertificateValidationCallback((o, e, s, p) => true);
@@ -51,6 +56,7 @@ namespace MTSC.Server
         /// Returns the state of the server.
         /// </summary>
         public bool Running { get => running; }
+        public bool RequestClientCertificate { get; set; } = true;
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
@@ -84,6 +90,26 @@ namespace MTSC.Server
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Requests that the client provides a certificate.
+        /// </summary>
+        /// <param name="requestCertificate"></param>
+        /// <returns>This server object</returns>
+        public Server WithClientCertificate(bool requestCertificate)
+        {
+            RequestClientCertificate = requestCertificate;
+            return this;
+        }
+        /// <summary>
+        /// Sets the server supported ssl protocols
+        /// </summary>
+        /// <param name="sslProtocols">Ssl protocols.</param>
+        /// <returns>This server object.</returns>
+        public Server WithSslProtocols(SslProtocols sslProtocols)
+        {
+            this.SslProtocols = sslProtocols;
+            return this;
+        }
         /// <summary>
         /// Sets the server certificate.
         /// </summary>
@@ -275,7 +301,7 @@ namespace MTSC.Server
                         lastLoad = DateTime.Now;
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
-                        if (certificate != null)
+                        if (this.certificate != null)
                         {
                             SslStream sslStream = new SslStream(tcpClient.GetStream(), 
                                 true, 
@@ -283,7 +309,7 @@ namespace MTSC.Server
                                 this.LocalCertificateSelectionCallback, 
                                 this.EncryptionPolicy);
                             clientStruct.SslStream = sslStream;
-                            sslStream.AuthenticateAsServer(certificate);
+                            sslStream.AuthenticateAsServer(this.certificate, this.RequestClientCertificate, this.SslProtocols, false);
                         }
                         foreach (IHandler handler in handlers)
                         {
