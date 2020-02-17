@@ -284,7 +284,12 @@ namespace MTSC.Common.Http
         private byte[] BuildRequest()
         {
             StringBuilder requestString = new StringBuilder();
-            requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI).Append('?').Append(RequestQuery).Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
+            requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI);
+            if(!string.IsNullOrWhiteSpace(RequestQuery))
+            {
+                requestString.Append('?').Append(RequestQuery);
+            }    
+            requestString.Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
             foreach (KeyValuePair<string, string> header in Headers)
             {
                 requestString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
@@ -340,6 +345,7 @@ namespace MTSC.Common.Http
                 else if (step == 1)
                 {
                     RequestURI = ParseRequestURI(ms);
+                    ms.Seek(-1, SeekOrigin.Current);
                     if (ms.ReadByte() == '?')
                     {
                         step++;
@@ -348,7 +354,6 @@ namespace MTSC.Common.Http
                     {
                         step += 2;
                     }
-                    ms.Seek(-1, SeekOrigin.Current);
                 }
                 else if (step == 2)
                 {

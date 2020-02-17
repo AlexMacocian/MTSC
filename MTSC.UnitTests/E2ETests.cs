@@ -84,25 +84,6 @@ namespace MTSC.UnitTests
             }           
         }
 
-        [TestMethod]
-        public void HttpFragmentedMessage()
-        {
-            var client = new MTSC.Client.Client(false);
-            client.SetServerAddress("127.0.0.1");
-            client.SetPort(800);
-            client.Connect();
-            HttpRequest request = new HttpRequest();
-            request.Method = HttpMessage.HttpMethods.Get;
-            request.RequestURI = "/";
-            byte[] messageBytes = request.GetPackedRequest();
-            byte[] firstBytes = messageBytes.Take(4).ToArray();
-            byte[] restBytes = messageBytes.Skip(4).ToArray();
-            client.QueueMessage(firstBytes);
-            client.QueueMessage(restBytes);
-            Thread.Sleep(10000);
-            Thread.Sleep(10000);
-        }
-
         [ClassCleanup]
         public static void CleanupServer()
         {
