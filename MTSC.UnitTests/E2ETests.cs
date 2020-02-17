@@ -1,15 +1,17 @@
+using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MTSC.Client;
+using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
+using MTSC.Common.Http.ServerModules;
 using MTSC.Common.WebSockets.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server.Handlers;
 using System;
-using System.Net;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Security;
 using System.Net.WebSockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +21,7 @@ namespace MTSC.UnitTests
     [TestClass]
     public class E2ETests
     {
-        private static int stressIterations = 100000;
+        private static int stressIterations = 1000;
         public TestContext TestContext { get; set; }
         static Server.Server Server { get; set; }
 
@@ -27,16 +29,14 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new Server.Server(800)
-                .AddHandler(new WebsocketHandler()
-                    .AddWebsocketHandler(new EchoModule()))
-                //.AddHandler(new HttpHandler()
-                //    .AddHttpModule(new HelloWorldModule()))
-                .AddHandler(new HttpRoutingHandler()
-                    .AddRoute(Common.Http.HttpMessage.HttpMethods.Get, "/", new Http200Module()))
+                //.AddHandler(new WebsocketHandler()
+                //    .AddWebsocketHandler(new EchoModule()))
+                .AddHandler(new HttpHandler()
+                    .AddHttpModule(new HttpRoutingModule()
+                        .AddRoute(Common.Http.HttpMessage.HttpMethods.Get, "/", new Http200Module())))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());
-                //.AddServerUsageMonitor(new TickrateEnforcer().SetTicksPerSecond(60));
             Server.RunAsync().Start();
         }
 
@@ -82,6 +82,25 @@ namespace MTSC.UnitTests
                 }
                 TestContext.WriteLine($"{i}: Processed {tasks.Length} requests in {duration.TotalMilliseconds} ms.");
             }           
+        }
+
+        [TestMethod]
+        public void HttpFragmentedMessage()
+        {
+            var client = new MTSC.Client.Client(false);
+            client.SetServerAddress("127.0.0.1");
+            client.SetPort(800);
+            client.Connect();
+            HttpRequest request = new HttpRequest();
+            request.Method = HttpMessage.HttpMethods.Get;
+            request.RequestURI = "/";
+            byte[] messageBytes = request.GetPackedRequest();
+            byte[] firstBytes = messageBytes.Take(4).ToArray();
+            byte[] restBytes = messageBytes.Skip(4).ToArray();
+            client.QueueMessage(firstBytes);
+            client.QueueMessage(restBytes);
+            Thread.Sleep(10000);
+            Thread.Sleep(10000);
         }
 
         [ClassCleanup]

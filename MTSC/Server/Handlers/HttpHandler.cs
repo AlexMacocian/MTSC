@@ -1,11 +1,11 @@
-﻿using MTSC.Common;
-using MTSC.Common.Http;
+﻿using MTSC.Common.Http;
 using MTSC.Common.Http.ServerModules;
+using MTSC.Exceptions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
+using System.IO;
+using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Server.Handlers
 {
@@ -19,7 +19,7 @@ namespace MTSC.Server.Handlers
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
         ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
-        ConcurrentDictionary<ClientData, HttpRequest> fragmentedMessages = new ConcurrentDictionary<ClientData, HttpRequest>();
+        ConcurrentDictionary<ClientData, MemoryStream> fragmentedMessages = new ConcurrentDictionary<ClientData, MemoryStream>();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -73,35 +73,51 @@ namespace MTSC.Server.Handlers
         /// <returns></returns>
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            HttpRequest request;
-            /*
-             * If there's an existing fragmented request, get it from the storage.
-             */
-            if (fragmentedMessages.ContainsKey(client))
+            // Parse the request. If the message is incomplete, return 100 and queue the message to be parsed later.
+            HttpRequest request = null;
+            try
             {
-                request = fragmentedMessages[client];
-                request.AddToBody(message.MessageBytes);
+                byte[] messageBytes = null;
+                if (fragmentedMessages.ContainsKey(client))
+                {
+                    fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
+                    messageBytes = fragmentedMessages[client].ToArray();
+                }
+                else
+                {
+                    messageBytes = message.MessageBytes;
+                }
+                request = HttpRequest.FromBytes(messageBytes);
             }
-            else
+            catch (Exception ex) when (
+                ex is IncompleteHeaderKeyException ||
+                ex is IncompleteHeaderValueException ||
+                ex is IncompleteHttpVersionException ||
+                ex is IncompleteMethodException ||
+                ex is IncompleteRequestBodyException ||
+                ex is IncompleteRequestQueryException ||
+                ex is IncompleteRequestURIException || 
+                ex is IncompleteRequestException)
             {
-                request = HttpRequest.FromBytes(message.MessageBytes);                
-            }
-
-            /*
-             * If the server hasn't received all the bytes specified by the request, 
-             * add the request to storage and wait for the rest of bytes to be received.
-             */
-
-            if (request.Headers.ContainsHeader(HttpMessage.EntityHeaders.ContentLength) &&
-                    request.Body.Length < int.Parse(request.Headers[HttpMessage.EntityHeaders.ContentLength]))
-            {
-                fragmentedMessages[client] = request;
-                var continueResponse = new HttpResponse();
-                continueResponse.StatusCode = HttpMessage.StatusCodes.Continue;
-                QueueResponse(client, continueResponse);
+                if (fragmentedMessages.ContainsKey(client))
+                {
+                    fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
+                }
+                else
+                {
+                    fragmentedMessages[client] = new MemoryStream();
+                    fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
+                }
+                Return100Continue(server, client);
                 return true;
             }
-            else
+            catch (Exception e)
+            {
+                throw e;
+            }
+
+            // The message has been parsed. If there was a cache for the current message, remove it.
+            if (fragmentedMessages.ContainsKey(client))
             {
                 fragmentedMessages.TryRemove(client, out _);
             }
@@ -165,5 +181,12 @@ namespace MTSC.Server.Handlers
             }
         }
         #endregion
+        private void Return100Continue(Server server, ClientData clientData)
+        {
+            HttpResponse httpResponse = new HttpResponse();
+            httpResponse.StatusCode = StatusCodes.Continue;
+            httpResponse.Headers[GeneralHeaders.Connection] = "keep-alive";
+            server.QueueMessage(clientData, httpResponse.GetPackedResponse(false));
+        }
     }
 }

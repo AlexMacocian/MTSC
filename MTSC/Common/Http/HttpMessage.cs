@@ -601,10 +601,10 @@ namespace MTSC.Common.Http
                 }
                 catch (Exception e)
                 {
-                    throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString(), e);
+                    throw new InvalidMethodException("Invalid request method. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
-            throw new MethodInvalidException("Invalid request method. Buffer: " + parseBuffer.ToString());
+            throw new InvalidMethodException("Invalid request method. Buffer: " + parseBuffer.ToString());
         }
 
         private string ParseRequestURI(byte[] buffer, ref int index)
