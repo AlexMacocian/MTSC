@@ -1,10 +1,7 @@
-using Microsoft.VisualStudio.TestPlatform.Utilities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using MTSC.Client;
 using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.ServerModules;
-using MTSC.Common.WebSockets.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server.Handlers;
@@ -32,8 +29,8 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new Server.Server(800)
-                //.AddHandler(new WebsocketHandler()
-                //    .AddWebsocketHandler(new EchoModule()))
+                .AddHandler(new WebsocketHandler()
+                    .AddWebsocketHandler(new Common.WebSockets.ServerModules.EchoModule()))
                 .AddHandler(new HttpHandler()
                     .AddHttpModule(new HttpRoutingModule()
                         .AddRoute(HttpMessage.HttpMethods.Get, "/", new Http200Module())
@@ -81,7 +78,7 @@ namespace MTSC.UnitTests
             sw.Start();
             while (receivedMessage == null)
             {
-                if(sw.ElapsedMilliseconds > 1500)
+                if(sw.ElapsedMilliseconds > 15000)
                 {
                     throw new Exception("Response not received!");
                 }

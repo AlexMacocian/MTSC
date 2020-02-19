@@ -358,16 +358,46 @@ namespace MTSC.Server
                                     "\nMessage length: " + message.MessageLength);
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.PreHandleReceivedMessage(this, client, ref message))
+                                try
                                 {
-                                    break;
+                                    if (handler.PreHandleReceivedMessage(this, client, ref message))
+                                    {
+                                        break;
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDebug("Exception: " + e.Message);
+                                    LogDebug("Stacktrace: " + e.StackTrace);
+                                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                                    {
+                                        if (exceptionHandler.HandleException(e))
+                                        {
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                             foreach (IHandler handler in handlers)
                             {
-                                if (handler.HandleReceivedMessage(this, client, message))
+                                try
                                 {
-                                    break;
+                                    if (handler.HandleReceivedMessage(this, client, message))
+                                    {
+                                        break;
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    LogDebug("Exception: " + e.Message);
+                                    LogDebug("Stacktrace: " + e.StackTrace);
+                                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                                    {
+                                        if (exceptionHandler.HandleException(e))
+                                        {
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
