@@ -87,6 +87,7 @@ namespace MTSC.UnitTests
                 }
             }
             HttpResponse response = HttpResponse.FromBytes(receivedMessage);
+            Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.OK);
             Assert.AreEqual(response.BodyString, "Brought a message to you my guy!");
         }
 

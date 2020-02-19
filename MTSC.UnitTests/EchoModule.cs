@@ -8,7 +8,7 @@ namespace MTSC.UnitTests
     {
         HttpResponse IHttpRoute.HandleRequest(HttpRequest request, ClientData client, Server.Server server)
         {
-            return new HttpResponse { BodyString = request.BodyString };
+            return new HttpResponse { BodyString = request.BodyString, StatusCode = HttpMessage.StatusCodes.OK };
         }
     }
 }

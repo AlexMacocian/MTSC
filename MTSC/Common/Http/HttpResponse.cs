@@ -1,6 +1,7 @@
 ﻿using MTSC.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
@@ -83,7 +84,7 @@ namespace MTSC.Common.Http
             /*
              * Parse the bytes one by one, respecting the reference manual.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            MemoryStream ms = new MemoryStream(responseBytes);
             /*
              * Keep the index of the byte array, to identify the message body.
              * Step value indicates at what point the parsing algorithm currently is.
@@ -92,22 +93,21 @@ namespace MTSC.Common.Http
             int step = 0;
             string headerKey = string.Empty;
             string headerValue = string.Empty;
-            int bodyIndex = 0;
-            for (int i = 0; i < responseBytes.Length; i++)
+            while (ms.Position < ms.Length)
             {
                 if (step == 0)
                 {
-                    ParseHTTPVer(responseBytes, ref i);
+                    ParseHTTPVer(ms);
                     step++;
                 }
                 else if (step == 1)
                 {
-                    StatusCode = (StatusCodes)ParseResponseCode(responseBytes, ref i);
+                    StatusCode = (StatusCodes)ParseResponseCode(ms);
                     step++;
                 }
                 else if (step == 2)
                 {
-                    if (StatusCode != ParseResponseCodeString(responseBytes, ref i))
+                    if (StatusCode != ParseResponseCodeString(ms))
                     {
                         throw new InvalidStatusCodeException("Status code value and text do not match!");
                     }
@@ -115,35 +115,37 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 3)
                 {
-                    if (responseBytes[i] == HttpHeaders.CRLF[0])
+                    char c = (char)ms.ReadByte();
+                    if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
                     }
-                    else if (responseBytes[i] == HttpHeaders.CRLF[1])
+                    else if (c == HttpHeaders.CRLF[1])
                     {
-                        bodyIndex = i;
                         break;
                     }
                     else
                     {
-                        headerKey = ParseHeaderKey(responseBytes, ref i);
+                        ms.Seek(-1, SeekOrigin.Current);
+                        headerKey = ParseHeaderKey(ms);
                         step++;
                     }
                 }
                 else if (step == 4)
                 {
-                    if (responseBytes[i] == HttpHeaders.CRLF[0])
+                    char c = (char)ms.ReadByte();
+                    if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
                     }
-                    else if (responseBytes[i] == HttpHeaders.CRLF[1])
+                    else if (c == HttpHeaders.CRLF[1])
                     {
-                        bodyIndex = i;
                         break;
                     }
                     else
                     {
-                        headerValue = ParseHeaderValue(responseBytes, ref i);
+                        ms.Seek(-1, SeekOrigin.Current);
+                        headerValue = ParseHeaderValue(ms);
                         if (headerKey == HttpHeaders.ResponseCookieHeader)
                         {
                             Cookies.Add(new Cookie(headerValue));
@@ -156,18 +158,17 @@ namespace MTSC.Common.Http
                     }
                 }
             }
-            if (responseBytes.Length - bodyIndex > 1)
+            if (ms.Length - ms.Position > 1)
             {
                 /*
                  * If the message contains a body, copy it into a different array
                  * and save it into the HTTP message;
                  */
-                this.Body = new byte[responseBytes.Length - bodyIndex - 1];
-                Array.Copy(responseBytes, bodyIndex + 1, this.Body, 0, this.Body.Length);
+                this.Body = ms.ReadRemainingBytes();
             }
             return;
         }
-        private void ParseHTTPVer(byte[] buffer, ref int index)
+        private void ParseHTTPVer(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a LF character, parse the HTTPVer.
@@ -175,11 +176,12 @@ namespace MTSC.Common.Http
              * If not, throw an exception.
              */
             StringBuilder parseBuffer = new StringBuilder();
-            for (; index < buffer.Length; index++)
+            while(ms.Position < ms.Length)
             {
                 try
                 {
-                    if (buffer[index] == HttpHeaders.CRLF[1] || buffer[index] == HttpHeaders.SP)
+                    char c = (char)ms.ReadByte();
+                    if (c == HttpHeaders.CRLF[1] || c == HttpHeaders.SP)
                     {
                         string httpVer = parseBuffer.ToString();
                         if (httpVer != HttpHeaders.HTTPVER)
@@ -188,7 +190,7 @@ namespace MTSC.Common.Http
                         }
                         return;
                     }
-                    else if (buffer[index] == HttpHeaders.CRLF[0])
+                    else if (c == HttpHeaders.CRLF[0])
                     {
                         /*
                          * If a termination character is detected, ignore it and wait for the full terminator.
@@ -197,7 +199,7 @@ namespace MTSC.Common.Http
                     }
                     else
                     {
-                        parseBuffer.Append((char)buffer[index]);
+                        parseBuffer.Append(c);
                     }
                 }
                 catch (Exception e)
@@ -208,23 +210,24 @@ namespace MTSC.Common.Http
         }
 
 
-        private string ParseHeaderKey(byte[] buffer, ref int index)
+        private string ParseHeaderKey(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a ':' character, parse the header key.
              */
             StringBuilder parseBuffer = new StringBuilder();
-            for (; index < buffer.Length; index++)
+            while(ms.Position < ms.Length)
             {
+                char c = (char)ms.ReadByte();
                 try
                 {
-                    if (buffer[index] == ':')
+                    if (c == ':')
                     {
                         return parseBuffer.ToString();
                     }
                     else
                     {
-                        parseBuffer.Append((char)buffer[index]);
+                        parseBuffer.Append(c);
                     }
                 }
                 catch (Exception e)
@@ -235,21 +238,22 @@ namespace MTSC.Common.Http
             throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString());
         }
 
-        private string ParseHeaderValue(byte[] buffer, ref int index)
+        private string ParseHeaderValue(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
             StringBuilder parseBuffer = new StringBuilder();
-            for (; index < buffer.Length; index++)
+            while (ms.Position < ms.Length)
             {
+                char c = (char)ms.ReadByte();
                 try
                 {
-                    if (buffer[index] == HttpHeaders.CRLF[1])
+                    if (c == HttpHeaders.CRLF[1])
                     {
                         return parseBuffer.ToString().Trim();
                     }
-                    else if (buffer[index] == HttpHeaders.CRLF[0])
+                    else if (c == HttpHeaders.CRLF[0])
                     {
                         /*
                          * If a termination character is detected, ignore it and wait for the full terminator.
@@ -258,7 +262,7 @@ namespace MTSC.Common.Http
                     }
                     else
                     {
-                        parseBuffer.Append((char)buffer[index]);
+                        parseBuffer.Append(c);
                     }
                 }
                 catch (Exception e)
@@ -269,23 +273,24 @@ namespace MTSC.Common.Http
             throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString());
         }
 
-        private int ParseResponseCode(byte[] buffer, ref int index)
+        private int ParseResponseCode(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a SP character, parse the value.
              */
             StringBuilder parseBuffer = new StringBuilder();
-            for (; index < buffer.Length; index++)
+            while (ms.Position < ms.Length)
             {
+                char c = (char)ms.ReadByte();
                 try
                 {
-                    if (buffer[index] == HttpHeaders.SP)
+                    if (c == HttpHeaders.SP)
                     {
                         return int.Parse(parseBuffer.ToString());
                     }
                     else
                     {
-                        parseBuffer.Append((char)buffer[index]);
+                        parseBuffer.Append(c);
                     }
                 }
                 catch (Exception e)
@@ -296,21 +301,22 @@ namespace MTSC.Common.Http
             throw new InvalidStatusCodeException("Invalid status code. Buffer: " + parseBuffer.ToString());
         }
 
-        private StatusCodes ParseResponseCodeString(byte[] buffer, ref int index)
+        private StatusCodes ParseResponseCodeString(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
             StringBuilder parseBuffer = new StringBuilder();
-            for (; index < buffer.Length; index++)
+            while (ms.Position < ms.Length)
             {
+                char c = (char)ms.ReadByte();
                 try
                 {
-                    if (buffer[index] == HttpHeaders.CRLF[1])
+                    if (c == HttpHeaders.CRLF[1])
                     {
                         return (StatusCodes)Enum.Parse(typeof(StatusCodes), parseBuffer.ToString().Trim());
                     }
-                    else if (buffer[index] == HttpHeaders.CRLF[0])
+                    else if (c == HttpHeaders.CRLF[0])
                     {
                         /*
                          * If a termination character is detected, ignore it and wait for the full terminator.
@@ -319,7 +325,7 @@ namespace MTSC.Common.Http
                     }
                     else
                     {
-                        parseBuffer.Append((char)buffer[index]);
+                        parseBuffer.Append(c);
                     }
                 }
                 catch (Exception e)
