@@ -418,15 +418,15 @@ namespace MTSC.Common.Http
             if (Headers.ContainsHeader(EntityHeaders.ContentLength))
             {
                 int remainingBytes = int.Parse(Headers[EntityHeaders.ContentLength]);
-                if (remainingBytes > ms.Length - ms.Position)
-                {
-                    throw new IncompleteRequestBodyException($"Incomplete request body. Expected size {remainingBytes} but remaining size is {ms.Length - ms.Position}.",
-                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
-                }
-                else
+                if (ms.Length - ms.Position == remainingBytes)
                 {
                     this.Body = new byte[remainingBytes];
                     ms.Read(this.Body, 0, remainingBytes);
+                }
+                else
+                {
+                    throw new IncompleteRequestBodyException($"Incomplete request body. Expected size {remainingBytes} but remaining size is {ms.Length - ms.Position}.",
+                        new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
                 }
             }
             else

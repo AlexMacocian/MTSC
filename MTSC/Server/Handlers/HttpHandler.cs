@@ -108,6 +108,8 @@ namespace MTSC.Server.Handlers
                     fragmentedMessages[client] = new MemoryStream();
                     fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
                 }
+                server.LogDebug(ex.Message);
+                server.LogDebug(ex.StackTrace);
                 Return100Continue(server, client);
                 return true;
             }
