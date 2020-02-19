@@ -9,6 +9,7 @@ using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server.Handlers;
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -22,6 +23,7 @@ namespace MTSC.UnitTests
     [TestClass]
     public class E2ETests
     {
+        private volatile byte[] receivedMessage = null;
         private static int stressIterations = 1000;
         public TestContext TestContext { get; set; }
         static Server.Server Server { get; set; }
@@ -35,7 +37,8 @@ namespace MTSC.UnitTests
                 .AddHandler(new HttpHandler()
                     .AddHttpModule(new HttpRoutingModule()
                         .AddRoute(HttpMessage.HttpMethods.Get, "/", new Http200Module())
-                        .AddRoute(HttpMessage.HttpMethods.Get, "/query", new TestQueryModule())))
+                        .AddRoute(HttpMessage.HttpMethods.Get, "/query", new TestQueryModule())
+                        .AddRoute(HttpMessage.HttpMethods.Get, "/echo", new EchoModule())))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());
@@ -49,6 +52,42 @@ namespace MTSC.UnitTests
             httpClient.BaseAddress = new Uri("http://localhost:800");
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
+        }
+
+        [TestMethod]
+        public void SendFragmentedHttpMessage()
+        {
+            Client.Client client = new Client.Client();
+            var notifyHandler = new NotifyReceivedMessageHandler();
+            notifyHandler.ReceivedMessage += (o, m) => { receivedMessage = m.MessageBytes; };
+            client.SetServerAddress("127.0.0.1")
+                .SetPort(800)
+                .AddHandler(notifyHandler)
+                .Connect();
+
+            HttpRequest request = new HttpRequest();
+            request.Method = HttpMessage.HttpMethods.Get;
+            request.BodyString = "Brought a message to you my guy!";
+            request.RequestURI = "/echo";
+            request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
+            byte[] message = request.GetPackedRequest();
+
+            client.QueueMessage(message.Take(5).ToArray());
+            Thread.Sleep(300);
+            client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
+            Thread.Sleep(300);
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while (receivedMessage == null)
+            {
+                if(sw.ElapsedMilliseconds > 1500)
+                {
+                    throw new Exception("Response not received!");
+                }
+            }
+            HttpResponse response = HttpResponse.FromBytes(receivedMessage);
+            Assert.AreEqual(response.BodyString, "Brought a message to you my guy!");
         }
 
         [TestMethod]

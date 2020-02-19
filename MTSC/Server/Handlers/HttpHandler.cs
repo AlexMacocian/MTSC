@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Server.Handlers
@@ -19,7 +20,7 @@ namespace MTSC.Server.Handlers
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();
         ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
-        ConcurrentDictionary<ClientData, MemoryStream> fragmentedMessages = new ConcurrentDictionary<ClientData, MemoryStream>();
+        ConcurrentDictionary<ClientData, byte[]> fragmentedMessages = new ConcurrentDictionary<ClientData, byte[]>();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -75,13 +76,16 @@ namespace MTSC.Server.Handlers
         {
             // Parse the request. If the message is incomplete, return 100 and queue the message to be parsed later.
             HttpRequest request = null;
+            byte[] messageBytes = null;
             try
             {
-                byte[] messageBytes = null;
                 if (fragmentedMessages.ContainsKey(client))
                 {
-                    fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
-                    messageBytes = fragmentedMessages[client].ToArray();
+                    byte[] previousBytes = fragmentedMessages[client];
+                    byte[] repackagingBuffer = new byte[previousBytes.Length + message.MessageBytes.Length];
+                    Array.Copy(previousBytes, 0, repackagingBuffer, 0, previousBytes.Length);
+                    Array.Copy(message.MessageBytes, 0, repackagingBuffer, previousBytes.Length, message.MessageBytes.Length);
+                    messageBytes = repackagingBuffer;
                 }
                 else
                 {
@@ -99,18 +103,9 @@ namespace MTSC.Server.Handlers
                 ex is IncompleteRequestURIException || 
                 ex is IncompleteRequestException)
             {
-                if (fragmentedMessages.ContainsKey(client))
-                {
-                    fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
-                }
-                else
-                {
-                    fragmentedMessages[client] = new MemoryStream();
-                    fragmentedMessages[client].Write(message.MessageBytes, 0, message.MessageBytes.Length);
-                }
+                fragmentedMessages[client] = messageBytes;
                 server.LogDebug(ex.Message);
                 server.LogDebug(ex.StackTrace);
-                Return100Continue(server, client);
                 return true;
             }
             catch (Exception e)
@@ -183,12 +178,5 @@ namespace MTSC.Server.Handlers
             }
         }
         #endregion
-        private void Return100Continue(Server server, ClientData clientData)
-        {
-            HttpResponse httpResponse = new HttpResponse();
-            httpResponse.StatusCode = StatusCodes.Continue;
-            httpResponse.Headers[GeneralHeaders.Connection] = "keep-alive";
-            server.QueueMessage(clientData, httpResponse.GetPackedResponse(false));
-        }
     }
 }

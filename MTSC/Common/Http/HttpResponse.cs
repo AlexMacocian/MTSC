@@ -163,7 +163,7 @@ namespace MTSC.Common.Http
                  * and save it into the HTTP message;
                  */
                 this.Body = new byte[responseBytes.Length - bodyIndex - 1];
-                Array.Copy(responseBytes, bodyIndex, this.Body, 0, this.Body.Length);
+                Array.Copy(responseBytes, bodyIndex + 1, this.Body, 0, this.Body.Length);
             }
             return;
         }

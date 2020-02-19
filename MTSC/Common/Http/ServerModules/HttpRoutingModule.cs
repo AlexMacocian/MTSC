@@ -42,13 +42,13 @@ namespace MTSC.Common.Http.ServerModules
                 {
                     try
                     {
-                        server.QueueMessage(client, module.HandleRequest(request, client, server).GetPackedResponse(true));
+                        response = module.HandleRequest(request, client, server);
                     }
                     catch(Exception e)
                     {
                         server.LogDebug("Exception: " + e.Message);
                         server.LogDebug("Stacktrace: " + e.StackTrace);
-                        server.QueueMessage(client, new HttpResponse() { StatusCode = StatusCodes.InternalServerError }.GetPackedResponse(true));
+                        response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
                     }
                     return true;
                 }
