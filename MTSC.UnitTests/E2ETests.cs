@@ -15,6 +15,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace MTSC.UnitTests
 {
@@ -33,7 +34,8 @@ namespace MTSC.UnitTests
                 //    .AddWebsocketHandler(new EchoModule()))
                 .AddHandler(new HttpHandler()
                     .AddHttpModule(new HttpRoutingModule()
-                        .AddRoute(Common.Http.HttpMessage.HttpMethods.Get, "/", new Http200Module())))
+                        .AddRoute(HttpMessage.HttpMethods.Get, "/", new Http200Module())
+                        .AddRoute(HttpMessage.HttpMethods.Get, "/query", new TestQueryModule())))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());
@@ -45,6 +47,22 @@ namespace MTSC.UnitTests
         {
             HttpClient httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
+            var result = httpClient.GetAsync("").Result;
+            Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
+        }
+
+        [TestMethod]
+        public void GetWithQueryHttp()
+        {
+            var builder = new UriBuilder("http://localhost:800/query");
+            var query = HttpUtility.ParseQueryString(builder.Query);
+            query["key1"] = "value1";
+            query["key2"] = "value2";
+            builder.Query = query.ToString();
+            string url = builder.ToString();
+
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri(url);
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
         }
