@@ -35,7 +35,9 @@ namespace MTSC.UnitTests
                     .AddHttpModule(new HttpRoutingModule()
                         .AddRoute(HttpMessage.HttpMethods.Get, "/", new Http200Module())
                         .AddRoute(HttpMessage.HttpMethods.Get, "/query", new TestQueryModule())
-                        .AddRoute(HttpMessage.HttpMethods.Get, "/echo", new EchoModule())))
+                        .AddRoute(HttpMessage.HttpMethods.Get, "/echo", new EchoModule()))
+                    .WithFragmentsExpirationTime(TimeSpan.FromSeconds(1))
+                    .WithMaximumSize(300))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());
@@ -86,6 +88,78 @@ namespace MTSC.UnitTests
             HttpResponse response = HttpResponse.FromBytes(receivedMessage);
             Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.OK);
             Assert.AreEqual(response.BodyString, "Brought a message to you my guy!");
+        }
+
+        [TestMethod]
+        public void SendFragmentedHttpMessageShouldExpire()
+        {
+            Client.Client client = new Client.Client();
+            var notifyHandler = new NotifyReceivedMessageHandler();
+            notifyHandler.ReceivedMessage += (o, m) => { receivedMessage = m.MessageBytes; };
+            client.SetServerAddress("127.0.0.1")
+                .SetPort(800)
+                .AddHandler(notifyHandler)
+                .Connect();
+
+            HttpRequest request = new HttpRequest();
+            request.Method = HttpMessage.HttpMethods.Get;
+            request.BodyString = "Brought a message to you my guy!";
+            request.RequestURI = "/echo";
+            request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
+            byte[] message = request.GetPackedRequest();
+
+            client.QueueMessage(message.Take(5).ToArray());
+            Thread.Sleep(300);
+            client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
+            Thread.Sleep(1300);
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while (receivedMessage == null)
+            {
+                if (sw.ElapsedMilliseconds > 5000)
+                {
+                    return;
+                }
+            }
+            Assert.Fail("Should not receive any response due to fragments expiring before being put back together!");
+        }
+
+        [TestMethod]
+        public void SendFragmentedHttpMessageExceedingSizeShouldExpire()
+        {
+            Client.Client client = new Client.Client();
+            var notifyHandler = new NotifyReceivedMessageHandler();
+            notifyHandler.ReceivedMessage += (o, m) => { receivedMessage = m.MessageBytes; };
+            client.SetServerAddress("127.0.0.1")
+                .SetPort(800)
+                .AddHandler(notifyHandler)
+                .Connect();
+
+            HttpRequest request = new HttpRequest();
+            request.Method = HttpMessage.HttpMethods.Get;
+            request.BodyString = "Brought a message to you my guy!";
+            request.RequestURI = "/echo";
+            request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
+            request.Body = new byte[300];
+            Array.Fill<byte>(request.Body, 50);
+            byte[] message = request.GetPackedRequest();
+
+            client.QueueMessage(message.Take(5).ToArray());
+            Thread.Sleep(300);
+            client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
+            Thread.Sleep(300);
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            while (receivedMessage == null)
+            {
+                if (sw.ElapsedMilliseconds > 5000)
+                {
+                    return;
+                }
+            }
+            Assert.Fail("Message should be discarded due to exceeding the size limit");
         }
 
         [TestMethod]
