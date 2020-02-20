@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
 using System.Xml;
 
 namespace MTSC
@@ -117,12 +116,28 @@ namespace MTSC
 
         public static byte[] ReadRemainingBytes(this MemoryStream ms)
         {
-            var buffer = new byte[ms.Length - ms.Position];
-            for(int i = 0; i < buffer.Length; i++)
-            {
-                buffer[i] = (byte)ms.ReadByte();
-            }
+            byte[] buffer = new byte[ms.Length - ms.Position];
+            ms.Read(buffer, 0, buffer.Length);
             return buffer;
+        }
+
+        public static byte[] TrimTrailingNullBytes(this byte[] bytes)
+        {
+            int trimSize = 0;
+            for(int i = bytes.Length - 1; i >= 0; i--)
+            {
+                if(bytes[i] == 0)
+                {
+                    trimSize++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            byte[] newBytes = new byte[bytes.Length - trimSize];
+            Array.Copy(bytes, 0, newBytes, 0, newBytes.Length);
+            return newBytes;
         }
     }
 }

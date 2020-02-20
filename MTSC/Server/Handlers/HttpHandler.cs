@@ -91,6 +91,7 @@ namespace MTSC.Server.Handlers
                 {
                     messageBytes = message.MessageBytes;
                 }
+                messageBytes = messageBytes.TrimTrailingNullBytes();
                 request = HttpRequest.FromBytes(messageBytes);
             }
             catch (Exception ex) when (

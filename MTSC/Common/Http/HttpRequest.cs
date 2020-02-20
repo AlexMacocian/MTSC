@@ -418,10 +418,9 @@ namespace MTSC.Common.Http
             if (Headers.ContainsHeader(EntityHeaders.ContentLength))
             {
                 int remainingBytes = int.Parse(Headers[EntityHeaders.ContentLength]);
-                if (ms.Length - ms.Position == remainingBytes)
+                if (remainingBytes <= ms.Length - ms.Position)
                 {
-                    this.Body = new byte[remainingBytes];
-                    ms.Read(this.Body, 0, remainingBytes);
+                    this.Body = ms.ReadRemainingBytes();
                 }
                 else
                 {
@@ -440,6 +439,10 @@ namespace MTSC.Common.Http
                     this.Body = ms.ReadRemainingBytes();
                 }
             }
+            /*
+             * Trim all trailing null characters left over from SSL encryption.
+             */
+            this.BodyString = this.BodyString.Trim('\0');
             return;
         }
         /// <summary>
