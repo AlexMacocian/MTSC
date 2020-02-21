@@ -4,9 +4,6 @@ using MTSC.Exceptions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Server.Handlers
 {

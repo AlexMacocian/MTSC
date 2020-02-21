@@ -107,6 +107,7 @@ namespace MTSC.Common.Http
              * Get each character one by one. When meeting a SP character, parse the URI and clear the buffer.
              */
             StringBuilder parseBuffer = new StringBuilder();
+            ms.ReadByte(); //Ignore the first '/'
             while (ms.Position < ms.Length)
             {
                 try
