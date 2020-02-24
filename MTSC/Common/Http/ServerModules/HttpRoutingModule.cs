@@ -10,59 +10,37 @@ namespace MTSC.Common.Http.ServerModules
     public class HttpRoutingModule : IHttpModule
     {
         private static Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
-        private static Func<HttpRequest, HttpRequest> noTemplate = (request) => request;
 
-        private Dictionary<HttpMethods, Dictionary<string, (IHttpRoute<ITemplatedHttpRequest>, 
-            Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>, Func<HttpRequest, ITemplatedHttpRequest> template)>> moduleDictionary = 
-            new Dictionary<HttpMethods, Dictionary<string, (IHttpRoute<ITemplatedHttpRequest>, 
-                Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>, Func<HttpRequest, ITemplatedHttpRequest>)>>();
+        private Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase, 
+            Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary = 
+            new Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase, 
+                Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
 
         public HttpRoutingModule()
         {
             foreach (HttpMethods method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
-                moduleDictionary[method] = new Dictionary<string, (IHttpRoute<ITemplatedHttpRequest>, 
-                    Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>, Func<HttpRequest, ITemplatedHttpRequest> template)>();
+                moduleDictionary[method] = new Dictionary<string, (HttpRouteBase, 
+                    Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
             }
         }
 
         public HttpRoutingModule AddRoute(
             HttpMethods method,
             string uri,
-            IHttpRoute<ITemplatedHttpRequest> routeModule)
+            HttpRouteBase routeModule)
         {
-            moduleDictionary[method][uri] = (routeModule, alwaysEnabled, noTemplate);
+            moduleDictionary[method][uri] = (routeModule, alwaysEnabled);
             return this;
         }
 
         public HttpRoutingModule AddRoute(
             HttpMethods method,
             string uri,
-            IHttpRoute<ITemplatedHttpRequest> routeModule,
+            HttpRouteBase routeModule,
             Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
         {
-            moduleDictionary[method][uri] = (routeModule, routeEnabler, noTemplate);
-            return this;
-        }
-
-        public HttpRoutingModule AddRoute(
-            HttpMethods method,
-            string uri,
-            IHttpRoute<ITemplatedHttpRequest> routeModule,
-            Func<HttpRequest, ITemplatedHttpRequest> requestTemplate)
-        {
-            moduleDictionary[method][uri] = (routeModule, alwaysEnabled, requestTemplate);
-            return this;
-        }
-
-        public HttpRoutingModule AddRoute(
-            HttpMethods method,
-            string uri,
-            IHttpRoute<ITemplatedHttpRequest> routeModule,
-            Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler,
-            Func<HttpRequest, ITemplatedHttpRequest> requestTemplate)
-        {
-            moduleDictionary[method][uri] = (routeModule, routeEnabler, requestTemplate);
+            moduleDictionary[method][uri] = (routeModule, routeEnabler);
             return this;
         }
 
@@ -81,13 +59,14 @@ namespace MTSC.Common.Http.ServerModules
              */
             if (moduleDictionary[request.Method].ContainsKey(request.RequestURI))
             {
-                (var module, var routeEnabler, var requestTemplate) = moduleDictionary[request.Method][request.RequestURI];
+                (var module, var routeEnabler) = moduleDictionary[request.Method][request.RequestURI];
                 var routeEnablerResponse = routeEnabler.Invoke(server, request, client);
                 if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
                 {
                     try
                     {
-                        response = module.HandleRequest(requestTemplate.Invoke(request), client, server);
+                        response = module.CallHandleRequest(request, client, server);
+                        //response = module.HandleRequest(requestTemplate.Invoke(request), client, server);
                     }
                     catch(Exception e)
                     {

@@ -4,9 +4,9 @@ using MTSC.Server;
 
 namespace MTSC.UnitTests
 {
-    public class EchoModule : IHttpRoute
+    public class EchoModule : HttpRouteBase
     {
-        HttpResponse IHttpRoute.HandleRequest(HttpRequest request, ClientData client, Server.Server server)
+        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server)
         {
             return new HttpResponse { BodyString = request.BodyString, StatusCode = HttpMessage.StatusCodes.OK };
         }

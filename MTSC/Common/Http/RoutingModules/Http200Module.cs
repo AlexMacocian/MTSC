@@ -2,9 +2,9 @@
 
 namespace MTSC.Common.Http.RoutingModules
 {
-    public class Http200Module : IHttpRoute
+    public class Http200Module : HttpRouteBase
     {
-        HttpResponse IHttpRoute.HandleRequest(HttpRequest request, ClientData client, Server.Server server)
+        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server)
         {
             return new HttpResponse { StatusCode = HttpMessage.StatusCodes.OK };
         }

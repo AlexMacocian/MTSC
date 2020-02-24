@@ -5,9 +5,9 @@ using System.Web;
 
 namespace MTSC.UnitTests
 {
-    class TestQueryModule : IHttpRoute
+    class TestQueryModule : HttpRouteBase
     {
-        HttpResponse IHttpRoute.HandleRequest(HttpRequest request, ClientData client, Server.Server server)
+        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server)
         {
             var query = HttpUtility.ParseQueryString(request.RequestQuery);
             if(query.Count == 2 &&
