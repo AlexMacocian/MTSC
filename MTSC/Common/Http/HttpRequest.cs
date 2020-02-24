@@ -10,7 +10,7 @@ namespace MTSC.Common.Http
     /// <summary>
     /// Class encapsulating a http request.
     /// </summary>
-    public class HttpRequest
+    public class HttpRequest : ITemplatedHttpRequest
     {
         public HttpRequestHeaderDictionary Headers { get; } = new HttpRequestHeaderDictionary();
 

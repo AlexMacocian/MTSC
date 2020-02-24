@@ -2,8 +2,8 @@
 
 namespace MTSC.Common.Http.RoutingModules
 {
-    public interface IHttpRoute
+    public interface IHttpRoute<T> where T : ITemplatedHttpRequest
     {
-        HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server);
+        HttpResponse HandleRequest(T request, ClientData client, Server.Server server);
     }
 }
