@@ -34,6 +34,12 @@ namespace MTSC.Common.Http.ServerModules
             return this;
         }
 
+        public HttpRoutingModule RemoveRoute(HttpMethods method, string uri)
+        {
+            moduleDictionary[method].Remove(uri);
+            return this;
+        }
+
         bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             /*
