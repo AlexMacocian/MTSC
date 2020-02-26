@@ -41,7 +41,7 @@ namespace MTSC.UnitTests
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger());
-            Server.RunAsync().Start();
+            Server.RunAsync();
         }
 
         [TestMethod]
