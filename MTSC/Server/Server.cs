@@ -35,7 +35,7 @@ namespace MTSC.Server
         /// <summary>
         /// SSL supported protocols.
         /// </summary>
-        public SslProtocols SslProtocols { get; set; } = SslProtocols.Default;
+        public SslProtocols SslProtocols { get; set; } = SslProtocols.None;
         /// <summary>
         /// Remote certificate validation callback.
         /// </summary>
@@ -280,8 +280,6 @@ namespace MTSC.Server
                 }
                 catch (Exception e)
                 {
-                    LogDebug("Exception: " + e.Message);
-                    LogDebug("Stacktrace: " + e.StackTrace);
                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
@@ -296,20 +294,33 @@ namespace MTSC.Server
                  */
                 try
                 {
-                    if (listener.Pending())
+                    while (listener.Pending())
                     {
                         lastLoad = DateTime.Now;
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
                         if (this.certificate != null)
                         {
-                            SslStream sslStream = new SslStream(tcpClient.GetStream(), 
-                                true, 
-                                this.RemoteCertificateValidationCallback, 
-                                this.LocalCertificateSelectionCallback, 
-                                this.EncryptionPolicy);
-                            clientStruct.SslStream = sslStream;
-                            sslStream.AuthenticateAsServer(this.certificate, this.RequestClientCertificate, this.SslProtocols, false);
+                            try
+                            {
+                                SslStream sslStream = new SslStream(tcpClient.GetStream(),
+                                    true,
+                                    this.RemoteCertificateValidationCallback,
+                                    this.LocalCertificateSelectionCallback,
+                                    this.EncryptionPolicy);
+                                clientStruct.SslStream = sslStream;
+                                sslStream.AuthenticateAsServer(this.certificate, this.RequestClientCertificate, this.SslProtocols, false);
+                            }
+                            catch(Exception e)
+                            {
+                                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                                {
+                                    if (exceptionHandler.HandleException(e))
+                                    {
+                                        break;
+                                    }
+                                }
+                            }
                         }
                         foreach (IHandler handler in handlers)
                         {
@@ -324,8 +335,6 @@ namespace MTSC.Server
                 }
                 catch(Exception e)
                 {
-                    LogDebug("Exception: " + e.Message);
-                    LogDebug("Stacktrace: " + e.StackTrace);
                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
@@ -367,8 +376,6 @@ namespace MTSC.Server
                                 }
                                 catch (Exception e)
                                 {
-                                    LogDebug("Exception: " + e.Message);
-                                    LogDebug("Stacktrace: " + e.StackTrace);
                                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                                     {
                                         if (exceptionHandler.HandleException(e))
@@ -404,8 +411,6 @@ namespace MTSC.Server
                     }
                     catch(Exception e)
                     {
-                        LogDebug("Exception: " + e.Message);
-                        LogDebug("Stacktrace: " + e.StackTrace);
                         foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
                         {
                             if (exceptionHandler.HandleException(e))
@@ -426,8 +431,6 @@ namespace MTSC.Server
                     }
                     catch (Exception e)
                     {
-                        LogDebug("Exception: " + e.Message);
-                        LogDebug("Stacktrace: " + e.StackTrace);
                         foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                         {
                             if (exceptionHandler.HandleException(e))
@@ -443,12 +446,11 @@ namespace MTSC.Server
                 if(messageQueue.Count > 0)
                 {
                     lastLoad = DateTime.Now;
-                    try
+                    while (messageQueue.Count > 0)
                     {
-                        while (messageQueue.Count > 0)
+                        try
                         {
-                            Tuple<ClientData, byte[]> queuedOrder = null;
-                            if (messageQueue.TryDequeue(out queuedOrder))
+                            if (messageQueue.TryDequeue(out Tuple<ClientData, byte[]> queuedOrder))
                             {
                                 Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
                                 for (int i = handlers.Count - 1; i >= 0; i--)
@@ -462,16 +464,14 @@ namespace MTSC.Server
                                     "\nMessage length: " + sendMessage.MessageLength);
                             }
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        LogDebug("Exception: " + e.Message);
-                        LogDebug("Stacktrace: " + e.StackTrace);
-                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                        catch (Exception e)
                         {
-                            if (exceptionHandler.HandleException(e))
+                            foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                             {
-                                break;
+                                if (exceptionHandler.HandleException(e))
+                                {
+                                    break;
+                                }
                             }
                         }
                     }
@@ -481,7 +481,20 @@ namespace MTSC.Server
                  */
                 foreach(IServerUsageMonitor usageMonitor in serverUsageMonitors)
                 {
-                    usageMonitor.Tick(this);
+                    try
+                    {
+                        usageMonitor.Tick(this);
+                    }
+                    catch(Exception e)
+                    {
+                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                        {
+                            if (exceptionHandler.HandleException(e))
+                            {
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
