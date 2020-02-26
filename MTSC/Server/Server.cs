@@ -503,7 +503,7 @@ namespace MTSC.Server
         /// </summary>
         public Task RunAsync()
         {
-            return new Task(Run);
+            return Task.Run(Run);
         }
         /// <summary>
         /// Stop the server.
