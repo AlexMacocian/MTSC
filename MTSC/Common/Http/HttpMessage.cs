@@ -1,12 +1,11 @@
 ﻿using MTSC.Exceptions;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MTSC.Common.Http
 {
-    public class HttpMessage
+    public sealed class HttpMessage
     {
         public enum StatusCodes
         {

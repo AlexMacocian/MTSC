@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Common.Http
 {
-    public class HttpResponseHeaderDictionary : IEnumerable<KeyValuePair<string, string>>
+    public sealed class HttpResponseHeaderDictionary : IEnumerable<KeyValuePair<string, string>>
     {
         private Dictionary<string, string> headers { get; } = new Dictionary<string, string>();
 

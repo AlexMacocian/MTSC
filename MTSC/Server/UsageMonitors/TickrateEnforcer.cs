@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 
 namespace MTSC.Server.UsageMonitors
@@ -8,7 +6,7 @@ namespace MTSC.Server.UsageMonitors
     /// <summary>
     /// Implementation of <see cref="IServerUsageMonitor"/> that enforces a specified tickrate.
     /// </summary>
-    public class TickrateEnforcer : IServerUsageMonitor
+    public sealed class TickrateEnforcer : IServerUsageMonitor
     {
         private DateTime lastTickTime = DateTime.Now;
 

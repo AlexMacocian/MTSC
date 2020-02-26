@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
 
 namespace MTSC.Server.Handlers
 {
     /// <summary>
     /// Broadcast handler.
     /// </summary>
-    public class BroadcastHandler : IHandler
+    public sealed class BroadcastHandler : IHandler
     {
         public BroadcastHandler()
         {

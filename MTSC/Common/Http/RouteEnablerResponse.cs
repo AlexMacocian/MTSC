@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace MTSC.Common.Http
+﻿namespace MTSC.Common.Http
 {
     public abstract class RouteEnablerResponse 
     {
@@ -11,17 +9,17 @@ namespace MTSC.Common.Http
             return new RouteEnablerResponseError(responseMessage);
         }
 
-        public class RouteEnablerResponseAccept : RouteEnablerResponse
+        public sealed class RouteEnablerResponseAccept : RouteEnablerResponse
         {
 
         }
 
-        public class RouteEnablerResponseIgnore : RouteEnablerResponse
+        public sealed class RouteEnablerResponseIgnore : RouteEnablerResponse
         {
 
         }
 
-        public class RouteEnablerResponseError : RouteEnablerResponse
+        public sealed class RouteEnablerResponseError : RouteEnablerResponse
         {
             public HttpResponse Response { get; }
             public RouteEnablerResponseError(HttpResponse responseMessage)

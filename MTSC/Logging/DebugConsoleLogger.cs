@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MTSC.Logging
 {
-    public class DebugConsoleLogger : ILogger
+    public sealed class DebugConsoleLogger : ILogger
     {
         /// <summary>
         /// Ignores simple logging messages.

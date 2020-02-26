@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-using System.Text;
 
 namespace MTSC.Exceptions
 {
-    public class InvalidWebsocketFormatException : Exception
+    public sealed class InvalidWebsocketFormatException : Exception
     {
         public InvalidWebsocketFormatException()
         {
@@ -16,10 +13,6 @@ namespace MTSC.Exceptions
         }
 
         public InvalidWebsocketFormatException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected InvalidWebsocketFormatException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

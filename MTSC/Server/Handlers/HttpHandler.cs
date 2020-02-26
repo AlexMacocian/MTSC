@@ -10,7 +10,7 @@ namespace MTSC.Server.Handlers
     /// <summary>
     /// Handler for handling server http requests.
     /// </summary>
-    public class HttpHandler : IHandler
+    public sealed class HttpHandler : IHandler
     {
         private static readonly string urlEncodedHeader = "application/x-www-form-urlencoded";
         private static readonly string multipartHeader = "multipart/form-data";

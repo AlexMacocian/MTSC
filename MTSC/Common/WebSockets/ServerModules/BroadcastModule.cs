@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using MTSC.Server;
+﻿using MTSC.Server;
 using MTSC.Server.Handlers;
 
 namespace MTSC.Common.WebSockets.ServerModules
 {
-    public class BroadcastModule : IWebsocketModule
+    public sealed class BroadcastModule : IWebsocketModule
     {
         void IWebsocketModule.ConnectionClosed(Server.Server server, WebsocketHandler handler, ClientData client)
         {

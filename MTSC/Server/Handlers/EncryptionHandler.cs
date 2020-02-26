@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using MTSC;
 
 namespace MTSC.Server.Handlers
 {
     /// <summary>
     /// Handler that encrypts the communication.
     /// </summary>
-    public class EncryptionHandler : IHandler
+    public sealed class EncryptionHandler : IHandler
     {
         private enum ClientState
         {

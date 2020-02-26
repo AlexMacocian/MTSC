@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Common.Http
@@ -10,7 +7,7 @@ namespace MTSC.Common.Http
     /// <summary>
     /// Dictionary of http request headers.
     /// </summary>
-    public class HttpRequestHeaderDictionary : IEnumerable<KeyValuePair<string, string>>
+    public sealed class HttpRequestHeaderDictionary : IEnumerable<KeyValuePair<string, string>>
     {
         private Dictionary<string, string> headers { get; } = new Dictionary<string, string>();
 

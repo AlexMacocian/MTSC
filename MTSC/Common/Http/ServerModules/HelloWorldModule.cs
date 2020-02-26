@@ -1,14 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text;
 using MTSC.Server;
 using MTSC.Server.Handlers;
 
 namespace MTSC.Common.Http.ServerModules
 {
-    public class HelloWorldModule : IHttpModule
+    public sealed class HelloWorldModule : IHttpModule
     {
-        byte[] response = ASCIIEncoding.ASCII.GetBytes("Hello, World!");
+        byte[] response = Encoding.ASCII.GetBytes("Hello, World!");
         bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if (request.Method == HttpMessage.HttpMethods.Get)

@@ -1,14 +1,12 @@
 ﻿using MTSC.Exceptions;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace MTSC.Common.WebSockets
 {
     /// <summary>
     /// Class containing the bytes of a websocket received message.
     /// </summary>
-    public class WebsocketMessage
+    public sealed class WebsocketMessage
     {
         public enum Opcodes
         {

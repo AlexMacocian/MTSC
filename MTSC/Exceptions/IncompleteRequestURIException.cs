@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace MTSC.Exceptions
 {
-    public class IncompleteRequestURIException : Exception
+    public sealed class IncompleteRequestURIException : Exception
     {
         public IncompleteRequestURIException()
         {
@@ -14,10 +13,6 @@ namespace MTSC.Exceptions
         }
 
         public IncompleteRequestURIException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected IncompleteRequestURIException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

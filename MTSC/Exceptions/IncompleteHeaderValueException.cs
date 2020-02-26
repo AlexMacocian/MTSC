@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 
 namespace MTSC.Exceptions
 {
-    class IncompleteHeaderValueException : Exception
+    public sealed class IncompleteHeaderValueException : Exception
     {
         public IncompleteHeaderValueException()
         {
@@ -14,10 +14,6 @@ namespace MTSC.Exceptions
         }
 
         public IncompleteHeaderValueException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected IncompleteHeaderValueException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

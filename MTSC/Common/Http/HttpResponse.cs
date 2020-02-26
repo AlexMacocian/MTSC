@@ -7,7 +7,7 @@ using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Common.Http
 {
-    public class HttpResponse
+    public sealed class HttpResponse
     {
         /// <summary>
         /// List of cookies.

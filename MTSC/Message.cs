@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace MTSC
+﻿namespace MTSC
 {
-    public struct Message
+    public sealed class Message
     {
-        private uint messageLength;
-        private byte[] messageBytes;
-        public uint MessageLength { get => messageLength; }
-        public byte[] MessageBytes { get => messageBytes; }
+        public uint MessageLength { get; private set; }
+        public byte[] MessageBytes { get; private set; }
         public Message(uint messageLength, byte[] messageBytes)
         {
-            this.messageLength = messageLength;
-            this.messageBytes = messageBytes;
+            this.MessageLength = messageLength;
+            this.MessageBytes = messageBytes;
         }
     }
 }

@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using MTSC.Server;
+﻿using MTSC.Server;
 using MTSC.Server.Handlers;
 
 namespace MTSC.Common.WebSockets.ServerModules
 {
-    public class EchoModule : IWebsocketModule
+    public sealed class EchoModule : IWebsocketModule
     {
         #region Public Methods
         public void SendMessage(WebsocketHandler handler, ClientData client, WebsocketMessage message)

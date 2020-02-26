@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using MTSC.Server;
 using MTSC.Server.Handlers;
 
@@ -9,7 +7,7 @@ namespace MTSC.Common.Http.ServerModules
     /// <summary>
     /// Simple module that returns status code 404.
     /// </summary>
-    public class Http404Module : IHttpModule
+    public sealed class Http404Module : IHttpModule
     {
         /// <summary>
         /// Check the request and construct the response.

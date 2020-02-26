@@ -7,7 +7,7 @@ namespace MTSC.Common.Http
     /// <summary>
     /// Class for HTTP cookies.
     /// </summary>
-    public class Cookie
+    public sealed class Cookie
     {
         /// <summary>
         /// Key of cookie.

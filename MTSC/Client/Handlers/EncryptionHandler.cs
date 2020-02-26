@@ -1,14 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 
 namespace MTSC.Client.Handlers
 {
-    public class EncryptionHandler : IHandler
+    public sealed class EncryptionHandler : IHandler
     {
         private enum ConnectionState
         {

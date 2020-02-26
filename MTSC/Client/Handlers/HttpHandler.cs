@@ -1,16 +1,13 @@
 ﻿using MTSC.Common.Http;
 using MTSC.Common.Http.ClientModules;
-using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
-using System.Text;
 
 namespace MTSC.Client.Handlers
 {
     /// <summary>
     /// Handler for handling client http communication.
     /// </summary>
-    public class HttpHandler : IHandler
+    public sealed class HttpHandler : IHandler
     {
         #region Fields
         List<IHttpModule> httpModules = new List<IHttpModule>();

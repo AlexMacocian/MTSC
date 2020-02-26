@@ -2,13 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using MTSC.Server;
 using MTSC.Server.Handlers;
 
 namespace MTSC.Common.Http.ServerModules
 {
-    public class FileServerModule : IHttpModule
+    public sealed class FileServerModule : IHttpModule
     {
         private string rootFolder;
         ConcurrentDictionary<string, Tuple<byte[], DateTime>> fileCache = new ConcurrentDictionary<string, Tuple<byte[], DateTime>>();

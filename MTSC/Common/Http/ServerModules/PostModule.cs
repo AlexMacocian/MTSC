@@ -7,7 +7,7 @@ using MTSC.Server.Handlers;
 
 namespace MTSC.Common.Http.ServerModules
 {
-    public class PostModule : IHttpModule
+    public sealed class PostModule : IHttpModule
     {
         private static string urlEncodedHeader = "application/x-www-form-urlencoded";
         private static string multipartHeader = "multipart/form-data";

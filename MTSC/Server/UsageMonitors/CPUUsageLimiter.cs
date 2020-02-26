@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +8,7 @@ namespace MTSC.Server.UsageMonitors
     /// <summary>
     /// Implementation of <see cref="IServerUsageMonitor"/> that limits CPU usage to a given value.
     /// </summary>
-    public class CPUUsageLimiter : IServerUsageMonitor
+    public sealed class CPUUsageLimiter : IServerUsageMonitor
     {
         private double cpuUsage;
         private volatile bool polling = false;

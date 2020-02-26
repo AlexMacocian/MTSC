@@ -11,7 +11,7 @@ namespace MTSC.Client.Handlers
     /// <summary>
     /// Handler implementing websocket protocol.
     /// </summary>
-    public class WebsocketHandler : IHandler
+    public sealed class WebsocketHandler : IHandler
     {
         private static string WebsocketHeaderAcceptKey = "Sec-WebSocket-Accept";
         private static string WebsocketHeaderKey = "Sec-WebSocket-Key";

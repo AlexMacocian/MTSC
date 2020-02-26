@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
+﻿using System.Collections.Generic;
 using System.Text;
 
 namespace MTSC.Client.Handlers
 {
-    public class BroadcastHandler : IHandler
+    public sealed class BroadcastHandler : IHandler
     {
         private List<string> buffer = new List<string>();
         /// <summary>

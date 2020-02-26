@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace MTSC.Exceptions
 {
-    public class IncompleteRequestException : Exception
+    public sealed class IncompleteRequestException : Exception
     {
         public IncompleteRequestException()
         {
@@ -14,10 +13,6 @@ namespace MTSC.Exceptions
         }
 
         public IncompleteRequestException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected IncompleteRequestException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

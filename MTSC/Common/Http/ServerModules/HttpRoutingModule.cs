@@ -7,7 +7,7 @@ using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Common.Http.ServerModules
 {
-    public class HttpRoutingModule : IHttpModule
+    public sealed class HttpRoutingModule : IHttpModule
     {
         private static Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
 

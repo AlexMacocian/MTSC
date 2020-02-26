@@ -9,7 +9,7 @@ using System.Text;
 
 namespace MTSC.Server.Handlers
 {
-    public class WebsocketHandler : IHandler
+    public sealed class WebsocketHandler : IHandler
     {
         private static readonly string WebsocketHeaderAcceptKey = "Sec-WebSocket-Accept";
         private static readonly string WebsocketHeaderKey = "Sec-WebSocket-Key";

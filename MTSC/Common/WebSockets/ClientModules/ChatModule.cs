@@ -1,13 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
-using MTSC.Client;
 using MTSC.Client.Handlers;
 
 namespace MTSC.Common.WebSockets.ClientModules
 {
-    public class ChatModule : IWebsocketModule
+    public sealed class ChatModule : IWebsocketModule
     {
         static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
         #region Public Methods

@@ -2,7 +2,7 @@
 
 namespace MTSC.Exceptions
 {
-    public class HttpRequestParsingException : Exception
+    public sealed class HttpRequestParsingException : Exception
     {
         public HttpRequestParsingException(string message) : base(message)
         {
