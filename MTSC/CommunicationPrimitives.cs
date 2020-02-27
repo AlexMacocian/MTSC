@@ -49,7 +49,7 @@ namespace MTSC
 
         public static Message BuildMessage(byte[] msgData)
         {
-            Message message = new Message((ushort)msgData.Length, msgData);
+            Message message = new Message((uint)msgData.Length, msgData);
             return message;
         }
     }
