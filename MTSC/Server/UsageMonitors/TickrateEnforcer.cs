@@ -11,6 +11,11 @@ namespace MTSC.Server.UsageMonitors
         private DateTime lastTickTime = DateTime.Now;
 
         /// <summary>
+        /// Set to true if the handler should post messages each tick.
+        /// </summary>
+        public bool Silent { get; set; }
+
+        /// <summary>
         /// Number of server ticks in one second.
         /// </summary>
         public int TicksPerSecond { get; set; }
@@ -25,12 +30,24 @@ namespace MTSC.Server.UsageMonitors
             return this;
         }
 
+        /// <summary>
+        /// Sets the silent property
+        /// </summary>
+        /// <param name="silent"></param>
+        /// <returns></returns>
+        public TickrateEnforcer SetSilent(bool silent)
+        {
+            Silent = silent;
+            return this;
+        }
+
         void IServerUsageMonitor.Tick(Server server)
         {
             if((DateTime.Now - lastTickTime).TotalMilliseconds < 1000f / TicksPerSecond)
             {
                 int sleepTime = (int)Math.Ceiling(Math.Max(1000f / TicksPerSecond - (DateTime.Now - lastTickTime).TotalMilliseconds, 0)) + 1;
-                server.LogDebug($"Sleeping thread for {sleepTime} ms due to throttling!");
+                if(!Silent)
+                    server.LogDebug($"Sleeping thread for {sleepTime} ms due to throttling!");
                 Thread.Sleep(sleepTime);
             }
             lastTickTime = DateTime.Now;
