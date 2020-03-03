@@ -23,6 +23,7 @@ namespace MTSC.Server.Handlers
         #region Public Properties
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = 15000;
+        public bool Return100Continue { get; set; } = true;
         #endregion
         #region Constructors
         public HttpHandler()
@@ -44,6 +45,16 @@ namespace MTSC.Server.Handlers
         public HttpHandler WithFragmentsExpirationTime(TimeSpan duration)
         {
             this.FragmentsExpirationTime = duration;
+            return this;
+        }
+        /// <summary>
+        /// Sets Return100Continue property
+        /// </summary>
+        /// <param name="response"></param>
+        /// <returns>This object.</returns>
+        public HttpHandler WithContinueResponse(bool response)
+        {
+            this.Return100Continue = response;
             return this;
         }
         /// <summary>
@@ -102,6 +113,7 @@ namespace MTSC.Server.Handlers
                     if(previousBytes.Length + message.MessageBytes.Length > MaximumRequestSize)
                     {
                         // Discard the message if it is too big
+                        server.LogDebug($"Discarded message. Message size [{previousBytes.Length + message.MessageBytes.Length}] > [{MaximumRequestSize}]");
                         fragmentedMessages.TryRemove(client, out _);
                         return false;
                     }
@@ -115,6 +127,7 @@ namespace MTSC.Server.Handlers
                     if(message.MessageBytes.Length > MaximumRequestSize)
                     {
                         // Discard the message if it is too big
+                        server.LogDebug($"Discarded message. Message size [{message.MessageBytes.Length}] > [{MaximumRequestSize}]");
                         return false;
                     }
                     messageBytes = message.MessageBytes;
@@ -135,6 +148,14 @@ namespace MTSC.Server.Handlers
                 fragmentedMessages[client] = (messageBytes, DateTime.Now);
                 server.LogDebug(ex.Message);
                 server.LogDebug(ex.StackTrace);
+
+                if (Return100Continue)
+                {
+                    var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
+                    contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
+                    QueueResponse(client, contResponse);
+                }
+
                 return true;
             }
             catch (Exception e)
