@@ -23,7 +23,6 @@ namespace MTSC.Server.Handlers
         #region Public Properties
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = 15000;
-        public bool Return100Continue { get; set; } = true;
         #endregion
         #region Constructors
         public HttpHandler()
@@ -45,16 +44,6 @@ namespace MTSC.Server.Handlers
         public HttpHandler WithFragmentsExpirationTime(TimeSpan duration)
         {
             this.FragmentsExpirationTime = duration;
-            return this;
-        }
-        /// <summary>
-        /// Sets Return100Continue property
-        /// </summary>
-        /// <param name="response"></param>
-        /// <returns>This object.</returns>
-        public HttpHandler WithContinueResponse(bool response)
-        {
-            this.Return100Continue = response;
             return this;
         }
         /// <summary>
@@ -133,7 +122,14 @@ namespace MTSC.Server.Handlers
                     messageBytes = message.MessageBytes;
                 }
                 messageBytes = messageBytes.TrimTrailingNullBytes();
-                request = HttpRequest.FromBytes(messageBytes);
+                var partialRequest = PartialHttpRequest.FromBytes(messageBytes);
+                if (partialRequest.Complete)
+                    request = partialRequest.ToRequest();
+                else
+                {
+                    HandleIncompleteRequest(client, server, messageBytes, partialRequest);
+                    return true;
+                }
             }
             catch (Exception ex) when (
                 ex is IncompleteHeaderKeyException ||
@@ -145,17 +141,9 @@ namespace MTSC.Server.Handlers
                 ex is IncompleteRequestURIException || 
                 ex is IncompleteRequestException)
             {
-                fragmentedMessages[client] = (messageBytes, DateTime.Now);
                 server.LogDebug(ex.Message);
                 server.LogDebug(ex.StackTrace);
-
-                if (Return100Continue)
-                {
-                    var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
-                    contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
-                    QueueResponse(client, contResponse);
-                }
-
+                HandleIncompleteRequest(client, server, messageBytes);
                 return true;
             }
             catch (Exception e)
@@ -240,5 +228,19 @@ namespace MTSC.Server.Handlers
             }
         }
         #endregion
+
+        private void HandleIncompleteRequest(ClientData client, Server server, byte[] messageBytes, PartialHttpRequest partialRequest = null)
+        {
+            fragmentedMessages[client] = (messageBytes, DateTime.Now);
+            server.LogDebug("Incomplete request received!");
+            if (partialRequest != null && partialRequest.Headers.ContainsHeader(HttpMessage.RequestHeaders.Expect) &&
+                partialRequest.Headers[HttpMessage.RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
+            {
+                server.LogDebug("Returning 100-Continue");
+                var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
+                contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
+                QueueResponse(client, contResponse);
+            }
+        }
     }
 }
