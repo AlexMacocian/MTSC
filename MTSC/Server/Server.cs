@@ -313,6 +313,7 @@ namespace MTSC.Server
                             }
                             catch(Exception e)
                             {
+                                clientStruct.ToBeRemoved = true;
                                 foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                                 {
                                     if (exceptionHandler.HandleException(e))
