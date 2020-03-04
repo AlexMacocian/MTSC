@@ -210,9 +210,9 @@ namespace MTSC.Server
             serverUsageMonitors.Add(serverUsageMonitor);
             return this;
         }
-        public IResource GetResource<T>()
+        public T GetResource<T>()
         {
-            return Resources[typeof(T)];
+            return (T)Resources[typeof(T)];
         }
         /// <summary>
         /// Queues a message to be sent.
