@@ -1,6 +1,7 @@
 ﻿using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.Server.Handlers;
+using MTSC.Server.Resources;
 using MTSC.Server.UsageMonitors;
 using System;
 using System.Collections.Concurrent;
@@ -61,6 +62,10 @@ namespace MTSC.Server
         /// List of clients currently connected to the server.
         /// </summary>
         public List<ClientData> Clients { get; set; } = new List<ClientData>();
+        /// <summary>
+        /// Dictionary of resources
+        /// </summary>
+        public Dictionary<Type, IResource> Resources { get; } = new Dictionary<Type, IResource>();
         #endregion
         #region Constructors
         /// <summary>
@@ -90,6 +95,11 @@ namespace MTSC.Server
         }
         #endregion
         #region Public Methods
+        public Server WithResource(IResource resource)
+        {
+            Resources[resource.GetType()] = resource;
+            return this;
+        }
         /// <summary>
         /// Requests that the client provides a certificate.
         /// </summary>
@@ -199,6 +209,10 @@ namespace MTSC.Server
         {
             serverUsageMonitors.Add(serverUsageMonitor);
             return this;
+        }
+        public IResource GetResource<T>()
+        {
+            return Resources[typeof(T)];
         }
         /// <summary>
         /// Queues a message to be sent.
