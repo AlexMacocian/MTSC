@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MTSC.Server.UsageMonitors
+namespace MTSC.ServerSide.UsageMonitors
 {
     /// <summary>
     /// Interface for server usage monitors.

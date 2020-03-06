@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace MTSC.Server.Handlers
+namespace MTSC.ServerSide.Handlers
 {
     /// <summary>
     /// Broadcast handler.

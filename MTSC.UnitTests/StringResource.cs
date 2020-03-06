@@ -1,4 +1,4 @@
-﻿using MTSC.Server.Resources;
+﻿using MTSC.ServerSide.Resources;
 
 namespace MTSC.UnitTests
 {

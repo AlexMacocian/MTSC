@@ -4,7 +4,7 @@ using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
-using MTSC.Server.Handlers;
+using MTSC.ServerSide.Handlers;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -23,12 +23,12 @@ namespace MTSC.UnitTests
         private volatile byte[] receivedMessage = null;
         private static int stressIterations = 1000;
         public TestContext TestContext { get; set; }
-        static Server.Server Server { get; set; }
+        static ServerSide.Server Server { get; set; }
 
         [ClassInitialize]
         public static void InitializeServer(TestContext testContext)
         {
-            Server = new Server.Server(800)
+            Server = new ServerSide.Server(800)
                 .AddHandler(new WebsocketHandler()
                     .AddWebsocketHandler(new Common.WebSockets.ServerModules.EchoModule()))
                 .AddHandler(new HttpHandler()

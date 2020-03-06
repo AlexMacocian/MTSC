@@ -2,8 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using MTSC.Server;
-using MTSC.Server.Handlers;
+using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
 
 namespace MTSC.Common.Http.ServerModules
 {
@@ -17,7 +17,7 @@ namespace MTSC.Common.Http.ServerModules
             this.rootFolder = Path.GetFullPath(rootFolder);
         }
         #region Interface Implementation
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
+        bool IHttpModule.HandleRequest(ServerSide.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if(request.Method == HttpMessage.HttpMethods.Get)
             {
@@ -66,7 +66,7 @@ namespace MTSC.Common.Http.ServerModules
             return false;
         }
 
-        void IHttpModule.Tick(Server.Server server, HttpHandler handler)
+        void IHttpModule.Tick(ServerSide.Server server, HttpHandler handler)
         {
             foreach(KeyValuePair<string, Tuple<byte[], DateTime>> keyValuePair in fileCache)
             {

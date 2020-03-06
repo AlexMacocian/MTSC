@@ -1,16 +1,16 @@
-﻿using MTSC.Server;
+﻿using MTSC.ServerSide;
 using System;
 
 namespace MTSC.Common.Http.RoutingModules
 {
     public abstract class HttpRouteBase
     {
-        public HttpResponse CallHandleRequest(HttpRequest request, ClientData client, Server.Server server)
+        public HttpResponse CallHandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
         {
             return this.HandleRequest(request, client, server);
         }
 
-        public abstract HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server);
+        public abstract HttpResponse HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server);
     }
     public abstract class HttpRouteBase<T> : HttpRouteBase
     {
@@ -32,11 +32,11 @@ namespace MTSC.Common.Http.RoutingModules
             return this;
         }
 
-        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server)
+        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
         {
             return HandleRequest(template.Invoke(request), client, server);
         }
 
-        public abstract HttpResponse HandleRequest(T request, ClientData client, Server.Server server);
+        public abstract HttpResponse HandleRequest(T request, ClientData client, ServerSide.Server server);
     }
 }

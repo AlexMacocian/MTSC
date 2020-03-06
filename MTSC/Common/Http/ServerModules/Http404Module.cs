@@ -1,6 +1,6 @@
 ﻿using System;
-using MTSC.Server;
-using MTSC.Server.Handlers;
+using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
 
 namespace MTSC.Common.Http.ServerModules
 {
@@ -17,7 +17,7 @@ namespace MTSC.Common.Http.ServerModules
         /// <param name="request"></param>
         /// <param name="response"></param>
         /// <returns>True so no other handler modifies the response, so the response contains the 404 return status code.</returns>
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
+        bool IHttpModule.HandleRequest(ServerSide.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if(request.Method == HttpMessage.HttpMethods.Get)
             {
@@ -28,7 +28,7 @@ namespace MTSC.Common.Http.ServerModules
             return true;
         }
 
-        void IHttpModule.Tick(Server.Server server, HttpHandler handler)
+        void IHttpModule.Tick(ServerSide.Server server, HttpHandler handler)
         {
             
         }

@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace MTSC.Server.UsageMonitors
+namespace MTSC.ServerSide.UsageMonitors
 {
     /// <summary>
     /// Implementation of <see cref="IServerUsageMonitor"/> that limits CPU usage to a given value.

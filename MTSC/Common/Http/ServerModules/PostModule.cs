@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using MTSC.Exceptions;
-using MTSC.Server;
-using MTSC.Server.Handlers;
+using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
 
 namespace MTSC.Common.Http.ServerModules
 {
@@ -81,7 +81,7 @@ namespace MTSC.Common.Http.ServerModules
         #endregion
 
         #region Interface Implementation
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
+        bool IHttpModule.HandleRequest(ServerSide.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             if (request.Method == HttpMessage.HttpMethods.Post &&
                request.Headers.ContainsHeader(HttpMessage.EntityHeaders.ContentType))
@@ -111,7 +111,7 @@ namespace MTSC.Common.Http.ServerModules
             }
         }
 
-        void IHttpModule.Tick(Server.Server server, HttpHandler handler)
+        void IHttpModule.Tick(ServerSide.Server server, HttpHandler handler)
         {
 
         }

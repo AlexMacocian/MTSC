@@ -1,21 +1,21 @@
-﻿using MTSC.Server;
-using MTSC.Server.Handlers;
+﻿using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
 
 namespace MTSC.Common.WebSockets.ServerModules
 {
     public sealed class BroadcastModule : IWebsocketModule
     {
-        void IWebsocketModule.ConnectionClosed(Server.Server server, WebsocketHandler handler, ClientData client)
+        void IWebsocketModule.ConnectionClosed(ServerSide.Server server, WebsocketHandler handler, ClientData client)
         {
             
         }
 
-        void IWebsocketModule.ConnectionInitialized(Server.Server server, WebsocketHandler handler, ClientData client)
+        void IWebsocketModule.ConnectionInitialized(ServerSide.Server server, WebsocketHandler handler, ClientData client)
         {
             
         }
 
-        bool IWebsocketModule.HandleReceivedMessage(Server.Server server, WebsocketHandler handler, ClientData client, WebsocketMessage receivedMessage)
+        bool IWebsocketModule.HandleReceivedMessage(ServerSide.Server server, WebsocketHandler handler, ClientData client, WebsocketMessage receivedMessage)
         {
             receivedMessage.Masked = false;
             //receivedMessage.Opcode = WebsocketMessage.Opcodes.Text;

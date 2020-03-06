@@ -1,6 +1,6 @@
 ﻿using MTSC.Common.Http.RoutingModules;
-using MTSC.Server;
-using MTSC.Server.Handlers;
+using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
 using System;
 using System.Collections.Generic;
 using static MTSC.Common.Http.HttpMessage;
@@ -9,19 +9,19 @@ namespace MTSC.Common.Http.ServerModules
 {
     public sealed class HttpRoutingModule : IHttpModule
     {
-        private static Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
+        private static Func<ServerSide.Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
 
         private Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase, 
-            Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary = 
+            Func<ServerSide.Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary = 
             new Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase, 
-                Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
+                Func<ServerSide.Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
 
         public HttpRoutingModule()
         {
             foreach (HttpMethods method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
                 moduleDictionary[method] = new Dictionary<string, (HttpRouteBase, 
-                    Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
+                    Func<ServerSide.Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
             }
         }
 
@@ -38,7 +38,7 @@ namespace MTSC.Common.Http.ServerModules
             HttpMethods method,
             string uri,
             HttpRouteBase routeModule,
-            Func<Server.Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+            Func<ServerSide.Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
         {
             moduleDictionary[method][uri] = (routeModule, routeEnabler);
             return this;
@@ -52,7 +52,7 @@ namespace MTSC.Common.Http.ServerModules
             return this;
         }
 
-        bool IHttpModule.HandleRequest(Server.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
+        bool IHttpModule.HandleRequest(ServerSide.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response)
         {
             /*
              * Now find if a routing module exists. If not let other handlers try and handle the message.
@@ -89,6 +89,6 @@ namespace MTSC.Common.Http.ServerModules
             return false;
         }
 
-        void IHttpModule.Tick(Server.Server server, HttpHandler handler) { }
+        void IHttpModule.Tick(ServerSide.Server server, HttpHandler handler) { }
     }
 }

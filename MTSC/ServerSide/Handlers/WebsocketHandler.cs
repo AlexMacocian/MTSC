@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace MTSC.Server.Handlers
+namespace MTSC.ServerSide.Handlers
 {
     public sealed class WebsocketHandler : IHandler
     {

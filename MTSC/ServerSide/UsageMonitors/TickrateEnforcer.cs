@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace MTSC.Server.UsageMonitors
+namespace MTSC.ServerSide.UsageMonitors
 {
     /// <summary>
     /// Implementation of <see cref="IServerUsageMonitor"/> that enforces a specified tickrate.

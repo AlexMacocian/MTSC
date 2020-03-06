@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 
-namespace MTSC.Server.Handlers
+namespace MTSC.ServerSide.Handlers
 {
     /// <summary>
     /// Interface for communication handlers.

@@ -4,7 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace MTSC.Server.Handlers
+namespace MTSC.ServerSide.Handlers
 {
     /// <summary>
     /// Handler that encrypts the communication.

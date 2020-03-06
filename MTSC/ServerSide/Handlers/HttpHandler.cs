@@ -5,7 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 
-namespace MTSC.Server.Handlers
+namespace MTSC.ServerSide.Handlers
 {
     /// <summary>
     /// Handler for handling server http requests.

@@ -2,9 +2,9 @@
 using MTSC.Common.WebSockets.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
-using MTSC.Server;
-using MTSC.Server.Handlers;
-using MTSC.Server.UsageMonitors;
+using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
+using MTSC.ServerSide.UsageMonitors;
 using System;
 using System.Numerics;
 using System.Security.Cryptography;

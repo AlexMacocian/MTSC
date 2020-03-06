@@ -1,8 +1,8 @@
 ﻿using MTSC.Exceptions;
 using MTSC.Logging;
-using MTSC.Server.Handlers;
-using MTSC.Server.Resources;
-using MTSC.Server.UsageMonitors;
+using MTSC.ServerSide.Handlers;
+using MTSC.ServerSide.Resources;
+using MTSC.ServerSide.UsageMonitors;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
-namespace MTSC.Server
+namespace MTSC.ServerSide
 {
     /// <summary>
     /// Basic server class to handle TCP connections.
@@ -56,7 +56,7 @@ namespace MTSC.Server
         /// <summary>
         /// Returns the state of the server.
         /// </summary>
-        public bool Running { get => running; }
+        public bool Running { get => listener != null; }
         public bool RequestClientCertificate { get; set; } = true;
         /// <summary>
         /// List of clients currently connected to the server.
@@ -512,6 +512,8 @@ namespace MTSC.Server
                     }
                 }
             }
+            listener.Stop();
+            listener = null;
         }
         /// <summary>
         /// Runs the server async.

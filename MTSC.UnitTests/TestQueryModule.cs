@@ -1,13 +1,13 @@
 ﻿using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
-using MTSC.Server;
+using MTSC.ServerSide;
 using System.Web;
 
 namespace MTSC.UnitTests
 {
     class TestQueryModule : HttpRouteBase
     {
-        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, Server.Server server)
+        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
         {
             var query = HttpUtility.ParseQueryString(request.RequestQuery);
             if(query.Count == 2 &&
