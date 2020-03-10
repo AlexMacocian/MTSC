@@ -11,6 +11,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MTSC.ServerSide
@@ -24,7 +25,6 @@ namespace MTSC.ServerSide
         bool running;
         X509Certificate2 certificate;
         TcpListener listener;
-        int port = 80;
         List<ClientData> toRemove = new List<ClientData>();
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
@@ -52,7 +52,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Server port.
         /// </summary>
-        public int Port { get => port; set => port = value; }
+        public int Port { get; set; } = 80;
         /// <summary>
         /// Returns the state of the server.
         /// </summary>
@@ -73,7 +73,7 @@ namespace MTSC.ServerSide
         /// </summary>
         public Server()
         {
-
+            
         }
         /// <summary>
         /// Creates an instance of server.
@@ -81,7 +81,7 @@ namespace MTSC.ServerSide
         /// <param name="port">Port to be used by server.</param>
         public Server(int port)
         {
-            this.port = port;
+            this.Port = port;
         }
         /// <summary>
         /// Creates an instance of server.
@@ -91,7 +91,7 @@ namespace MTSC.ServerSide
         public Server(X509Certificate2 certificate, int port)
         {
             this.certificate = certificate;
-            this.port = port;
+            this.Port = port;
         }
         #endregion
         #region Public Methods
@@ -167,7 +167,7 @@ namespace MTSC.ServerSide
         /// <returns>This server instance.</returns>
         public Server SetPort(int port)
         {
-            this.port = port;
+            this.Port = port;
             return this;
         }
         /// <summary>
@@ -254,14 +254,13 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Blocking method. Runs the server on the current thread.
         /// </summary>
-        public void Run()
+        public async void Run()
         {
             listener?.Stop();
-            listener = new TcpListener(IPAddress.Any, port);
+            listener = new TcpListener(IPAddress.Any, Port);
             listener.Start();
             running = true;
             Log("Server started on: " + listener.LocalEndpoint.ToString());
-            DateTime lastLoad = DateTime.Now;
             DateTime startLoopTime;
             while (running)
             {
@@ -272,25 +271,7 @@ namespace MTSC.ServerSide
                  */
                 try
                 {
-                    foreach (ClientData client in Clients)
-                    {
-                        if (!client.TcpClient.Connected || client.ToBeRemoved)
-                        {
-                            toRemove.Add(client);
-                        }
-                    }
-                    foreach (ClientData client in toRemove)
-                    {
-                        foreach (IHandler handler in handlers)
-                        {
-                            handler.ClientRemoved(this, client);
-                        }
-                        LogDebug("Client removed: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-                        client.SslStream?.Dispose();
-                        client.TcpClient?.Dispose();
-                        Clients.Remove(client);
-                    }
-                    toRemove.Clear();
+                    CheckAndRemoveInactiveClients();
                 }
                 catch (Exception e)
                 {
@@ -308,45 +289,7 @@ namespace MTSC.ServerSide
                  */
                 try
                 {
-                    while (listener.Pending())
-                    {
-                        lastLoad = DateTime.Now;
-                        TcpClient tcpClient = listener.AcceptTcpClient();
-                        ClientData clientStruct = new ClientData(tcpClient);
-                        if (this.certificate != null)
-                        {
-                            try
-                            {
-                                SslStream sslStream = new SslStream(tcpClient.GetStream(),
-                                    true,
-                                    this.RemoteCertificateValidationCallback,
-                                    this.LocalCertificateSelectionCallback,
-                                    this.EncryptionPolicy);
-                                clientStruct.SslStream = sslStream;
-                                sslStream.AuthenticateAsServer(this.certificate, this.RequestClientCertificate, this.SslProtocols, false);
-                            }
-                            catch(Exception e)
-                            {
-                                clientStruct.ToBeRemoved = true;
-                                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                                {
-                                    if (exceptionHandler.HandleException(e))
-                                    {
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        foreach (IHandler handler in handlers)
-                        {
-                            if (handler.HandleClient(this, clientStruct))
-                            {
-                                break;
-                            }
-                        }
-                        Clients.Add(clientStruct);
-                        Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
-                    }
+                    await Task.Run(CheckForNewConnections, new CancellationTokenSource(TimeSpan.FromMilliseconds(10)).Token);
                 }
                 catch(Exception e)
                 {
@@ -363,138 +306,26 @@ namespace MTSC.ServerSide
                  */
                 Parallel.ForEach(Clients, (client) =>
                 {
-                    try
-                    {
-                        /*
-                         * If the connection has been lost, mark the client to be removed.
-                         * Else, check if there is data to be read.
-                         */
-                        if (!client.TcpClient.Connected)
-                        {
-                            client.ToBeRemoved = true;
-                        }
-                        else if (client.TcpClient.Available > 0)
-                        {
-                            lastLoad = DateTime.Now;
-                            Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
-                            client.LastMessageTime = DateTime.Now;
-                            LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
-                                    "\nMessage length: " + message.MessageLength);
-                            foreach (IHandler handler in handlers)
-                            {
-                                try
-                                {
-                                    if (handler.PreHandleReceivedMessage(this, client, ref message))
-                                    {
-                                        break;
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                                    {
-                                        if (exceptionHandler.HandleException(e))
-                                        {
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                            foreach (IHandler handler in handlers)
-                            {
-                                try
-                                {
-                                    if (handler.HandleReceivedMessage(this, client, message))
-                                    {
-                                        break;
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    LogDebug("Exception: " + e.Message);
-                                    LogDebug("Stacktrace: " + e.StackTrace);
-                                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                                    {
-                                        if (exceptionHandler.HandleException(e))
-                                        {
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch(Exception e)
-                    {
-                        foreach(IExceptionHandler exceptionHandler in exceptionHandlers)
-                        {
-                            if (exceptionHandler.HandleException(e))
-                            {
-                                break;
-                            }
-                        }
-                    }
+                    HandleClientMessage(client);
                 });
+
                 /*
                  * Iterate through all the handlers, running periodic operations.
                  */
-                Parallel.ForEach(handlers, (handler) =>
+                foreach(IHandler handler in handlers)
                 {
-                    try
-                    {
-                        handler.Tick(this);
-                    }
-                    catch (Exception e)
-                    {
-                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                        {
-                            if (exceptionHandler.HandleException(e))
-                            {
-                                break;
-                            }
-                        }
-                    }
-                });
+                    TickHandler(handler);
+                }
+
                 /*
                  * Check if there are messages queued to be sent.
                  */
-                if(messageQueue.Count > 0)
-                {
-                    lastLoad = DateTime.Now;
-                    while (messageQueue.Count > 0)
-                    {
-                        try
-                        {
-                            if (messageQueue.TryDequeue(out Tuple<ClientData, byte[]> queuedOrder))
-                            {
-                                Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
-                                for (int i = handlers.Count - 1; i >= 0; i--)
-                                {
-                                    IHandler handler = handlers[i];
-                                    ClientData client = queuedOrder.Item1;
-                                    handler.HandleSendMessage(this, client, ref sendMessage);
-                                }
-                                CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
-                                LogDebug("Sent message to " + queuedOrder.Item1.TcpClient.Client.RemoteEndPoint.ToString() +
-                                    "\nMessage length: " + sendMessage.MessageLength);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                            {
-                                if (exceptionHandler.HandleException(e))
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
+                SendQueuedMessages();
+
                 /*
                  * Call the usage monitors and let them scale or determine current resource usage.
                  */
-                foreach(IServerUsageMonitor usageMonitor in serverUsageMonitors)
+                foreach (IServerUsageMonitor usageMonitor in serverUsageMonitors)
                 {
                     try
                     {
@@ -534,6 +365,195 @@ namespace MTSC.ServerSide
         }
         #endregion
         #region Private Methods
+        private void SendQueuedMessages()
+        {
+            while (messageQueue.Count > 0)
+            {
+                try
+                {
+                    if (messageQueue.TryDequeue(out Tuple<ClientData, byte[]> queuedOrder))
+                    {
+                        Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
+                        for (int i = handlers.Count - 1; i >= 0; i--)
+                        {
+                            IHandler handler = handlers[i];
+                            ClientData client = queuedOrder.Item1;
+                            handler.HandleSendMessage(this, client, ref sendMessage);
+                        }
+                        CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
+                        LogDebug("Sent message to " + queuedOrder.Item1.TcpClient.Client.RemoteEndPoint.ToString() +
+                            "\nMessage length: " + sendMessage.MessageLength);
+                    }
+                }
+                catch (Exception e)
+                {
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        if (exceptionHandler.HandleException(e))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void CheckAndRemoveInactiveClients()
+        {
+            foreach (ClientData client in Clients)
+            {
+                if (!client.TcpClient.Connected || client.ToBeRemoved)
+                {
+                    toRemove.Add(client);
+                }
+            }
+            foreach (ClientData client in toRemove)
+            {
+                foreach (IHandler handler in handlers)
+                {
+                    handler.ClientRemoved(this, client);
+                }
+                LogDebug("Client removed: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                client.SslStream?.Dispose();
+                client.TcpClient?.Dispose();
+                Clients.Remove(client);
+            }
+            toRemove.Clear();
+        }
+
+        private void TickHandler(IHandler handler)
+        {
+            try
+            {
+                handler.Tick(this);
+            }
+            catch (Exception e)
+            {
+                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                {
+                    if (exceptionHandler.HandleException(e))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void HandleClientMessage(ClientData client)
+        {
+            try
+            {
+                /*
+                * If the connection has been lost, mark the client to be removed.
+                * Else, check if there is data to be read.
+                */
+                if (!client.TcpClient.Connected)
+                {
+                    client.ToBeRemoved = true;
+                }
+                else if (client.TcpClient.Available > 0)
+                {
+                    Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
+                    client.LastMessageTime = DateTime.Now;
+                    LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
+                            "\nMessage length: " + message.MessageLength);
+                    foreach (IHandler handler in handlers)
+                    {
+                        try
+                        {
+                            if (handler.PreHandleReceivedMessage(this, client, ref message))
+                            {
+                                break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                            {
+                                if (exceptionHandler.HandleException(e))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    foreach (IHandler handler in handlers)
+                    {
+                        try
+                        {
+                            if (handler.HandleReceivedMessage(this, client, message))
+                            {
+                                break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            LogDebug("Exception: " + e.Message);
+                            LogDebug("Stacktrace: " + e.StackTrace);
+                            foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                            {
+                                if (exceptionHandler.HandleException(e))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                {
+                    if (exceptionHandler.HandleException(e))
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void CheckForNewConnections()
+        {
+            while (listener.Pending())
+            {
+                TcpClient tcpClient = listener.AcceptTcpClient();
+                ClientData clientStruct = new ClientData(tcpClient);
+                if (this.certificate != null)
+                {
+                    try
+                    {
+                        SslStream sslStream = new SslStream(tcpClient.GetStream(),
+                            true,
+                            this.RemoteCertificateValidationCallback,
+                            this.LocalCertificateSelectionCallback,
+                            this.EncryptionPolicy);
+                        clientStruct.SslStream = sslStream;
+                        sslStream.AuthenticateAsServer(this.certificate, this.RequestClientCertificate, this.SslProtocols, false);
+                    }
+                    catch (Exception e)
+                    {
+                        clientStruct.ToBeRemoved = true;
+                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                        {
+                            if (exceptionHandler.HandleException(e))
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+                foreach (IHandler handler in handlers)
+                {
+                    if (handler.HandleClient(this, clientStruct))
+                    {
+                        break;
+                    }
+                }
+                Clients.Add(clientStruct);
+                Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
+            }
+        }
         #endregion
     }
     /// <summary>
