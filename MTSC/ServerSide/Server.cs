@@ -33,6 +33,7 @@ namespace MTSC.ServerSide
         ConcurrentQueue<Tuple<ClientData, byte[]>> messageQueue = new ConcurrentQueue<Tuple<ClientData, byte[]>>();
         #endregion
         #region Properties
+        public TimeSpan SslAuthenticationTimeout { get; set; } = TimeSpan.FromSeconds(1);
         /// <summary>
         /// SSL supported protocols.
         /// </summary>
@@ -95,6 +96,16 @@ namespace MTSC.ServerSide
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Ssl authentication timeout
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public Server WithSslAuthenticationTimeout(TimeSpan timeout)
+        {
+            this.SslAuthenticationTimeout = timeout;
+            return this;
+        }
         public Server WithResource(IResource resource)
         {
             Resources[resource.GetType()] = resource;
@@ -254,7 +265,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Blocking method. Runs the server on the current thread.
         /// </summary>
-        public async void Run()
+        public void Run()
         {
             listener?.Stop();
             listener = new TcpListener(IPAddress.Any, Port);
@@ -289,7 +300,7 @@ namespace MTSC.ServerSide
                  */
                 try
                 {
-                    await Task.Run(CheckForNewConnections, new CancellationTokenSource(TimeSpan.FromMilliseconds(10)).Token);
+                    CheckForNewConnections();
                 }
                 catch(Exception e)
                 {
@@ -529,7 +540,10 @@ namespace MTSC.ServerSide
                             this.LocalCertificateSelectionCallback,
                             this.EncryptionPolicy);
                         clientStruct.SslStream = sslStream;
-                        sslStream.AuthenticateAsServer(this.certificate, this.RequestClientCertificate, this.SslProtocols, false);
+                        if(!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
+                        {
+                            clientStruct.ToBeRemoved = true;
+                        }
                     }
                     catch (Exception e)
                     {

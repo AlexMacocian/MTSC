@@ -40,7 +40,8 @@ namespace MTSC.UnitTests
                     .WithMaximumSize(300))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
-                .AddExceptionHandler(new ExceptionConsoleLogger());
+                .AddExceptionHandler(new ExceptionConsoleLogger())
+                .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
         }
 
