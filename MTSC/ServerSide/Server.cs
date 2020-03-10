@@ -300,9 +300,13 @@ namespace MTSC.ServerSide
                  */
                 try
                 {
-                    CheckForNewConnections();
+                    while (listener.Pending())
+                    {
+                        TcpClient tcpClient = listener.AcceptTcpClient();
+                        Task.Run(() => AcceptClient(tcpClient));
+                    }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
@@ -524,49 +528,45 @@ namespace MTSC.ServerSide
             }
         }
 
-        private void CheckForNewConnections()
+        private void AcceptClient(TcpClient tcpClient)
         {
-            while (listener.Pending())
+            ClientData clientStruct = new ClientData(tcpClient);
+            if (this.certificate != null)
             {
-                TcpClient tcpClient = listener.AcceptTcpClient();
-                ClientData clientStruct = new ClientData(tcpClient);
-                if (this.certificate != null)
+                try
                 {
-                    try
-                    {
-                        SslStream sslStream = new SslStream(tcpClient.GetStream(),
-                            true,
-                            this.RemoteCertificateValidationCallback,
-                            this.LocalCertificateSelectionCallback,
-                            this.EncryptionPolicy);
-                        clientStruct.SslStream = sslStream;
-                        if(!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
-                        {
-                            clientStruct.ToBeRemoved = true;
-                        }
-                    }
-                    catch (Exception e)
+                    SslStream sslStream = new SslStream(tcpClient.GetStream(),
+                        true,
+                        this.RemoteCertificateValidationCallback,
+                        this.LocalCertificateSelectionCallback,
+                        this.EncryptionPolicy);
+                    clientStruct.SslStream = sslStream;
+                    if (!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
                     {
                         clientStruct.ToBeRemoved = true;
-                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    }
+                }
+                catch (Exception e)
+                {
+                    clientStruct.ToBeRemoved = true;
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        if (exceptionHandler.HandleException(e))
                         {
-                            if (exceptionHandler.HandleException(e))
-                            {
-                                break;
-                            }
+                            break;
                         }
                     }
                 }
-                foreach (IHandler handler in handlers)
-                {
-                    if (handler.HandleClient(this, clientStruct))
-                    {
-                        break;
-                    }
-                }
-                Clients.Add(clientStruct);
-                Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
             }
+            foreach (IHandler handler in handlers)
+            {
+                if (handler.HandleClient(this, clientStruct))
+                {
+                    break;
+                }
+            }
+            Clients.Add(clientStruct);
+            Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
         }
         #endregion
     }
