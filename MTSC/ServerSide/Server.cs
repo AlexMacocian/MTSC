@@ -359,6 +359,21 @@ namespace MTSC.ServerSide
                 }
             }
             listener.Stop();
+            foreach (var client in Clients)
+            {
+                try
+                {
+                    client?.SslStream?.Dispose();
+                    client?.TcpClient?.Dispose();
+                }
+                catch (Exception e)
+                {
+                    foreach (var handler in exceptionHandlers)
+                    {
+                        handler.HandleException(e);
+                    }
+                }
+            }
             listener = null;
         }
         /// <summary>
