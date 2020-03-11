@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.ServerModules;
+using MTSC.Common.WebSockets;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
@@ -29,8 +30,16 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new ServerSide.Server(800)
-                .AddHandler(new WebsocketHandler()
-                    .AddWebsocketHandler(new Common.WebSockets.ServerModules.EchoModule()))
+                .AddHandler(new WebsocketRoutingHandler()
+                    .AddRoute("echo", new EchoWebsocketModule()
+                        .WithReceiveTemplateProvider((message) => UTF8Encoding.UTF8.GetString(message.Data))
+                        .WithSendTemplateProvider((s) => 
+                            {
+                                WebsocketMessage websocketMessage = new WebsocketMessage();
+                                websocketMessage.Data = UTF8Encoding.UTF8.GetBytes(s);
+                                websocketMessage.Opcode = WebsocketMessage.Opcodes.Text;
+                                return websocketMessage;
+                            })))
                 .AddHandler(new HttpHandler()
                     .AddHttpModule(new HttpRoutingModule()
                         .AddRoute(HttpMessage.HttpMethods.Get, "", new Http200Module())
@@ -184,7 +193,7 @@ namespace MTSC.UnitTests
         {
             byte[] bytes = new byte[100];
             ClientWebSocket client = new ClientWebSocket();
-            client.ConnectAsync(new Uri("ws://localhost:800"), CancellationToken.None).Wait();
+            client.ConnectAsync(new Uri("ws://localhost:800/echo"), CancellationToken.None).Wait();
             client.SendAsync(ASCIIEncoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
             client.ReceiveAsync(bytes, CancellationToken.None).Wait();
             var resultString = ASCIIEncoding.ASCII.GetString(bytes, 0, 12);
