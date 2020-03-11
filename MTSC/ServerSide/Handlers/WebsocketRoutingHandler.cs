@@ -88,7 +88,10 @@ namespace MTSC.ServerSide.Handlers
             {
                 webSockets.TryRemove(client, out state);
             }
-            routingTable[client].CallConnectionClosed(server, this, client);
+            if (routingTable.ContainsKey(client))
+            {
+                routingTable[client].CallConnectionClosed(server, this, client);
+            }
             while (routingTable.ContainsKey(client))
             {
                 routingTable.TryRemove(client, out _);
