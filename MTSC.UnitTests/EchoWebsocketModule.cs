@@ -20,5 +20,10 @@ namespace MTSC.UnitTests
         {
             this.SendMessage(message, client, handler);
         }
+
+        public override void Tick(Server server, WebsocketRoutingHandler handler)
+        {
+            
+        }
     }
 }

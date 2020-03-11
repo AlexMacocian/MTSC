@@ -220,6 +220,10 @@ namespace MTSC.ServerSide.Handlers
 
         void IHandler.Tick(Server server)
         {
+            foreach((var module, var _) in moduleDictionary.Values)
+            {
+                module.Tick(server, this);
+            }
             while (messageQueue.Count > 0)
             {
                 if (messageQueue.TryDequeue(out Tuple<ClientData, WebsocketMessage> tuple))

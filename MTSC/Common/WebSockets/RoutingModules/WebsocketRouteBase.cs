@@ -27,6 +27,7 @@ namespace MTSC.Common.WebSockets.RoutingModules
         public abstract void ConnectionInitialized(Server server, WebsocketRoutingHandler handler, ClientData client);
         public abstract void HandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, WebsocketMessage receivedMessage);
         public abstract void ConnectionClosed(Server server, WebsocketRoutingHandler handler, ClientData client);
+        public abstract void Tick(Server server, WebsocketRoutingHandler handler);
     }
     public abstract class WebsocketRouteBase<TReceive> : WebsocketRouteBase
     {
