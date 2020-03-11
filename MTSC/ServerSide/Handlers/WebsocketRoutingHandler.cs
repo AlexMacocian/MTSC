@@ -83,14 +83,13 @@ namespace MTSC.ServerSide.Handlers
         #region Handler Implementation
         void IHandler.ClientRemoved(Server server, ClientData client)
         {
-            SocketState state = SocketState.Initial;
             while (webSockets.ContainsKey(client))
             {
-                webSockets.TryRemove(client, out state);
+                webSockets.TryRemove(client, out SocketState state);
             }
-            if (routingTable.ContainsKey(client))
+            if (routingTable.TryGetValue(client, out WebsocketRouteBase route))
             {
-                routingTable[client].CallConnectionClosed(server, this, client);
+                route.CallConnectionClosed(server, this, client);
             }
             while (routingTable.ContainsKey(client))
             {
