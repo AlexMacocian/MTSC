@@ -321,7 +321,8 @@ namespace MTSC.ServerSide
                  */
                 Parallel.ForEach(Clients, (client) =>
                 {
-                    HandleClientMessage(client);
+                    if(!client.ToBeRemoved)
+                        HandleClientMessage(client);
                 });
 
                 /*
