@@ -221,9 +221,78 @@ namespace MTSC.ServerSide
             serverUsageMonitors.Add(serverUsageMonitor);
             return this;
         }
+        /// <summary>
+        /// Get the resource of provided type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
         public T GetResource<T>()
         {
             return (T)Resources[typeof(T)];
+        }
+        /// <summary>
+        /// Get handler of provided type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetHandler<T>() where T : class
+        {
+            foreach(var handler in handlers)
+            {
+                if(handler is T)
+                {
+                    return handler as T;
+                }
+            }
+            return null;
+        }
+        /// <summary>
+        /// Get exception handler of provided type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetExceptionHandler<T>() where T : class
+        {
+            foreach (var exceptionHandler in exceptionHandlers)
+            {
+                if (exceptionHandler is T)
+                {
+                    return exceptionHandler as T;
+                }
+            }
+            return null;
+        }
+        /// <summary>
+        /// Get logger of provided type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetLogger<T>() where T : class
+        {
+            foreach (var logger in loggers)
+            {
+                if (logger is T)
+                {
+                    return logger as T;
+                }
+            }
+            return null;
+        }
+        /// <summary>
+        /// Get server usage monitor of provided type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetServerUsageMonitor<T>() where T : class
+        {
+            foreach (var serverMonitor in serverUsageMonitors)
+            {
+                if(serverMonitor is T)
+                {
+                    return serverMonitor as T;
+                }
+            }
+            return null;
         }
         /// <summary>
         /// Queues a message to be sent.
