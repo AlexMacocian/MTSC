@@ -99,6 +99,16 @@ namespace MTSC.ServerSide
         #endregion
         #region Public Methods
         /// <summary>
+        /// Sets the scheduler of the server
+        /// </summary>
+        /// <param name="scheduler"></param>
+        /// <returns></returns>
+        public Server SetScheduler(IScheduler scheduler)
+        {
+            this.Scheduler = scheduler;
+            return this;
+        }
+        /// <summary>
         /// Sets the InQueue with the provided type.
         /// Default type is a <see cref="ConcurrentQueue{T}"/>.
         /// Modifying the queue will have an impact on performance, depending on the implementation of the provided collection.
