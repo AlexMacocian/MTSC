@@ -420,6 +420,13 @@ namespace MTSC.ServerSide
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
                         Clients.Add(clientStruct);
+                        foreach (IHandler handler in handlers)
+                        {
+                            if (handler.HandleClient(this, clientStruct))
+                            {
+                                break;
+                            }
+                        }
                         Task.Run(() => AcceptClient(clientStruct));
                     }
                 }
@@ -704,13 +711,6 @@ namespace MTSC.ServerSide
                             break;
                         }
                     }
-                }
-            }
-            foreach (IHandler handler in handlers)
-            {
-                if (handler.HandleClient(this, client))
-                {
-                    break;
                 }
             }
         }

@@ -6,6 +6,7 @@ using MTSC.Common.WebSockets;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
+using MTSC.ServerSide.Schedulers;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -50,6 +51,7 @@ namespace MTSC.UnitTests
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
+                .SetScheduler(new SequentialProcessingScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
         }
