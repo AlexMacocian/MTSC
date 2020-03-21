@@ -2,6 +2,7 @@
 using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Resources;
+using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
 using System;
 using System.Collections.Concurrent;
@@ -11,7 +12,6 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MTSC.ServerSide
@@ -30,9 +30,11 @@ namespace MTSC.ServerSide
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
-        ConcurrentQueue<Tuple<ClientData, byte[]>> messageQueue = new ConcurrentQueue<Tuple<ClientData, byte[]>>();
         #endregion
         #region Properties
+        public IScheduler Scheduler { get; set; } = new ParallelScheduler();
+        public IProducerConsumerCollection<(ClientData, Message)> InQueue { get; set; } = new ConcurrentQueue<(ClientData, Message)>();
+        public IProducerConsumerCollection<(ClientData, byte[])> OutQueue { get; set; } = new ConcurrentQueue<(ClientData, byte[])>();
         public TimeSpan SslAuthenticationTimeout { get; set; } = TimeSpan.FromSeconds(1);
         /// <summary>
         /// SSL supported protocols.
@@ -96,6 +98,32 @@ namespace MTSC.ServerSide
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Sets the InQueue with the provided type.
+        /// Default type is a <see cref="ConcurrentQueue{T}"/>.
+        /// Modifying the queue will have an impact on performance, depending on the implementation of the provided collection.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="queue"></param>
+        /// <returns>This server object.</returns>
+        public Server SetInQueue<T>(T queue) where T : IProducerConsumerCollection<(ClientData, Message)>
+        {
+            this.InQueue = queue;
+            return this;
+        }
+        /// <summary>
+        /// Sets the OutQueue with the provided type.
+        /// Default type is a <see cref="ConcurrentQueue{T}"/>.
+        /// Modifying the queue will have an impact on performance, depending on the implementation of the provided collection.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="queue"></param>
+        /// <returns>This server object.</returns>
+        public Server SetOutQueue<T>(T queue) where T : IProducerConsumerCollection<(ClientData, byte[])>
+        {
+            this.OutQueue = queue;
+            return this;
+        }
         /// <summary>
         /// Ssl authentication timeout
         /// </summary>
@@ -301,7 +329,15 @@ namespace MTSC.ServerSide
         /// <param name="message">Message to be sent.</param>
         public void QueueMessage(ClientData target, byte[] message)
         {
-            messageQueue.Enqueue(new Tuple<ClientData, byte[]>(target, message));
+            int retries = 0;
+            while(!OutQueue.TryAdd((target, message))) 
+            {
+                retries++;
+                if(retries > 5)
+                {
+                    throw new QueueOperationException($"Failed to insert provided message in the {nameof(OutQueue)}. Tried {retries} times");
+                }
+            };
         }
         /// <summary>
         /// Adds a message to be logged by the associated loggers.
@@ -372,7 +408,9 @@ namespace MTSC.ServerSide
                     while (listener.Pending())
                     {
                         TcpClient tcpClient = listener.AcceptTcpClient();
-                        Task.Run(() => AcceptClient(tcpClient));
+                        ClientData clientStruct = new ClientData(tcpClient);
+                        Clients.Add(clientStruct);
+                        Task.Run(() => AcceptClient(clientStruct));
                     }
                 }
                 catch (Exception e)
@@ -386,13 +424,15 @@ namespace MTSC.ServerSide
                     }
                 }
                 /*
-                 * Process in parallel all clients.
+                 * Gather all messages from clients and put them in a queue
                  */
-                Parallel.ForEach(Clients, (client) =>
-                {
-                    if(!client.ToBeRemoved)
-                        HandleClientMessage(client);
-                });
+                GatherReceivedMessages();
+
+                /*
+                 * Call the scheduler to handle all received messages and distribute them to the handlers
+                 */
+
+                Scheduler.ScheduleHandling(InQueue, HandleClientMessage);
 
                 /*
                  * Iterate through all the handlers, running periodic operations.
@@ -467,11 +507,11 @@ namespace MTSC.ServerSide
         #region Private Methods
         private void SendQueuedMessages()
         {
-            while (messageQueue.Count > 0)
+            while (OutQueue.Count > 0)
             {
                 try
                 {
-                    if (messageQueue.TryDequeue(out Tuple<ClientData, byte[]> queuedOrder))
+                    if (OutQueue.TryTake(out (ClientData, byte[]) queuedOrder))
                     {
                         Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
                         for (int i = handlers.Count - 1; i >= 0; i--)
@@ -539,101 +579,59 @@ namespace MTSC.ServerSide
             }
         }
 
-        private void HandleClientMessage(ClientData client)
+        private void GatherReceivedMessages()
         {
-            try
+            foreach(var client in Clients)
             {
-                /*
-                * If the connection has been lost, mark the client to be removed.
-                * Else, check if there is data to be read.
-                */
                 if (!client.TcpClient.Connected)
                 {
                     client.ToBeRemoved = true;
                 }
-                else if (client.TcpClient.Available > 0)
+                try
                 {
-                    Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
-                    client.LastMessageTime = DateTime.Now;
-                    LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
-                            "\nMessage length: " + message.MessageLength);
-                    foreach (IHandler handler in handlers)
+                    if (!client.ToBeRemoved && client.TcpClient.Available > 0)
                     {
-                        try
+                        Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
+                        client.LastMessageTime = DateTime.Now;
+                        LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
+                                "\nMessage length: " + message.MessageLength);
+                        int retries = 0;
+                        while(!InQueue.TryAdd((client, message)))
                         {
-                            if (handler.PreHandleReceivedMessage(this, client, ref message))
+                            retries++;
+                            if(retries > 5)
                             {
-                                break;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                            {
-                                if (exceptionHandler.HandleException(e))
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    foreach (IHandler handler in handlers)
-                    {
-                        try
-                        {
-                            if (handler.HandleReceivedMessage(this, client, message))
-                            {
-                                break;
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            LogDebug("Exception: " + e.Message);
-                            LogDebug("Stacktrace: " + e.StackTrace);
-                            foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                            {
-                                if (exceptionHandler.HandleException(e))
-                                {
-                                    break;
-                                }
+                                throw new QueueOperationException($"Failed to insert received message in {nameof(InQueue)}. Tried [{retries}] times");
                             }
                         }
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                catch(Exception e)
                 {
-                    if (exceptionHandler.HandleException(e))
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
-                        break;
+                        if (exceptionHandler.HandleException(e))
+                        {
+                            break;
+                        }
                     }
                 }
             }
         }
 
-        private void AcceptClient(TcpClient tcpClient)
+        private void HandleClientMessage(ClientData client, Message message)
         {
-            ClientData clientStruct = new ClientData(tcpClient);
-            if (this.certificate != null)
+            foreach (IHandler handler in handlers)
             {
                 try
                 {
-                    SslStream sslStream = new SslStream(tcpClient.GetStream(),
-                        true,
-                        this.RemoteCertificateValidationCallback,
-                        this.LocalCertificateSelectionCallback,
-                        this.EncryptionPolicy);
-                    clientStruct.SslStream = sslStream;
-                    if (!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
+                    if (handler.PreHandleReceivedMessage(this, client, ref message))
                     {
-                        clientStruct.ToBeRemoved = true;
+                        break;
                     }
                 }
                 catch (Exception e)
                 {
-                    clientStruct.ToBeRemoved = true;
                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
@@ -645,13 +643,66 @@ namespace MTSC.ServerSide
             }
             foreach (IHandler handler in handlers)
             {
-                if (handler.HandleClient(this, clientStruct))
+                try
+                {
+                    if (handler.HandleReceivedMessage(this, client, message))
+                    {
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    LogDebug("Exception: " + e.Message);
+                    LogDebug("Stacktrace: " + e.StackTrace);
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        if (exceptionHandler.HandleException(e))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        private void AcceptClient(ClientData client)
+        {
+
+            Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+            if (this.certificate != null)
+            {
+                try
+                {
+                    SslStream sslStream = new SslStream(client.TcpClient.GetStream(),
+                        true,
+                        this.RemoteCertificateValidationCallback,
+                        this.LocalCertificateSelectionCallback,
+                        this.EncryptionPolicy);
+                    client.SslStream = sslStream;
+                    if (!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
+                    {
+                        client.ToBeRemoved = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    client.ToBeRemoved = true;
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        if (exceptionHandler.HandleException(e))
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            foreach (IHandler handler in handlers)
+            {
+                if (handler.HandleClient(this, client))
                 {
                     break;
                 }
             }
-            Clients.Add(clientStruct);
-            Log("Accepted new connection: " + tcpClient.Client.RemoteEndPoint.ToString());
         }
         #endregion
     }
