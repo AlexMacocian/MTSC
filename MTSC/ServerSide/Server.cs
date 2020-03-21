@@ -684,7 +684,6 @@ namespace MTSC.ServerSide
 
         private void AcceptClient(ClientData client)
         {
-
             Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
             if (this.certificate != null)
             {
