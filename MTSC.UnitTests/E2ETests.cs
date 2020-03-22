@@ -23,7 +23,7 @@ namespace MTSC.UnitTests
     public class E2ETests
     {
         private volatile byte[] receivedMessage = null;
-        private static int stressIterations = 10000;
+        private static int stressIterations = 100000;
         public TestContext TestContext { get; set; }
         static ServerSide.Server Server { get; set; }
 

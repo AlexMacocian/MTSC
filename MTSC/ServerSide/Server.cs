@@ -64,7 +64,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
-        public ConcurrentBag<ClientData> Clients { get; set; } = new ConcurrentBag<ClientData>();
+        public List<ClientData> Clients { get; set; } = new List<ClientData>();
         /// <summary>
         /// Dictionary of resources
         /// </summary>
@@ -419,6 +419,7 @@ namespace MTSC.ServerSide
                     {
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
+                        Clients.Add(clientStruct);
                         Task.Run(() => AcceptClient(clientStruct));
                     }
                 }
@@ -565,7 +566,7 @@ namespace MTSC.ServerSide
                 LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
                 client.SslStream?.Dispose();
                 client.TcpClient?.Dispose();
-                Clients.TryTake(out _);
+                Clients.Remove(client);
             }
             toRemove.Clear();
         }
@@ -700,7 +701,6 @@ namespace MTSC.ServerSide
                         break;
                     }
                 }
-                Clients.Add(client);
             }
             catch (Exception e)
             {
