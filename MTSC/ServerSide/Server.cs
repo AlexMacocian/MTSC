@@ -562,7 +562,7 @@ namespace MTSC.ServerSide
                 {
                     handler.ClientRemoved(this, client);
                 }
-                LogDebug("Client removed: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
                 client.SslStream?.Dispose();
                 client.TcpClient?.Dispose();
                 Clients.TryTake(out _);
