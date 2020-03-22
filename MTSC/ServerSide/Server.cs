@@ -419,8 +419,7 @@ namespace MTSC.ServerSide
                     {
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
-                        Clients.Add(clientStruct);
-                        Task.Run(() => AcceptClient(clientStruct));
+                        AcceptClient(clientStruct);
                     }
                 }
                 catch (Exception e)
@@ -688,11 +687,9 @@ namespace MTSC.ServerSide
                         this.EncryptionPolicy);
                     client.SslStream = sslStream;
 
-                    if (!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
-                    {
-                        client.ToBeRemoved = true;
-                    }
+                    sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout);
                 }
+                Clients.Add(client);
                 Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
                 foreach (IHandler handler in handlers)
                 {
