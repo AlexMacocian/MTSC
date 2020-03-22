@@ -64,7 +64,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
-        public List<ClientData> Clients { get; set; } = new List<ClientData>();
+        public ConcurrentBag<ClientData> Clients { get; set; } = new ConcurrentBag<ClientData>();
         /// <summary>
         /// Dictionary of resources
         /// </summary>
@@ -419,14 +419,6 @@ namespace MTSC.ServerSide
                     {
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
-                        Clients.Add(clientStruct);
-                        foreach (IHandler handler in handlers)
-                        {
-                            if (handler.HandleClient(this, clientStruct))
-                            {
-                                break;
-                            }
-                        }
                         Task.Run(() => AcceptClient(clientStruct));
                     }
                 }
@@ -573,7 +565,7 @@ namespace MTSC.ServerSide
                 LogDebug("Client removed: " + client.TcpClient.Client.RemoteEndPoint.ToString());
                 client.SslStream?.Dispose();
                 client.TcpClient?.Dispose();
-                Clients.Remove(client);
+                Clients.TryTake(out _);
             }
             toRemove.Clear();
         }
@@ -684,10 +676,9 @@ namespace MTSC.ServerSide
 
         private void AcceptClient(ClientData client)
         {
-            Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-            if (this.certificate != null)
+            try
             {
-                try
+                if (this.certificate != null)
                 {
                     SslStream sslStream = new SslStream(client.TcpClient.GetStream(),
                         true,
@@ -695,20 +686,30 @@ namespace MTSC.ServerSide
                         this.LocalCertificateSelectionCallback,
                         this.EncryptionPolicy);
                     client.SslStream = sslStream;
+
                     if (!sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
                     {
                         client.ToBeRemoved = true;
                     }
                 }
-                catch (Exception e)
+                Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                foreach (IHandler handler in handlers)
                 {
-                    client.ToBeRemoved = true;
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    if (handler.HandleClient(this, client))
                     {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
+                        break;
+                    }
+                }
+                Clients.Add(client);
+            }
+            catch (Exception e)
+            {
+                client.ToBeRemoved = true;
+                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                {
+                    if (exceptionHandler.HandleException(e))
+                    {
+                        break;
                     }
                 }
             }
