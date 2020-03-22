@@ -153,7 +153,7 @@ namespace MTSC.ServerSide.Handlers
                     response.Headers[HttpMessage.GeneralHeaders.Upgrade] = "websocket";
                     response.Headers[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
                     response.Headers[WebsocketHeaderAcceptKey] = returnBase64Key;
-                    server.QueueMessage(client, response.GetPackedResponse(true));
+                    server.QueueMessage(client, response.GetPackedResponse(false));
                     webSockets[client] = SocketState.Established;
                     server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
                     routingTable[client] = module;
