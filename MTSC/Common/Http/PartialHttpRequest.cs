@@ -59,6 +59,10 @@ namespace MTSC.Common.Http
             {
                 httpRequest.Cookies.Add(cookie);
             }
+            foreach(var kvp in this.Form)
+            {
+                httpRequest.Form.SetValue(kvp.Key, kvp.Value);
+            }
             return httpRequest;
         }
 

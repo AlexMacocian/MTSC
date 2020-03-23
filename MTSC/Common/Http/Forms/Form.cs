@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 
 namespace MTSC.Common.Http.Forms
 {
-    public class Form
+    public class Form : IEnumerable<KeyValuePair<string, ContentTypeBase>>
     {
         private Dictionary<string, ContentTypeBase> dictionary = new Dictionary<string, ContentTypeBase>();
+
+        public int Count { get => dictionary.Count; }
 
         public void SetValue(string key, ContentTypeBase value)
         {
@@ -19,6 +22,16 @@ namespace MTSC.Common.Http.Forms
         public ContentTypeBase GetValue(string key)
         {
             return dictionary[key];
+        }
+
+        public IEnumerator<KeyValuePair<string, ContentTypeBase>> GetEnumerator()
+        {
+            return ((IEnumerable<KeyValuePair<string, ContentTypeBase>>)dictionary).GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return ((IEnumerable<KeyValuePair<string, ContentTypeBase>>)dictionary).GetEnumerator();
         }
     }
 }
