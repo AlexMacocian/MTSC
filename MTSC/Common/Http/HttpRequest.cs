@@ -38,7 +38,7 @@ namespace MTSC.Common.Http
             ParseRequest(requestBytes);
             if(this.Method == HttpMethods.Post)
             {
-                Form = GetPostForm();
+                GetPostForm();
             }
         }
 
@@ -452,7 +452,7 @@ namespace MTSC.Common.Http
         /// Parse the body into a posted from respecting the reference manual.
         /// </summary>
         /// <returns>Dictionary with posted from.</returns>
-        private Form GetPostForm()
+        private void GetPostForm()
         {
             if (Headers.ContainsHeader("Content-Type") && Body != null)
             {
@@ -462,7 +462,6 @@ namespace MTSC.Common.Http
                      * Walk through the buffer and get the form contents.
                      * Step 0 - key, 1 - value.
                      */
-                    Form form = new Form();
                     string formKey = string.Empty;
                     int step = 0;
                     for (int i = 0; i < Body.Length; i++)
@@ -474,30 +473,29 @@ namespace MTSC.Common.Http
                         }
                         else
                         {
-                            form.SetValue(formKey, new TextContentType("text/plain", GetValue(Body, ref i)));
+                            Form.SetValue(formKey, new TextContentType("text/plain", GetValue(Body, ref i)));
                             step--;
                         }
                     }
-                    return form;
+                    return;
                 }
                 else if (Headers["Content-Type"].Contains("multipart/form-data"))
                 {
-                    return GetMultipartForm();
+                    GetMultipartForm();
                 }
                 else
                 {
-                    return null;
+                    return;
                 }
             }
             else
             {
-                return null;
+                return;
             }
         }
         private Form GetMultipartForm()
         {
             string boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1);
-            Form form = new Form();
 
             int bodyIndex = 0;
             while (true)
@@ -568,16 +566,16 @@ namespace MTSC.Common.Http
                 var bytes = GetMultipartValue(bodyIndex, boundary);
                 if (keys.Keys.Contains("filename"))
                 {
-                    form.SetValue(keys["name"], new FileContentType(contentType, keys["filename"], bytes));
+                    Form.SetValue(keys["name"], new FileContentType(contentType, keys["filename"], bytes));
                 }
                 else
                 {
-                    form.SetValue(keys["name"], new TextContentType(contentType, Encoding.UTF8.GetString(bytes)));
+                    Form.SetValue(keys["name"], new TextContentType(contentType, Encoding.UTF8.GetString(bytes)));
                 }
                 bodyIndex += bytes.Length + 2;
             }
 
-            return form;
+            return Form;
         }
 
         private bool MatchesCRLF(int index)
