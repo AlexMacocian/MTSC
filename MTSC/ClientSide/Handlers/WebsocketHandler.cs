@@ -72,12 +72,11 @@ namespace MTSC.Client.Handlers
         {
             if(state == SocketState.Handshaking)
             {
-                HttpMessage response = new HttpMessage();
-                response.ParseResponse(message.MessageBytes);
+                HttpResponse response = new HttpResponse(message.MessageBytes);
                 if(response.StatusCode == HttpMessage.StatusCodes.SwitchingProtocols &&
-                    response["Upgrade"] == "websocket" &&
-                    response[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" &&
-                    response[WebsocketHeaderAcceptKey].Trim() == expectedguid)
+                    response.Headers["Upgrade"] == "websocket" &&
+                    response.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" &&
+                    response.Headers[WebsocketHeaderAcceptKey].Trim() == expectedguid)
                 {
                     state = SocketState.Established;
                     foreach (IWebsocketModule websocketModule in websocketModules)
@@ -123,16 +122,16 @@ namespace MTSC.Client.Handlers
             string handshakeGuid = Guid.NewGuid().ToString();
             string handshakeKey = handshakeGuid+ GlobalUniqueIdentifier;
             expectedguid = Convert.ToBase64String(sha1Provider.ComputeHash(Encoding.UTF8.GetBytes(handshakeKey)));
-            HttpMessage beginRequest = new HttpMessage();
+            HttpRequest beginRequest = new HttpRequest();
             beginRequest.Method = HttpMessage.HttpMethods.Get;
             beginRequest.RequestURI = WebsocketURI;
-            beginRequest[HttpMessage.RequestHeaders.Host] = client.Address;
-            beginRequest[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
-            beginRequest[WebsocketHeaderKey] = handshakeGuid;
-            beginRequest["Origin"] = client.Address;
-            beginRequest[WebsocketProtocolKey] = "chat";
-            beginRequest[WebsocketProtocolVersionKey] = "13";
-            client.QueueMessage(beginRequest.BuildRequest());
+            beginRequest.Headers[HttpMessage.RequestHeaders.Host] = client.Address;
+            beginRequest.Headers[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
+            beginRequest.Headers[WebsocketHeaderKey] = handshakeGuid;
+            beginRequest.Headers["Origin"] = client.Address;
+            beginRequest.Headers[WebsocketProtocolKey] = "chat";
+            beginRequest.Headers[WebsocketProtocolVersionKey] = "13";
+            client.QueueMessage(beginRequest.GetPackedRequest());
             return true;
         }
 

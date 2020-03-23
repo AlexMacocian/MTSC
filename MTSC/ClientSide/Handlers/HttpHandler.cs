@@ -23,9 +23,9 @@ namespace MTSC.Client.Handlers
         /// Send a request to the server.
         /// </summary>
         /// <param name="request">Request to be sent.</param>
-        public void SendRequest(Client client, HttpMessage request)
+        public void SendRequest(Client client, HttpRequest request)
         {
-            client.QueueMessage(request.BuildRequest());
+            client.QueueMessage(request.GetPackedRequest());
         }
         /// <summary>
         /// Add a http module.
@@ -55,8 +55,7 @@ namespace MTSC.Client.Handlers
         /// <returns>False.</returns>
         bool IHandler.HandleReceivedMessage(Client client, Message message)
         {
-            HttpMessage httpMessage = new HttpMessage();
-            httpMessage.ParseResponse(message.MessageBytes);
+            HttpResponse httpMessage = new HttpResponse(message.MessageBytes);
             foreach(IHttpModule httpModule in httpModules)
             {
                 if (httpModule.HandleResponse(this, httpMessage))

@@ -1,7 +1,9 @@
-﻿using MTSC.Exceptions;
+﻿using MTSC.Common.Http.Forms;
+using MTSC.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
@@ -19,7 +21,7 @@ namespace MTSC.Common.Http
         /// </summary>
         public List<Cookie> Cookies { get; } = new List<Cookie>();
 
-        public Dictionary<string, string> Form { get; } = new Dictionary<string, string>();
+        public Form Form { get; } = new Form();
         public HttpMethods Method { get; set; }
         public string RequestURI { get; set; }
         public string RequestQuery { get; set; }
@@ -450,17 +452,17 @@ namespace MTSC.Common.Http
         /// Parse the body into a posted from respecting the reference manual.
         /// </summary>
         /// <returns>Dictionary with posted from.</returns>
-        private Dictionary<string, string> GetPostForm()
+        private Form GetPostForm()
         {
             if (Headers.ContainsHeader("Content-Type") && Body != null)
             {
                 if (Headers["Content-Type"] == "application/x-www-form-urlencoded")
                 {
-                    Dictionary<string, string> returnDictionary = new Dictionary<string, string>();
                     /*
                      * Walk through the buffer and get the form contents.
                      * Step 0 - key, 1 - value.
                      */
+                    Form form = new Form();
                     string formKey = string.Empty;
                     int step = 0;
                     for (int i = 0; i < Body.Length; i++)
@@ -472,15 +474,15 @@ namespace MTSC.Common.Http
                         }
                         else
                         {
-                            returnDictionary[formKey] = GetValue(Body, ref i);
+                            form.SetValue(formKey, new TextContentType("text/plain", GetValue(Body, ref i)));
                             step--;
                         }
                     }
-                    return returnDictionary;
+                    return form;
                 }
                 else if (Headers["Content-Type"].Contains("multipart/form-data"))
                 {
-                    throw new NotImplementedException("Multipart posting not implemented");
+                    return GetMultipartForm();
                 }
                 else
                 {
@@ -491,6 +493,204 @@ namespace MTSC.Common.Http
             {
                 return null;
             }
+        }
+        private Form GetMultipartForm()
+        {
+            string boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1);
+            Form form = new Form();
+
+            int bodyIndex = 0;
+            while (true)
+            {
+                string contentType = "text/plain";
+
+                if (!MatchesTwoHyphens(bodyIndex))
+                {
+                    throw new InvalidPostFormException("No boundary where expected");
+                }
+                bodyIndex += 2;
+
+                if (!MatchesString(bodyIndex, boundary))
+                {
+                    throw new InvalidPostFormException("No boundary where expected");
+                }
+                bodyIndex += boundary.Length;
+
+                if (!MatchesCRLF(bodyIndex))
+                {
+                    if (MatchesTwoHyphens(bodyIndex))
+                    {
+                        /*
+                         * Reached the end of the multipart message
+                         */
+                        break;
+                    }
+                    throw new InvalidPostFormException("No new line after boundary");
+                }
+                bodyIndex += 2;
+
+                if (!MatchesString(bodyIndex, "Content-Disposition: form-data"))
+                {
+                    throw new InvalidPostFormException("No Content-Disposition header");
+                }
+                bodyIndex += 30;
+
+                Dictionary<string, string> keys = new Dictionary<string, string>();
+                while (Body[bodyIndex] == ';')
+                {
+                    bodyIndex += 2;
+                    var keyName = GetMultipartKeyName(bodyIndex);
+                    bodyIndex += keyName.Length + 1;
+                    var keyNameField = GetMultipartKeyNameField(bodyIndex);
+                    bodyIndex += keyNameField.Length + 2;
+                    keys[keyName] = keyNameField;
+                }
+
+                if (!MatchesCRLF(bodyIndex))
+                {
+                    throw new InvalidPostFormException("No new line after boundary");
+                }
+                bodyIndex += 2;
+
+                if (MatchesString(bodyIndex, "Content-Type: "))
+                {
+                    bodyIndex += 14;
+                    contentType = GetContentType(bodyIndex);
+                    bodyIndex += contentType.Length + 2;
+                }
+
+                if (!MatchesCRLF(bodyIndex))
+                {
+                    throw new InvalidPostFormException("No new line after boundary");
+                }
+                bodyIndex += 2;
+
+                var bytes = GetMultipartValue(bodyIndex, boundary);
+                if (keys.Keys.Contains("filename"))
+                {
+                    form.SetValue(keys["name"], new FileContentType(contentType, keys["filename"], bytes));
+                }
+                else
+                {
+                    form.SetValue(keys["name"], new TextContentType(contentType, Encoding.UTF8.GetString(bytes)));
+                }
+                bodyIndex += bytes.Length + 2;
+            }
+
+            return form;
+        }
+
+        private bool MatchesCRLF(int index)
+        {
+            if (index + 1 < Body.Length)
+            {
+                if (Body[index] == HttpHeaders.CRLF[0] && Body[index + 1] == HttpHeaders.CRLF[1])
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        private bool MatchesTwoHyphens(int index)
+        {
+            if (index + 1 < Body.Length)
+            {
+                if (Body[index] == '-' && Body[index + 1] == '-')
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        private bool MatchesString(int index, string s)
+        {
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (index + i < Body.Length)
+                {
+                    if ((char)Body[index + i] != s[i])
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        private string GetMultipartKeyName(int index)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (Body[index] != '=')
+            {
+                sb.Append((char)Body[index]);
+                index++;
+            }
+            return sb.ToString();
+        }
+        private string GetMultipartKeyNameField(int index)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (Body[index] != '\"')
+            {
+                throw new InvalidPostFormException($"Expected [\"] but found {Body[index]}");
+            }
+            index++;
+
+            while (Body[index] != '\"')
+            {
+                sb.Append((char)Body[index]);
+                index++;
+            }
+            return sb.ToString();
+        }
+        private byte[] GetMultipartValue(int bodyIndex, string boundary)
+        {
+            int startIndex = bodyIndex;
+            bool gatheringData = true;
+            while (true)
+            {
+                if (Body[bodyIndex] == '-')
+                {
+                    /*
+                     * Possible boundary detected. Try and see if it matches.
+                     */
+                    if (Body[bodyIndex + 1] == '-' && MatchesString(bodyIndex + 2, boundary))
+                    {
+                        break;
+                    }
+                }
+                bodyIndex++;
+            }
+            byte[] newBytes = new byte[bodyIndex - startIndex - 2];
+            Array.Copy(Body, startIndex, newBytes, 0, bodyIndex - startIndex - 2);
+            return newBytes;
+        }
+        private string GetContentType(int bodyIndex)
+        {
+            StringBuilder sb = new StringBuilder();
+            while (!MatchesCRLF(bodyIndex))
+            {
+                sb.Append((char)Body[bodyIndex]);
+                bodyIndex++;
+            }
+            return sb.ToString();
         }
         private string GetField(byte[] buffer, ref int index)
         {
