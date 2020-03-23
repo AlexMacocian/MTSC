@@ -139,7 +139,8 @@ namespace MTSC.ServerSide.Handlers
                 ex is IncompleteRequestBodyException ||
                 ex is IncompleteRequestQueryException ||
                 ex is IncompleteRequestURIException || 
-                ex is IncompleteRequestException)
+                ex is IncompleteRequestException || 
+                ex is InvalidPostFormException)
             {
                 server.LogDebug(ex.Message);
                 server.LogDebug(ex.StackTrace);
