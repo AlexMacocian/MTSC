@@ -38,7 +38,7 @@ namespace MTSC.Common.Http
             ParseRequest(requestBytes);
             if(this.Method == HttpMethods.Post)
             {
-                GetPostForm();
+                ParseBodyForm();
             }
         }
 
@@ -286,6 +286,44 @@ namespace MTSC.Common.Http
         /// <returns>Array of bytes.</returns>
         private byte[] BuildRequest()
         {
+            if(this.Method == HttpMethods.Post && this.Form.Count > 0)
+            {
+                List<byte> formData = new List<byte>();
+                string boundary = null;
+                if (this.Headers.ContainsHeader("Content-Type"))
+                {
+                    boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1);
+                }
+                else
+                {
+                    boundary = Guid.NewGuid().ToString();
+                    this.Headers["Content-Type"] = "multipart/form-data; boundary=" + boundary;
+                }
+                formData.AddRange(Encoding.UTF8.GetBytes("--" + boundary + HttpHeaders.CRLF));
+
+                foreach(var content in Form)
+                {
+                    if (content.Value is TextContentType) {
+                        formData.AddRange(Encoding.UTF8.GetBytes("Content-Disposition: form-data; name=\"" + content.Key + "\"" + HttpHeaders.CRLF +
+                            "Content-Type: " + content.Value.ContentType + HttpHeaders.CRLF + HttpHeaders.CRLF + ((TextContentType)content.Value).Value + HttpHeaders.CRLF));
+                    }
+                    else if(content.Value is FileContentType)
+                    {
+                        formData.AddRange(Encoding.UTF8.GetBytes("Content-Disposition: form-data; name=\"" + content.Key + "\"; filename=\"" + 
+                            ((FileContentType)content.Value).FileName + "\"" + HttpHeaders.CRLF + 
+                            "Content-Type: " + content.Value.ContentType + HttpHeaders.CRLF + HttpHeaders.CRLF));
+                        formData.AddRange(((FileContentType)content.Value).Data);
+                        formData.AddRange(Encoding.UTF8.GetBytes(HttpHeaders.CRLF));
+                    }
+                    formData.AddRange(Encoding.UTF8.GetBytes("--" + boundary + HttpHeaders.CRLF));
+                }
+                var prevBytes = Body;
+                Body = new byte[prevBytes.Length + formData.Count];
+                Array.Copy(formData.ToArray(), 0, Body, 0, formData.Count);
+                Array.Copy(prevBytes, 0, Body, formData.Count, prevBytes.Length);
+            }
+            this.Headers[EntityHeaders.ContentLength] = Body.Length.ToString();
+
             StringBuilder requestString = new StringBuilder();
             requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI);
             if(!string.IsNullOrWhiteSpace(RequestQuery))
@@ -452,7 +490,7 @@ namespace MTSC.Common.Http
         /// Parse the body into a posted from respecting the reference manual.
         /// </summary>
         /// <returns>Dictionary with posted from.</returns>
-        private void GetPostForm()
+        public void ParseBodyForm()
         {
             if (Headers.ContainsHeader("Content-Type") && Body != null)
             {

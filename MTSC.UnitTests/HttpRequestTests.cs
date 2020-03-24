@@ -67,5 +67,15 @@ namespace MTSC.UnitTests
             Assert.IsNotNull(request.Form.GetValue<TextContentType>("text"));
             Assert.IsNotNull(request.Form.GetValue<FileContentType>("file1"));
         }
+        [TestMethod]
+        public void BuiltRequestShouldContainFormData()
+        {
+            HttpRequest httpRequest = new HttpRequest();
+            httpRequest.Method = HttpMessage.HttpMethods.Post;
+            httpRequest.Form.SetValue("name", new TextContentType("text/plain", "Some random text here"));
+            var requestBytes = httpRequest.GetPackedRequest();
+            var requestString = Encoding.UTF8.GetString(requestBytes);
+            Assert.IsTrue(requestString.Contains("Some random text here"));
+        }
     }
 }

@@ -3,7 +3,6 @@ using MTSC.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
@@ -33,10 +32,6 @@ namespace MTSC.Common.Http
         public PartialHttpRequest(byte[] requestBytes)
         {
             ParseRequest(requestBytes);
-            if (this.Method == HttpMethods.Post)
-            {
-                GetPostForm();
-            }
         }
 
         public static PartialHttpRequest FromBytes(byte[] requestBytes)
@@ -59,16 +54,8 @@ namespace MTSC.Common.Http
             {
                 httpRequest.Cookies.Add(cookie);
             }
-            foreach(var kvp in this.Form)
-            {
-                httpRequest.Form.SetValue(kvp.Key, kvp.Value);
-            }
+            httpRequest.ParseBodyForm();
             return httpRequest;
-        }
-
-        public byte[] GetPackedRequest()
-        {
-            return BuildRequest();
         }
 
         public void AddToBody(byte[] bytesToBeAdded)
@@ -300,46 +287,6 @@ namespace MTSC.Common.Http
         }
 
         /// <summary>
-        /// Build the request bytes based on the message contents.
-        /// </summary>
-        /// <returns>Array of bytes.</returns>
-        private byte[] BuildRequest()
-        {
-            StringBuilder requestString = new StringBuilder();
-            requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI);
-            if (!string.IsNullOrWhiteSpace(RequestQuery))
-            {
-                requestString.Append('?').Append(RequestQuery);
-            }
-            requestString.Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
-            foreach (KeyValuePair<string, string> header in Headers)
-            {
-                requestString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
-            }
-            requestString.Append(HttpHeaders.CRLF);
-            if (Cookies.Count > 0)
-            {
-                requestString.Append(HttpHeaders.RequestCookieHeader).Append(':').Append(HttpHeaders.SP);
-                for (int i = 0; i < Cookies.Count; i++)
-                {
-                    Cookie cookie = Cookies[i];
-                    requestString.Append(cookie.BuildCookieString());
-                    if (i < Cookies.Count - 1)
-                    {
-                        requestString.Append(';');
-                    }
-                }
-            }
-            byte[] request = new byte[requestString.Length + (Body == null ? 0 : Body.Length)];
-            byte[] requestBytes = ASCIIEncoding.ASCII.GetBytes(requestString.ToString());
-            Array.Copy(requestBytes, 0, request, 0, requestBytes.Length);
-            if (Body != null)
-            {
-                Array.Copy(Body, 0, request, requestBytes.Length, Body.Length);
-            }
-            return request;
-        }
-        /// <summary>
         /// Parse the received bytes and populate the message contents.
         /// </summary>
         /// <param name="requestBytes">Message bytes to be parsed.</param>
@@ -466,249 +413,6 @@ namespace MTSC.Common.Http
             this.BodyString = this.BodyString.Trim('\0');
             Complete = true;
             return;
-        }
-        /// <summary>
-        /// Parse the body into a posted from respecting the reference manual.
-        /// </summary>
-        /// <returns>Dictionary with posted from.</returns>
-        private void GetPostForm()
-        {
-            if (Headers.ContainsHeader("Content-Type") && Body != null)
-            {
-                if (Headers["Content-Type"] == "application/x-www-form-urlencoded")
-                {
-                    /*
-                     * Walk through the buffer and get the form contents.
-                     * Step 0 - key, 1 - value.
-                     */
-                    string formKey = string.Empty;
-                    int step = 0;
-                    for (int i = 0; i < Body.Length; i++)
-                    {
-                        if (step == 0)
-                        {
-                            formKey = GetField(Body, ref i);
-                            step++;
-                        }
-                        else
-                        {
-                            Form.SetValue(formKey, new TextContentType("text/plain", GetValue(Body, ref i)));
-                            step--;
-                        }
-                    }
-                    return;
-                }
-                else if (Headers["Content-Type"].Contains("multipart/form-data"))
-                {
-                    GetMultipartForm();
-                    return;
-                }
-                else
-                {
-                    return;
-                }
-            }
-            else
-            {
-                return;
-            }
-        }
-        private Form GetMultipartForm()
-        {
-            string boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1);
-
-            int bodyIndex = 0;
-            while (true)
-            {
-                string contentType = "text/plain";
-
-                if (!MatchesTwoHyphens(bodyIndex))
-                {
-                    throw new InvalidPostFormException("No boundary where expected");
-                }
-                bodyIndex += 2;
-
-                if (!MatchesString(bodyIndex, boundary))
-                {
-                    throw new InvalidPostFormException("No boundary where expected");
-                }
-                bodyIndex += boundary.Length;
-
-                if (!MatchesCRLF(bodyIndex))
-                {
-                    if (MatchesTwoHyphens(bodyIndex))
-                    {
-                        /*
-                         * Reached the end of the multipart message
-                         */
-                        break;
-                    }
-                    throw new InvalidPostFormException("No new line after boundary");
-                }
-                bodyIndex += 2;
-
-                if (!MatchesString(bodyIndex, "Content-Disposition: form-data"))
-                {
-                    throw new InvalidPostFormException("No Content-Disposition header");
-                }
-                bodyIndex += 30;
-
-                Dictionary<string, string> keys = new Dictionary<string, string>();
-                while (Body[bodyIndex] == ';')
-                {
-                    bodyIndex += 2;
-                    var keyName = GetMultipartKeyName(bodyIndex);
-                    bodyIndex += keyName.Length + 1;
-                    var keyNameField = GetMultipartKeyNameField(bodyIndex);
-                    bodyIndex += keyNameField.Length + 2;
-                    keys[keyName] = keyNameField;
-                }
-
-                if (!MatchesCRLF(bodyIndex))
-                {
-                    throw new InvalidPostFormException("No new line after boundary");
-                }
-                bodyIndex += 2;
-
-                if (MatchesString(bodyIndex, "Content-Type: "))
-                {
-                    bodyIndex += 14;
-                    contentType = GetContentType(bodyIndex);
-                    bodyIndex += contentType.Length + 2;
-                }
-
-                if (!MatchesCRLF(bodyIndex))
-                {
-                    throw new InvalidPostFormException("No new line after boundary");
-                }
-                bodyIndex += 2;
-
-                var bytes = GetMultipartValue(bodyIndex, boundary);
-                if (keys.Keys.Contains("filename"))
-                {
-                    Form.SetValue(keys["name"], new FileContentType(contentType, keys["filename"], bytes));
-                }
-                else
-                {
-                    Form.SetValue(keys["name"], new TextContentType(contentType, Encoding.UTF8.GetString(bytes)));
-                }
-                bodyIndex += bytes.Length + 2;
-            }
-
-            return Form;
-        }
-
-        private bool MatchesCRLF(int index)
-        {
-            if (index + 1 < Body.Length)
-            {
-                if (Body[index] == HttpHeaders.CRLF[0] && Body[index + 1] == HttpHeaders.CRLF[1])
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
-        }
-        private bool MatchesTwoHyphens(int index)
-        {
-            if (index + 1 < Body.Length)
-            {
-                if (Body[index] == '-' && Body[index + 1] == '-')
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            else
-            {
-                return false;
-            }
-        }
-        private bool MatchesString(int index, string s)
-        {
-            for (int i = 0; i < s.Length; i++)
-            {
-                if (index + i < Body.Length)
-                {
-                    if ((char)Body[index + i] != s[i])
-                    {
-                        return false;
-                    }
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-        private string GetMultipartKeyName(int index)
-        {
-            StringBuilder sb = new StringBuilder();
-            while (Body[index] != '=')
-            {
-                sb.Append((char)Body[index]);
-                index++;
-            }
-            return sb.ToString();
-        }
-        private string GetMultipartKeyNameField(int index)
-        {
-            StringBuilder sb = new StringBuilder();
-            if (Body[index] != '\"')
-            {
-                throw new InvalidPostFormException($"Expected [\"] but found {Body[index]}");
-            }
-            index++;
-
-            while (Body[index] != '\"')
-            {
-                sb.Append((char)Body[index]);
-                index++;
-            }
-            return sb.ToString();
-        }
-        private byte[] GetMultipartValue(int bodyIndex, string boundary)
-        {
-            int startIndex = bodyIndex;
-            bool gatheringData = true;
-            while (true)
-            {
-                if (Body[bodyIndex] == '-')
-                {
-                    /*
-                     * Possible boundary detected. Try and see if it matches.
-                     */
-                    if (Body[bodyIndex + 1] == '-' && MatchesString(bodyIndex + 2, boundary))
-                    {
-                        break;
-                    }
-                }
-                bodyIndex++;
-            }
-            byte[] newBytes = new byte[bodyIndex - startIndex - 2];
-            Array.Copy(Body, startIndex, newBytes, 0, bodyIndex - startIndex - 2);
-            return newBytes;
-        }
-        private string GetContentType(int bodyIndex)
-        {
-            StringBuilder sb = new StringBuilder();
-            while (!MatchesCRLF(bodyIndex))
-            {
-                sb.Append((char)Body[bodyIndex]);
-                bodyIndex++;
-            }
-            return sb.ToString();
         }
         private string GetField(byte[] buffer, ref int index)
         {
