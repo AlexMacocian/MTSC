@@ -23,7 +23,6 @@ namespace MTSC.ServerSide.Handlers
             public ClientState ClientState = ClientState.Initial;
         }
         #region Fields
-        private Dictionary<ClientData, AdditionalData> additionalData;
         private RSACryptoServiceProvider rsa;
         private string privateKey, publicKey;
         #endregion
@@ -37,7 +36,6 @@ namespace MTSC.ServerSide.Handlers
         /// <param name="server">Server object managed by the handler.</param>
         public EncryptionHandler(RSACryptoServiceProvider rsa)
         {
-            additionalData = new Dictionary<ClientData, AdditionalData>();
             this.rsa = rsa;
             privateKey = HelperFunctions.ToXmlString(rsa, true);
             publicKey = HelperFunctions.ToXmlString(rsa, false);
@@ -124,7 +122,7 @@ namespace MTSC.ServerSide.Handlers
         /// <param name="client">Client to be removed.</param>
         void IHandler.ClientRemoved(Server server, ClientData client)
         {
-            additionalData.Remove(client);
+
         }
         /// <summary>
         /// Handle a new client connection.
@@ -133,7 +131,7 @@ namespace MTSC.ServerSide.Handlers
         /// <returns>False if an error occurred.</returns>
         bool IHandler.HandleClient(Server server, ClientData client)
         {
-            additionalData.Add(client, new AdditionalData());
+            client.Resources.SetResource(new AdditionalData());
             return false;
         }
         /// <summary>
@@ -144,13 +142,14 @@ namespace MTSC.ServerSide.Handlers
         /// <returns>True if no other handler should handle current message.</returns>
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            if (additionalData[client].ClientState == ClientState.Initial || additionalData[client].ClientState == ClientState.Negotiating)
+            var additionalData = client.Resources.GetResource<AdditionalData>();
+            if (additionalData.ClientState == ClientState.Initial || additionalData.ClientState == ClientState.Negotiating)
             {
                 string asciiMessage = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
                 if (asciiMessage == CommunicationPrimitives.RequestPublicKey)
                 {
                     server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendPublicKey + ":" + publicKey));
-                    additionalData[client].ClientState = ClientState.Negotiating;
+                    additionalData.ClientState = ClientState.Negotiating;
                     return true;
                 }
                 else if (asciiMessage.Contains(CommunicationPrimitives.SendEncryptionKey))
@@ -158,9 +157,9 @@ namespace MTSC.ServerSide.Handlers
                     byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length - 1];
                     Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length + 1, encryptedKey, 0, encryptedKey.Length);
                     byte[] decryptedKey = rsa.Decrypt(encryptedKey, false);
-                    additionalData[client].Key = decryptedKey;
+                    additionalData.Key = decryptedKey;
                     server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.AcceptEncryptionKey));
-                    additionalData[client].ClientState = ClientState.Encrypted;
+                    additionalData.ClientState = ClientState.Encrypted;
                     return true;
                 }
                 else
@@ -181,13 +180,14 @@ namespace MTSC.ServerSide.Handlers
         /// <returns>True if no other handlers should perform operations on current message.</returns>
         bool IHandler.PreHandleReceivedMessage(Server server, ClientData client, ref Message message)
         {
-            if (additionalData[client].ClientState == ClientState.Encrypted)
+            var additionalData = client.Resources.GetResource<AdditionalData>();
+            if (additionalData.ClientState == ClientState.Encrypted)
             {
                 /*
                  * Decrypt message before returning.
                  */
                 byte[] encryptedBytes = message.MessageBytes;
-                byte[] decryptedBytes = DecryptBytes(additionalData[client].Key, encryptedBytes);
+                byte[] decryptedBytes = DecryptBytes(additionalData.Key, encryptedBytes);
                 message = new Message((uint)decryptedBytes.Length, decryptedBytes);
                 return false;
             }
@@ -214,9 +214,10 @@ namespace MTSC.ServerSide.Handlers
         /// <returns>True if no other handler should process this message.</returns>
         bool IHandler.HandleSendMessage(Server server, ClientData client, ref Message message)
         {
-            if (additionalData[client].ClientState == ClientState.Encrypted)
+            var additionalData = client.Resources.GetResource<AdditionalData>();
+            if (additionalData.ClientState == ClientState.Encrypted)
             {
-                message = CommunicationPrimitives.BuildMessage(EncryptBytes(additionalData[client].Key, message.MessageBytes));
+                message = CommunicationPrimitives.BuildMessage(EncryptBytes(additionalData.Key, message.MessageBytes));
             }
             return false;
         }

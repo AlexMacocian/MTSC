@@ -713,22 +713,4 @@ namespace MTSC.ServerSide
         }
         #endregion
     }
-    /// <summary>
-    /// Structure containing client information.
-    /// </summary>
-    public class ClientData
-    {
-        public TcpClient TcpClient;
-        public DateTime LastMessageTime;
-        public bool ToBeRemoved;
-        public SslStream SslStream;
-
-        public ClientData(TcpClient client)
-        {
-            this.TcpClient = client;
-            this.LastMessageTime = DateTime.Now;
-            ToBeRemoved = false;
-            SslStream = null;
-        }
-    }
 }

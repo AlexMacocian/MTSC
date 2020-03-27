@@ -27,7 +27,7 @@ namespace MTSC_TestServer
                 .AddServerUsageMonitor(new TickrateEnforcer().SetTicksPerSecond(60))
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 //.AddHandler(new BroadcastHandler())
-                .AddHandler(new WebsocketHandler().AddWebsocketHandler(new BroadcastModule()))
+                .AddHandler(new WebsocketHandler())
                 .AddHandler(new HttpHandler().AddHttpModule(new FileServerModule())
                                             .AddHttpModule(new PostModule()))
                 .Run();

@@ -27,10 +27,8 @@ namespace MTSC.ServerSide.Handlers
             Closed
         }
         #region Fields
-        public ConcurrentDictionary<ClientData, SocketState> webSockets = new ConcurrentDictionary<ClientData, SocketState>();
         Dictionary<string, (WebsocketRouteBase, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)> moduleDictionary =
             new Dictionary<string, (WebsocketRouteBase, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
-        ConcurrentDictionary<ClientData, WebsocketRouteBase> routingTable = new ConcurrentDictionary<ClientData, WebsocketRouteBase>();
         ConcurrentQueue<Tuple<ClientData, WebsocketMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, WebsocketMessage>>();
         #endregion
         #region Public Methods
@@ -83,29 +81,22 @@ namespace MTSC.ServerSide.Handlers
         #region Handler Implementation
         void IHandler.ClientRemoved(Server server, ClientData client)
         {
-            while (webSockets.ContainsKey(client))
-            {
-                webSockets.TryRemove(client, out SocketState state);
-            }
-            if (routingTable.TryGetValue(client, out WebsocketRouteBase route))
+            if (client.Resources.TryGetResource(out WebsocketRouteBase route))
             {
                 route.CallConnectionClosed(server, this, client);
-            }
-            while (routingTable.ContainsKey(client))
-            {
-                routingTable.TryRemove(client, out _);
             }
         }
 
         bool IHandler.HandleClient(Server server, ClientData client)
         {
-            webSockets[client] = SocketState.Initial;
+            client.Resources.SetResource(SocketState.Initial);
             return false;
         }
 
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            if (webSockets[client] == SocketState.Initial)
+            var socketState = client.Resources.GetResource<SocketState>();
+            if (socketState == SocketState.Initial)
             {
                 PartialHttpRequest request;
                 try
@@ -154,9 +145,9 @@ namespace MTSC.ServerSide.Handlers
                     response.Headers[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
                     response.Headers[WebsocketHeaderAcceptKey] = returnBase64Key;
                     server.QueueMessage(client, response.GetPackedResponse(false));
-                    webSockets[client] = SocketState.Established;
+                    client.Resources.SetResource(SocketState.Established);
                     server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
-                    routingTable[client] = module;
+                    client.Resources.SetResource(module);
                     module.CallConnectionInitialized(server, this, client);
                     return true;
                 }
@@ -165,7 +156,7 @@ namespace MTSC.ServerSide.Handlers
                     return false;
                 }
             }
-            else if (webSockets[client] == SocketState.Established)
+            else if (socketState == SocketState.Established)
             {
                 WebsocketMessage receivedMessage = null;
                 try
@@ -181,10 +172,6 @@ namespace MTSC.ServerSide.Handlers
                 if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Close)
                 {
                     client.ToBeRemoved = true;
-                    while (webSockets.ContainsKey(client))
-                    {
-                        webSockets.TryRemove(client, out SocketState _);
-                    }
                     WebsocketMessage closeFrame = new WebsocketMessage();
                     closeFrame.Opcode = WebsocketMessage.Opcodes.Close;
                     QueueMessage(client, closeFrame);
@@ -194,7 +181,7 @@ namespace MTSC.ServerSide.Handlers
                 {
                     try 
                     {
-                        routingTable[client].CallHandleReceivedMessage(server, this, client, receivedMessage);
+                        client.Resources.GetResource<WebsocketRouteBase>().CallHandleReceivedMessage(server, this, client, receivedMessage);
                         return true;
                     }
                     catch(Exception e)
@@ -233,9 +220,9 @@ namespace MTSC.ServerSide.Handlers
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetMessageBytes());
                     if (tuple.Item2.Opcode == WebsocketMessage.Opcodes.Close)
                     {
-                        if (routingTable.ContainsKey(tuple.Item1))
+                        if (tuple.Item1.Resources.TryGetResource<WebsocketRouteBase>(out var route))
                         {
-                            routingTable[tuple.Item1].CallConnectionClosed(server, this, tuple.Item1);
+                            route.CallConnectionClosed(server, this, tuple.Item1);
                         }
                         tuple.Item1.ToBeRemoved = true;
                     }
