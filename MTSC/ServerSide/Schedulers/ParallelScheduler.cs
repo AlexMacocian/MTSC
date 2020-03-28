@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using MTSC.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,11 +7,11 @@ namespace MTSC.ServerSide.Schedulers
 {
     public class ParallelScheduler : IScheduler
     {
-        void IScheduler.ScheduleHandling(IProducerConsumerCollection<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure)
+        void IScheduler.ScheduleHandling(IConsumerQueue<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure)
         {
-            List<Action> actionList = new List<Action>(inQueue.Count);
+            List<Action> actionList = new List<Action>();
 
-            while(inQueue.TryTake(out var tuple))
+            while(inQueue.TryDequeue(out var tuple))
             {
                 (var client, var message) = tuple;
                 actionList.Add(new Action(() => { messageHandlingProcedure.Invoke(client, message); }));

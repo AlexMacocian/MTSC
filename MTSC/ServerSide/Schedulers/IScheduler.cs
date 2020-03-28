@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using MTSC.Common;
+using System;
 
 namespace MTSC.ServerSide.Schedulers
 {
     public interface IScheduler
     {
-        void ScheduleHandling(IProducerConsumerCollection<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure);
+        void ScheduleHandling(IConsumerQueue<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure);
     }
 }

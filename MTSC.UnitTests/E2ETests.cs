@@ -41,19 +41,37 @@ namespace MTSC.UnitTests
                                 websocketMessage.Opcode = WebsocketMessage.Opcodes.Text;
                                 return websocketMessage;
                             })))
-                .AddHandler(new HttpHandler()
-                    .AddHttpModule(new HttpRoutingModule()
-                        .AddRoute(HttpMessage.HttpMethods.Get, "", new Http200Module())
-                        .AddRoute(HttpMessage.HttpMethods.Get, "query", new TestQueryModule())
-                        .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule()))
+                .AddHandler(new HttpRoutingHandler()
+                    .AddRoute(HttpMessage.HttpMethods.Get, "", new Http200Module())
+                    .AddRoute(HttpMessage.HttpMethods.Get, "query", new TestQueryModule())
+                    .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule())
+                    .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
                     .WithFragmentsExpirationTime(TimeSpan.FromSeconds(1))
                     .WithMaximumSize(300))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
-                .SetScheduler(new SequentialProcessingScheduler())
+                .SetScheduler(new FireTasksAndForgetScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
+        }
+        [TestMethod]
+        public async Task ServerRespondsDuringLongRunningTask()
+        {
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://localhost:800");
+            var longRunningTask = httpClient.GetAsync("long-running");
+            int responses = 0;
+            HttpClient client2 = new HttpClient();
+            client2.BaseAddress = new Uri("http://localhost:800");
+            while (!longRunningTask.IsCompleted)
+            {
+                var echoResponse = await client2.GetAsync("echo");
+                responses++;
+            }
+            var result = longRunningTask.Result;
+            Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
+            Assert.IsTrue(responses > 50);
         }
 
         [TestMethod]

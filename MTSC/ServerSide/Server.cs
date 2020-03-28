@@ -1,4 +1,5 @@
-﻿using MTSC.Exceptions;
+﻿using MTSC.Common;
+using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Resources;
@@ -25,16 +26,36 @@ namespace MTSC.ServerSide
         bool running;
         X509Certificate2 certificate;
         TcpListener listener;
+        ProducerConsumerQueue<ClientData> addQueue = new ProducerConsumerQueue<ClientData>();
+        List<ClientData> clients = new List<ClientData>();
         List<ClientData> toRemove = new List<ClientData>();
         List<IHandler> handlers = new List<IHandler>();
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
+        ProducerConsumerQueue<(ClientData, Message)> messageInQueue = new ProducerConsumerQueue<(ClientData, Message)>();
+        ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new ProducerConsumerQueue<(ClientData, byte[])>();
         #endregion
-        #region Properties
+        #region Private Properties
+        private IConsumerQueue<ClientData> _ConsumerClientQueue { get => addQueue; }
+        private IProducerQueue<ClientData> _ProducerClientQueue { get => addQueue; }
+        private IConsumerQueue<(ClientData, Message)> _ConsumerMessageInQueue { get => messageInQueue; }
+        private IConsumerQueue<(ClientData, byte[])> _ConsumerMessageOutQueue { get => messageOutQueue; }
+        private IProducerQueue<(ClientData, Message)> _ProducerMessageInQueue { get => messageInQueue; }
+        #endregion
+        #region Public Properties
+        /// <summary>
+        /// Client handling scheduler
+        /// </summary>
         public IScheduler Scheduler { get; set; } = new ParallelScheduler();
-        public IProducerConsumerCollection<(ClientData, Message)> InQueue { get; set; } = new ConcurrentQueue<(ClientData, Message)>();
-        public IProducerConsumerCollection<(ClientData, byte[])> OutQueue { get; set; } = new ConcurrentQueue<(ClientData, byte[])>();
+
+        /// <summary>
+        /// Queue of destinations and messages to be processed
+        /// </summary>
+        public IProducerQueue<(ClientData, byte[])> MessageOutQueue { get => messageOutQueue; }
+        /// <summary>
+        /// Duration until ssl authentication gives up during the authentication process
+        /// </summary>
         public TimeSpan SslAuthenticationTimeout { get; set; } = TimeSpan.FromSeconds(1);
         /// <summary>
         /// SSL supported protocols.
@@ -64,7 +85,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
-        public List<ClientData> Clients { get; set; } = new List<ClientData>();
+        public IReadOnlyCollection<ClientData> Clients { get => clients.AsReadOnly(); }
         /// <summary>
         /// Dictionary of resources
         /// </summary>
@@ -106,32 +127,6 @@ namespace MTSC.ServerSide
         public Server SetScheduler(IScheduler scheduler)
         {
             this.Scheduler = scheduler;
-            return this;
-        }
-        /// <summary>
-        /// Sets the InQueue with the provided type.
-        /// Default type is a <see cref="ConcurrentQueue{T}"/>.
-        /// Modifying the queue will have an impact on performance, depending on the implementation of the provided collection.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="queue"></param>
-        /// <returns>This server object.</returns>
-        public Server SetInQueue<T>(T queue) where T : IProducerConsumerCollection<(ClientData, Message)>
-        {
-            this.InQueue = queue;
-            return this;
-        }
-        /// <summary>
-        /// Sets the OutQueue with the provided type.
-        /// Default type is a <see cref="ConcurrentQueue{T}"/>.
-        /// Modifying the queue will have an impact on performance, depending on the implementation of the provided collection.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="queue"></param>
-        /// <returns>This server object.</returns>
-        public Server SetOutQueue<T>(T queue) where T : IProducerConsumerCollection<(ClientData, byte[])>
-        {
-            this.OutQueue = queue;
             return this;
         }
         /// <summary>
@@ -339,15 +334,7 @@ namespace MTSC.ServerSide
         /// <param name="message">Message to be sent.</param>
         public void QueueMessage(ClientData target, byte[] message)
         {
-            int retries = 0;
-            while(!OutQueue.TryAdd((target, message))) 
-            {
-                retries++;
-                if(retries > 5)
-                {
-                    throw new QueueOperationException($"Failed to insert provided message in the {nameof(OutQueue)}. Tried {retries} times");
-                }
-            };
+            (MessageOutQueue as IProducerQueue<(ClientData, byte[])>).Enqueue((target, message));
         }
         /// <summary>
         /// Adds a message to be logged by the associated loggers.
@@ -419,7 +406,7 @@ namespace MTSC.ServerSide
                     {
                         TcpClient tcpClient = listener.AcceptTcpClient();
                         ClientData clientStruct = new ClientData(tcpClient);
-                        AcceptClient(clientStruct);
+                        Task.Run(() => AcceptClient(clientStruct));
                     }
                 }
                 catch (Exception e)
@@ -433,6 +420,22 @@ namespace MTSC.ServerSide
                     }
                 }
                 /*
+                 * Add all accepted clients to the list
+                 */
+                while(this._ConsumerClientQueue.TryDequeue(out var client)) 
+                {
+                    Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                    clients.Add(client);
+                    foreach (IHandler handler in handlers)
+                    {
+                        if (handler.HandleClient(this, client))
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                /*
                  * Gather all messages from clients and put them in a queue
                  */
                 GatherReceivedMessages();
@@ -441,7 +444,7 @@ namespace MTSC.ServerSide
                  * Call the scheduler to handle all received messages and distribute them to the handlers
                  */
 
-                Scheduler.ScheduleHandling(InQueue, HandleClientMessage);
+                Scheduler.ScheduleHandling(this._ConsumerMessageInQueue, HandleClientMessage);
 
                 /*
                  * Iterate through all the handlers, running periodic operations.
@@ -516,25 +519,22 @@ namespace MTSC.ServerSide
         #region Private Methods
         private void SendQueuedMessages()
         {
-            while (OutQueue.Count > 0)
+            while (this._ConsumerMessageOutQueue.TryDequeue(out var tuple))
             {
-                try
+                (var client, var bytes) = tuple;
+                try 
                 {
-                    if (OutQueue.TryTake(out (ClientData, byte[]) queuedOrder))
+                    Message sendMessage = CommunicationPrimitives.BuildMessage(bytes);
+                    for (int i = handlers.Count - 1; i >= 0; i--)
                     {
-                        Message sendMessage = CommunicationPrimitives.BuildMessage(queuedOrder.Item2);
-                        for (int i = handlers.Count - 1; i >= 0; i--)
-                        {
-                            IHandler handler = handlers[i];
-                            ClientData client = queuedOrder.Item1;
-                            handler.HandleSendMessage(this, client, ref sendMessage);
-                        }
-                        CommunicationPrimitives.SendMessage(queuedOrder.Item1.TcpClient, sendMessage, queuedOrder.Item1.SslStream);
-                        LogDebug("Sent message to " + queuedOrder.Item1.TcpClient.Client.RemoteEndPoint.ToString() +
-                            "\nMessage length: " + sendMessage.MessageLength);
+                        IHandler handler = handlers[i];
+                        handler.HandleSendMessage(this, client, ref sendMessage);
                     }
+                    CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage, client.SslStream);
+                    LogDebug("Sent message to " + client.TcpClient.Client.RemoteEndPoint.ToString() +
+                        "\nMessage length: " + sendMessage.MessageLength);
                 }
-                catch (Exception e)
+                catch(Exception e)
                 {
                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
@@ -558,14 +558,26 @@ namespace MTSC.ServerSide
             }
             foreach (ClientData client in toRemove)
             {
-                foreach (IHandler handler in handlers)
+                try
                 {
-                    handler.ClientRemoved(this, client);
+                    foreach (IHandler handler in handlers)
+                    {
+                        handler.ClientRemoved(this, client);
+                    }
+                    LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
+                    client.Dispose();
                 }
-                LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
-                client.SslStream?.Dispose();
-                client.TcpClient?.Dispose();
-                Clients.Remove(client);
+                catch(Exception e)
+                {
+                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    {
+                        if (exceptionHandler.HandleException(e))
+                        {
+                            break;
+                        }
+                    }
+                }
+                clients.Remove(client);
             }
             toRemove.Clear();
         }
@@ -604,15 +616,7 @@ namespace MTSC.ServerSide
                         client.LastMessageTime = DateTime.Now;
                         LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                 "\nMessage length: " + message.MessageLength);
-                        int retries = 0;
-                        while(!InQueue.TryAdd((client, message)))
-                        {
-                            retries++;
-                            if(retries > 5)
-                            {
-                                throw new QueueOperationException($"Failed to insert received message in {nameof(InQueue)}. Tried [{retries}] times");
-                            }
-                        }
+                        this._ProducerMessageInQueue.Enqueue((client, message));
                     }
                 }
                 catch(Exception e)
@@ -689,19 +693,10 @@ namespace MTSC.ServerSide
 
                     sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout);
                 }
-                Clients.Add(client);
-                Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-                foreach (IHandler handler in handlers)
-                {
-                    if (handler.HandleClient(this, client))
-                    {
-                        break;
-                    }
-                }
+                this._ProducerClientQueue.Enqueue(client);
             }
             catch (Exception e)
             {
-                client.ToBeRemoved = true;
                 foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                 {
                     if (exceptionHandler.HandleException(e))
@@ -709,6 +704,7 @@ namespace MTSC.ServerSide
                         break;
                     }
                 }
+                client.Dispose();
             }
         }
         #endregion

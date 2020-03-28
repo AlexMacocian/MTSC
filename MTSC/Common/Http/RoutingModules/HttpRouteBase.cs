@@ -1,16 +1,17 @@
 ﻿using MTSC.ServerSide;
 using System;
+using System.Threading.Tasks;
 
 namespace MTSC.Common.Http.RoutingModules
 {
     public abstract class HttpRouteBase
     {
-        public HttpResponse CallHandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
+        public async Task<HttpResponse> CallHandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
         {
-            return this.HandleRequest(request, client, server);
+            return await this.HandleRequest(request, client, server);
         }
 
-        public abstract HttpResponse HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server);
+        public abstract Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server);
     }
     public abstract class HttpRouteBase<T> : HttpRouteBase
     {
@@ -32,12 +33,12 @@ namespace MTSC.Common.Http.RoutingModules
             return this;
         }
 
-        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
+        public async override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
         {
-            return HandleRequest(template.Invoke(request), client, server);
+            return await HandleRequest(template.Invoke(request), client, server);
         }
 
-        public abstract HttpResponse HandleRequest(T request, ClientData client, ServerSide.Server server);
+        public abstract Task<HttpResponse> HandleRequest(T request, ClientData client, ServerSide.Server server);
     }
     public abstract class HttpRouteBase<TReceive, TSend> : HttpRouteBase
     {
@@ -67,11 +68,11 @@ namespace MTSC.Common.Http.RoutingModules
             return this;
         }
 
-        public override HttpResponse HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
+        public async override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, Server server)
         {
-            return sendTemplate.Invoke(HandleRequest(receiveTemplate.Invoke(request), client, server));
+            return sendTemplate.Invoke(await HandleRequest(receiveTemplate.Invoke(request), client, server));
         }
 
-        public abstract TSend HandleRequest(TReceive request, ClientData client, ServerSide.Server server);
+        public abstract Task<TSend> HandleRequest(TReceive request, ClientData client, Server server);
     }
 }

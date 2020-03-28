@@ -15,11 +15,11 @@ namespace MTSC.Common.Http.ServerModules
         /// <param name="client">Client data.</param>
         /// <param name="request">Request message.</param>
         /// <returns>True if no other module should handle the received request.</returns>
-        bool HandleRequest(ServerSide.Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response);
+        bool HandleRequest(Server server, HttpHandler handler, ClientData client, HttpRequest request, ref HttpResponse response);
         /// <summary>
         /// Perform periodic operations.
         /// </summary>
         /// <param name="handler"></param>
-        void Tick(ServerSide.Server server, HttpHandler handler);
+        void Tick(Server server, HttpHandler handler);
     }
 }

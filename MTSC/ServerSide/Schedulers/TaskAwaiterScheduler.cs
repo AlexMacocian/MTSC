@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using MTSC.Common;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,10 +7,10 @@ namespace MTSC.ServerSide.Schedulers
 {
     public class TaskAwaiterScheduler : IScheduler
     {
-        void IScheduler.ScheduleHandling(IProducerConsumerCollection<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure)
+        void IScheduler.ScheduleHandling(IConsumerQueue<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure)
         {
             List<Task> tasks = new List<Task>();
-            while(inQueue.TryTake(out var tuple))
+            while(inQueue.TryDequeue(out var tuple))
             {
                 (var client, var message) = tuple;
                 tasks.Add(Task.Run(() => messageHandlingProcedure.Invoke(client, message)));
