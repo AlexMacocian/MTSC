@@ -7,10 +7,17 @@ namespace MTSC.ServerSide
     /// <summary>
     /// Structure containing client information.
     /// </summary>
-    public class ClientData : IDisposable
+    public class ClientData : IDisposable, IActiveClient
     {
         public TcpClient TcpClient;
-        public DateTime LastMessageTime = DateTime.Now;
+        /// <summary>
+        /// Latest datetime when a message has been received from the client
+        /// </summary>
+        public DateTime LastReceivedMessageTime { get; private set; } = DateTime.Now;
+        /// <summary>
+        /// Latest datetime when a message has been received or sent to the client
+        /// </summary>
+        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
         public bool ToBeRemoved = false;
         public SslStream SslStream = null;
         public ResourceDictionary Resources = new ResourceDictionary();
@@ -18,6 +25,16 @@ namespace MTSC.ServerSide
         public ClientData(TcpClient client)
         {
             this.TcpClient = client;
+        }
+
+        void IActiveClient.UpdateLastReceivedMessage()
+        {
+            LastActivityTime = LastReceivedMessageTime = DateTime.Now;
+        }
+
+        void IActiveClient.UpdateLastActivity()
+        {
+            LastActivityTime = DateTime.Now;
         }
 
         #region IDisposable Support

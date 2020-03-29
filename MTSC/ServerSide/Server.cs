@@ -531,6 +531,7 @@ namespace MTSC.ServerSide
                         handler.HandleSendMessage(this, client, ref sendMessage);
                     }
                     CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage, client.SslStream);
+                    (client as IActiveClient).UpdateLastActivity();
                     LogDebug("Sent message to " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                         "\nMessage length: " + sendMessage.MessageLength);
                 }
@@ -613,7 +614,7 @@ namespace MTSC.ServerSide
                     if (!client.ToBeRemoved && client.TcpClient.Available > 0)
                     {
                         Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
-                        client.LastMessageTime = DateTime.Now;
+                        (client as IActiveClient).UpdateLastReceivedMessage();
                         LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                 "\nMessage length: " + message.MessageLength);
                         this._ProducerMessageInQueue.Enqueue((client, message));
