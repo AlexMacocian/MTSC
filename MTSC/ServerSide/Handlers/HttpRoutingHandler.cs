@@ -22,7 +22,7 @@ namespace MTSC.ServerSide.Handlers
                 Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
-        public double MaximumRequestSize { get; set; } = 15000;
+        public double MaximumRequestSize { get; set; } = double.MaxValue;
 
         public HttpRoutingHandler()
         {
