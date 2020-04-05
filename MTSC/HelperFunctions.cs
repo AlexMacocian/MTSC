@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 using System.Xml;
 
 namespace MTSC
@@ -55,6 +56,8 @@ namespace MTSC
                   parameters.InverseQ != null ? Convert.ToBase64String(parameters.InverseQ) : null,
                   parameters.D != null ? Convert.ToBase64String(parameters.D) : null);
         }
+        #endregion
+
         /// <summary>
         /// Returns true if <paramref name="path"/> starts with the path <paramref name="baseDirPath"/>.
         /// The comparison is case-insensitive, handles / and \ slashes as folder separators and
@@ -70,6 +73,7 @@ namespace MTSC
 
             return normalizedPath.StartsWith(normalizedBaseDirPath, StringComparison.OrdinalIgnoreCase);
         }
+        
         /// <summary>
         /// Returns <paramref name="str"/> with the minimal concatenation of <paramref name="ending"/> (starting from end) that
         /// results in satisfying .EndsWith(ending).
@@ -94,6 +98,7 @@ namespace MTSC
 
             return result;
         }
+        
         /// <summary>Gets the rightmost <paramref name="length" /> characters from a string.</summary>
         /// <param name="value">The string to retrieve the substring from.</param>
         /// <param name="length">The number of characters to retrieve.</param>
@@ -111,7 +116,42 @@ namespace MTSC
 
             return (length < value.Length) ? value.Substring(value.Length - length) : value;
         }
-        #endregion
+        
+        public static string RelativePath(this string absPath, string relTo)
+        {
+            string[] absDirs = absPath.Split('\\');
+            string[] relDirs = relTo.Split('\\');
+            // Get the shortest of the two paths 
+            int len = absDirs.Length < relDirs.Length ? absDirs.Length : relDirs.Length;
+            // Use to determine where in the loop we exited 
+            int lastCommonRoot = -1; int index;
+            // Find common root 
+            for (index = 0; index < len; index++)
+            {
+                if (absDirs[index] == relDirs[index])
+                    lastCommonRoot = index;
+                else break;
+            }
+            // If we didn't find a common prefix then throw 
+            if (lastCommonRoot == -1)
+            {
+                throw new ArgumentException("Paths do not have a common base");
+            }
+            // Build up the relative path 
+            StringBuilder relativePath = new StringBuilder();
+            // Add on the .. 
+            for (index = lastCommonRoot + 1; index < absDirs.Length; index++)
+            {
+                if (absDirs[index].Length > 0) relativePath.Append("..\\");
+            }
+            // Add on the folders 
+            for (index = lastCommonRoot + 1; index < relDirs.Length - 1; index++)
+            {
+                relativePath.Append(relDirs[index] + "\\");
+            }
+            relativePath.Append(relDirs[relDirs.Length - 1]);
+            return relativePath.ToString();
+        }
 
         public static byte[] ReadRemainingBytes(this MemoryStream ms)
         {

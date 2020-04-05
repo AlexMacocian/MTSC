@@ -17,4 +17,10 @@
     <ProjectReference Include="..\MTSC\MTSC.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="powershellcert.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

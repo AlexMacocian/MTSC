@@ -10,8 +10,10 @@ using MTSC.ServerSide.Schedulers;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +33,7 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new ServerSide.Server(800)
+                .WithCertificate(new X509Certificate2("powershellcert.pfx", "123"))
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute("echo", new EchoWebsocketModule()
                         .WithReceiveTemplateProvider((message) => UTF8Encoding.UTF8.GetString(message.Data))
@@ -46,8 +49,10 @@ namespace MTSC.UnitTests
                     .AddRoute(HttpMessage.HttpMethods.Get, "query", new TestQueryModule())
                     .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule())
                     .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
-                    .WithFragmentsExpirationTime(TimeSpan.FromSeconds(1))
+                    .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(500))
                     .WithMaximumSize(300))
+                .AddHandler(new FtpHandler()
+                    .WithReadyDelay(TimeSpan.FromMilliseconds(500)))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
@@ -241,6 +246,20 @@ namespace MTSC.UnitTests
                 }
                 TestContext.WriteLine($"{i}: Processed {tasks.Length} requests in {duration.TotalMilliseconds} ms.");
             }           
+        }
+        
+        [TestMethod]
+        public void FtpTest()
+        {
+            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://127.0.0.1:800");
+            request.Method = WebRequestMethods.Ftp.ListDirectory;
+            request.UsePassive = true;
+            request.EnableSsl = true;
+            request.Credentials = new NetworkCredential("user", "password");
+            using (FtpWebResponse response = (FtpWebResponse)request.GetResponse())
+            {
+                
+            }
         }
 
         [ClassCleanup]
