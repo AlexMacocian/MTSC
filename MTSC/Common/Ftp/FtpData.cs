@@ -28,6 +28,7 @@ namespace MTSC.Common.Ftp
         {
             this.TransferDetails.Socket.Close();
             this.TransferDetails.Socket.Dispose();
+            this.TransferDetails.ConnectionOpen = false;
         }
 
         public void SendData(byte[] data, int length)

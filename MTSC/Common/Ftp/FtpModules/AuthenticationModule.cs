@@ -7,6 +7,12 @@ namespace MTSC.Common.Ftp.FtpModules
     public class AuthenticationModule : IFtpModule
     {
         public Func<AuthenticationData, bool> ValidateAuthentication { get; set; } = AlwaysAllowed;
+        
+        public AuthenticationModule WithAuthenticationValidation(Func<AuthenticationData, bool> func)
+        {
+            this.ValidateAuthentication = func;
+            return this;
+        }
         bool IFtpModule.HandleRequest(FtpRequest request, ClientData client, FtpHandler handler, Server server)
         {
             if (!client.Resources.TryGetResource<AuthenticationData>(out var authData))

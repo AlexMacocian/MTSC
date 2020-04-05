@@ -1,4 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using MTSC.Common.Ftp;
+using MTSC.Common.Ftp.FtpModules;
 using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.ServerModules;
@@ -33,7 +35,6 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new ServerSide.Server(800)
-                .WithCertificate(new X509Certificate2("powershellcert.pfx", "123"))
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute("echo", new EchoWebsocketModule()
                         .WithReceiveTemplateProvider((message) => UTF8Encoding.UTF8.GetString(message.Data))
@@ -51,8 +52,6 @@ namespace MTSC.UnitTests
                     .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(500))
                     .WithMaximumSize(300))
-                .AddHandler(new FtpHandler()
-                    .WithReadyDelay(TimeSpan.FromMilliseconds(500)))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
@@ -246,20 +245,6 @@ namespace MTSC.UnitTests
                 }
                 TestContext.WriteLine($"{i}: Processed {tasks.Length} requests in {duration.TotalMilliseconds} ms.");
             }           
-        }
-        
-        [TestMethod]
-        public void FtpTest()
-        {
-            FtpWebRequest request = (FtpWebRequest)WebRequest.Create("ftp://127.0.0.1:800");
-            request.Method = WebRequestMethods.Ftp.ListDirectory;
-            request.UsePassive = true;
-            request.EnableSsl = true;
-            request.Credentials = new NetworkCredential("user", "password");
-            using (FtpWebResponse response = (FtpWebResponse)request.GetResponse())
-            {
-                
-            }
         }
 
         [ClassCleanup]

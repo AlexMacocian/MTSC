@@ -1,18 +1,14 @@
 ﻿using MTSC.Common.Ftp.FtpModules;
-using MTSC.Common.Http.ServerModules;
-using MTSC.Common.WebSockets.ServerModules;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.ServerSide;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.UsageMonitors;
-using System;
-using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
 namespace MTSC_TestServer
-{    
+{
     class Program
     {
         static void Main(string[] args)
@@ -33,10 +29,13 @@ namespace MTSC_TestServer
                 .AddHandler(new FtpHandler()
                     .AddModule(new AuthenticationModule())
                     .AddModule(new SystModule())
-                    .AddModule(new FileSystemModule()
-                        .WithRootPath("src/"))
+                    .AddModule(new DataConnectionModule())
+                    .AddModule(new DirectoryModule()
+                        .WithRootPath("src"))
+                    .AddModule(new FileModule())
                     .AddModule(new QuitModule())
                     .AddModule(new UnknownCommandModule()))
+                .WithClientCertificate(true)
                 .Run();
         }
 
