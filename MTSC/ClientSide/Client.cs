@@ -51,6 +51,11 @@ namespace MTSC.Client
         }
         #endregion
         #region Public Methods
+        public Client WithSsl(bool ssl)
+        {
+            this.useSsl = ssl;
+            return this;
+        }
         /// <summary>
         /// Add a message to the message queue.
         /// </summary>

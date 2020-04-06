@@ -7,13 +7,13 @@ namespace MTSC.ServerSide.Schedulers
 {
     public class TaskAwaiterScheduler : IScheduler
     {
-        void IScheduler.ScheduleHandling(IConsumerQueue<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure)
+        void IScheduler.ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
         {
             List<Task> tasks = new List<Task>();
-            while(inQueue.TryDequeue(out var tuple))
+            foreach(var tuple in clientsQueues)
             {
-                (var client, var message) = tuple;
-                tasks.Add(Task.Run(() => messageHandlingProcedure.Invoke(client, message)));
+                (var client, var messageQueue) = tuple;
+                tasks.Add(Task.Run(() => messageHandlingProcedure.Invoke(client, messageQueue)));
             }
             Task.WaitAll(tasks.ToArray());
         }

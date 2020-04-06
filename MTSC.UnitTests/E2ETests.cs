@@ -34,7 +34,10 @@ namespace MTSC.UnitTests
         [ClassInitialize]
         public static void InitializeServer(TestContext testContext)
         {
+            ServicePointManager.ServerCertificateValidationCallback = (_, __, ___, ____) => true;
+
             Server = new ServerSide.Server(800)
+                .WithCertificate(new X509Certificate2("myCert.cer"))
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute("echo", new EchoWebsocketModule()
                         .WithReceiveTemplateProvider((message) => UTF8Encoding.UTF8.GetString(message.Data))
@@ -49,6 +52,7 @@ namespace MTSC.UnitTests
                     .AddRoute(HttpMessage.HttpMethods.Get, "", new Http200Module())
                     .AddRoute(HttpMessage.HttpMethods.Get, "query", new TestQueryModule())
                     .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule())
+                    .AddRoute(HttpMessage.HttpMethods.Post, "echo", new EchoModule())
                     .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(500))
                     .WithMaximumSize(300))
@@ -63,11 +67,11 @@ namespace MTSC.UnitTests
         public async Task ServerRespondsDuringLongRunningTask()
         {
             HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://localhost:800");
+            httpClient.BaseAddress = new Uri("https://localhost:800");
             var longRunningTask = httpClient.GetAsync("long-running");
             int responses = 0;
             HttpClient client2 = new HttpClient();
-            client2.BaseAddress = new Uri("http://localhost:800");
+            client2.BaseAddress = new Uri("https://localhost:800");
             while (!longRunningTask.IsCompleted)
             {
                 var echoResponse = await client2.GetAsync("echo");
@@ -82,7 +86,7 @@ namespace MTSC.UnitTests
         public void HelloWorldHTTP()
         {
             HttpClient httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://localhost:800");
+            httpClient.BaseAddress = new Uri("https://localhost:800");
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
         }
@@ -96,6 +100,7 @@ namespace MTSC.UnitTests
             client.SetServerAddress("127.0.0.1")
                 .SetPort(800)
                 .AddHandler(notifyHandler)
+                .WithSsl(true)
                 .Connect();
 
             HttpRequest request = new HttpRequest();
@@ -120,6 +125,8 @@ namespace MTSC.UnitTests
                 }
             }
             HttpResponse response = HttpResponse.FromBytes(receivedMessage);
+            //Trim the null bytes from encryption/decryption
+            response.BodyString = response.BodyString.Trim('\0');
             Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.OK);
             Assert.AreEqual(response.BodyString, "Brought a message to you my guy!");
         }
@@ -133,6 +140,7 @@ namespace MTSC.UnitTests
             client.SetServerAddress("127.0.0.1")
                 .SetPort(800)
                 .AddHandler(notifyHandler)
+                .WithSsl(true)
                 .Connect();
 
             HttpRequest request = new HttpRequest();
@@ -168,6 +176,7 @@ namespace MTSC.UnitTests
             client.SetServerAddress("127.0.0.1")
                 .SetPort(800)
                 .AddHandler(notifyHandler)
+                .WithSsl(true)
                 .Connect();
 
             HttpRequest request = new HttpRequest();
@@ -199,7 +208,7 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void GetWithQueryHttp()
         {
-            var builder = new UriBuilder("http://localhost:800/query");
+            var builder = new UriBuilder("https://localhost:800/query");
             var query = HttpUtility.ParseQueryString(builder.Query);
             query["key1"] = "value1";
             query["key2"] = "value2";
@@ -217,7 +226,7 @@ namespace MTSC.UnitTests
         {
             byte[] bytes = new byte[100];
             ClientWebSocket client = new ClientWebSocket();
-            client.ConnectAsync(new Uri("ws://localhost:800/echo"), CancellationToken.None).Wait();
+            client.ConnectAsync(new Uri("wss://localhost:800/echo"), CancellationToken.None).Wait();
             client.SendAsync(ASCIIEncoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
             client.ReceiveAsync(bytes, CancellationToken.None).Wait();
             var resultString = ASCIIEncoding.ASCII.GetString(bytes, 0, 12);
@@ -228,7 +237,7 @@ namespace MTSC.UnitTests
         public void HTTPStressTest()
         {
             var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("http://localhost:800");
+            httpClient.BaseAddress = new Uri("https://localhost:800");
             for(int i = 0; i < stressIterations; i++)
             {
                 var startTime = DateTime.Now;

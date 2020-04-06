@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MTSC.Common;
+using System;
 using System.Net.Security;
 using System.Net.Sockets;
 
@@ -7,8 +8,10 @@ namespace MTSC.ServerSide
     /// <summary>
     /// Structure containing client information.
     /// </summary>
-    public class ClientData : IDisposable, IActiveClient
+    public class ClientData : IDisposable, IActiveClient, IQueueHolder<Message>
     {
+        private ProducerConsumerQueue<Message> messageQueue = new ProducerConsumerQueue<Message>();
+
         public TcpClient TcpClient;
         /// <summary>
         /// Latest datetime when a message has been received from the client
@@ -18,6 +21,9 @@ namespace MTSC.ServerSide
         /// Latest datetime when a message has been received or sent to the client
         /// </summary>
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+
+        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => messageQueue;
+
         public bool ToBeRemoved = false;
         public SslStream SslStream = null;
         public ResourceDictionary Resources = new ResourceDictionary();
@@ -35,6 +41,21 @@ namespace MTSC.ServerSide
         void IActiveClient.UpdateLastActivity()
         {
             LastActivityTime = DateTime.Now;
+        }
+
+        void IQueueHolder<Message>.Enqueue(Message value)
+        {
+            (messageQueue as IProducerQueue<Message>).Enqueue(value);
+        }
+
+        Message IQueueHolder<Message>.Dequeue()
+        {
+            return (messageQueue as IConsumerQueue<Message>).Dequeue();
+        }
+
+        bool IQueueHolder<Message>.TryDequeue(out Message Value)
+        {
+            return (messageQueue as IConsumerQueue<Message>).TryDequeue(out Value);
         }
 
         #region IDisposable Support

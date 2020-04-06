@@ -8,6 +8,7 @@ using MTSC.ServerSide.UsageMonitors;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -33,15 +34,12 @@ namespace MTSC.ServerSide
         List<ILogger> loggers = new List<ILogger>();
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
-        ProducerConsumerQueue<(ClientData, Message)> messageInQueue = new ProducerConsumerQueue<(ClientData, Message)>();
         ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new ProducerConsumerQueue<(ClientData, byte[])>();
         #endregion
         #region Private Properties
         private IConsumerQueue<ClientData> _ConsumerClientQueue { get => addQueue; }
         private IProducerQueue<ClientData> _ProducerClientQueue { get => addQueue; }
-        private IConsumerQueue<(ClientData, Message)> _ConsumerMessageInQueue { get => messageInQueue; }
         private IConsumerQueue<(ClientData, byte[])> _ConsumerMessageOutQueue { get => messageOutQueue; }
-        private IProducerQueue<(ClientData, Message)> _ProducerMessageInQueue { get => messageInQueue; }
         #endregion
         #region Public Properties
         /// <summary>
@@ -444,7 +442,11 @@ namespace MTSC.ServerSide
                  * Call the scheduler to handle all received messages and distribute them to the handlers
                  */
 
-                Scheduler.ScheduleHandling(this._ConsumerMessageInQueue, HandleClientMessage);
+                Scheduler.ScheduleHandling(
+                    clients
+                        .Select(client => (client, (client as IQueueHolder<Message>).ConsumerQueue))
+                        .ToList(),
+                    HandleClientMessages);
 
                 /*
                  * Iterate through all the handlers, running periodic operations.
@@ -617,7 +619,7 @@ namespace MTSC.ServerSide
                         (client as IActiveClient).UpdateLastReceivedMessage();
                         LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                 "\nMessage length: " + message.MessageLength);
-                        this._ProducerMessageInQueue.Enqueue((client, message));
+                        (client as IQueueHolder<Message>).Enqueue(message);
                     }
                 }
                 catch(Exception e)
@@ -630,6 +632,14 @@ namespace MTSC.ServerSide
                         }
                     }
                 }
+            }
+        }
+
+        private void HandleClientMessages(ClientData client, IConsumerQueue<Message> messages)
+        {
+            while(messages.TryDequeue(out var message))
+            {
+                HandleClientMessage(client, message);
             }
         }
 

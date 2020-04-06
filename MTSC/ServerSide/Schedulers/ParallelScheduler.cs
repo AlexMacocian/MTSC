@@ -7,16 +7,15 @@ namespace MTSC.ServerSide.Schedulers
 {
     public class ParallelScheduler : IScheduler
     {
-        void IScheduler.ScheduleHandling(IConsumerQueue<(ClientData, Message)> inQueue, Action<ClientData, Message> messageHandlingProcedure)
+        void IScheduler.ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
         {
             List<Action> actionList = new List<Action>();
 
-            while(inQueue.TryDequeue(out var tuple))
+            foreach(var tuple in clientsQueues)
             {
-                (var client, var message) = tuple;
-                actionList.Add(new Action(() => { messageHandlingProcedure.Invoke(client, message); }));
+                (var client, var messageQueue) = tuple;
+                actionList.Add(new Action(() => messageHandlingProcedure.Invoke(client, messageQueue)));
             }
-            Parallel.Invoke(actionList.ToArray());
         }
     }
 }

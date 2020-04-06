@@ -407,10 +407,6 @@ namespace MTSC.Common.Http
                     this.Body = ms.ReadRemainingBytes();
                 }
             }
-            /*
-             * Trim all trailing null characters left over from SSL encryption.
-             */
-            this.BodyString = this.BodyString.Trim('\0');
             Complete = true;
             return;
         }

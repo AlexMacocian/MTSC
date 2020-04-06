@@ -93,32 +93,32 @@ namespace MTSC.ServerSide.Handlers
             byte[] messageBytes = null;
             try
             {
+                var trimmedMessageBytes = message.MessageBytes.TrimTrailingNullBytes();
                 if (fragmentedMessages.ContainsKey(client))
                 {
                     byte[] previousBytes = fragmentedMessages[client].Item1;
-                    if (previousBytes.Length + message.MessageBytes.Length > MaximumRequestSize)
+                    if (previousBytes.Length + trimmedMessageBytes.Length > MaximumRequestSize)
                     {
                         // Discard the message if it is too big
-                        server.LogDebug($"Discarded message. Message size [{previousBytes.Length + message.MessageBytes.Length}] > [{MaximumRequestSize}]");
+                        server.LogDebug($"Discarded message. Message size [{previousBytes.Length + trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
                         fragmentedMessages.TryRemove(client, out _);
                         return false;
                     }
                     byte[] repackagingBuffer = new byte[previousBytes.Length + message.MessageBytes.Length];
                     Array.Copy(previousBytes, 0, repackagingBuffer, 0, previousBytes.Length);
-                    Array.Copy(message.MessageBytes, 0, repackagingBuffer, previousBytes.Length, message.MessageBytes.Length);
+                    Array.Copy(trimmedMessageBytes, 0, repackagingBuffer, previousBytes.Length, trimmedMessageBytes.Length);
                     messageBytes = repackagingBuffer;
                 }
                 else
                 {
-                    if (message.MessageBytes.Length > MaximumRequestSize)
+                    if (trimmedMessageBytes.Length > MaximumRequestSize)
                     {
                         // Discard the message if it is too big
-                        server.LogDebug($"Discarded message. Message size [{message.MessageBytes.Length}] > [{MaximumRequestSize}]");
+                        server.LogDebug($"Discarded message. Message size [{trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
                         return false;
                     }
-                    messageBytes = message.MessageBytes;
+                    messageBytes = trimmedMessageBytes;
                 }
-                messageBytes = messageBytes.TrimTrailingNullBytes();
                 var partialRequest = PartialHttpRequest.FromBytes(messageBytes);
                 if (partialRequest.Complete)
                     request = partialRequest.ToRequest();
