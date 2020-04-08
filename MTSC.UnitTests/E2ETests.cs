@@ -110,11 +110,11 @@ namespace MTSC.UnitTests
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
             byte[] message = request.GetPackedRequest();
 
-            client.QueueMessage(message.Take(5).ToArray());
+            client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
             Thread.Sleep(300);
-            client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
             Thread.Sleep(300);
-            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
             Stopwatch sw = new Stopwatch();
             sw.Start();
             while (receivedMessage == null)
@@ -150,11 +150,11 @@ namespace MTSC.UnitTests
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
             byte[] message = request.GetPackedRequest();
 
-            client.QueueMessage(message.Take(5).ToArray());
+            client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
             Thread.Sleep(300);
-            client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
             Thread.Sleep(3300);
-            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
             Stopwatch sw = new Stopwatch();
             sw.Start();
             while (receivedMessage == null)
@@ -189,11 +189,11 @@ namespace MTSC.UnitTests
             Array.Fill<byte>(request.Body, 50);
             byte[] message = request.GetPackedRequest();
 
-            client.QueueMessage(message.Take(5).ToArray());
-            Thread.Sleep(50);
-            client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
-            Thread.Sleep(50);
-            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
+            client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
+            Thread.Sleep(5);
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
+            Thread.Sleep(5);
+            client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
             Stopwatch sw = new Stopwatch();
             sw.Start();
             while (receivedMessage == null)

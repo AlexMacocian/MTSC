@@ -102,7 +102,7 @@ namespace MTSC.ServerSide.Handlers
                         server.LogDebug($"Discarded message. Message size [{previousBytes.Length + trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
                         client.Resources.RemoveResource<FragmentedMessage>();
                         QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
-                        return false;
+                        return true;
                     }
                     byte[] repackagingBuffer = new byte[previousBytes.Length + trimmedMessageBytes.Length];
                     Array.Copy(previousBytes, 0, repackagingBuffer, 0, previousBytes.Length);
@@ -116,7 +116,7 @@ namespace MTSC.ServerSide.Handlers
                         // Discard the message if it is too big
                         server.LogDebug($"Discarded message. Message size [{trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
                         QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
-                        return false;
+                        return true;
                     }
                     messageBytes = trimmedMessageBytes;
                 }
@@ -126,7 +126,7 @@ namespace MTSC.ServerSide.Handlers
                 else
                 {
                     HandleIncompleteRequest(client, server, messageBytes, partialRequest);
-                    return false;
+                    return true;
                 }
             }
             catch (Exception ex) when (
@@ -140,9 +140,8 @@ namespace MTSC.ServerSide.Handlers
                 ex is IncompleteRequestException ||
                 ex is InvalidPostFormException)
             {
-                server.LogDebug(ex.Message);
-                server.LogDebug(ex.StackTrace);
-                HandleIncompleteRequest(client, server, messageBytes);
+                server.LogDebug("Malformed request, not saving!");
+                server.LogDebug(ex.Message + "\n" + ex.StackTrace);
                 return false;
             }
             catch (Exception e)
