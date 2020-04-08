@@ -7,6 +7,11 @@ namespace MTSC.ServerSide
     {
         private Dictionary<Type, object> Resources = new Dictionary<Type, object>();
 
+        public void RemoveResource<TValue>()
+        {
+            Resources.Remove(typeof(TValue));
+        }
+
         public void SetResource<TValue>(TValue value)
         {
             Resources[typeof(TValue)] = value;

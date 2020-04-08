@@ -12,7 +12,7 @@ namespace MTSC.ServerSide
     {
         private ProducerConsumerQueue<Message> messageQueue = new ProducerConsumerQueue<Message>();
 
-        public TcpClient TcpClient;
+        public TcpClient TcpClient { get; }
         /// <summary>
         /// Latest datetime when a message has been received from the client
         /// </summary>
@@ -22,17 +22,19 @@ namespace MTSC.ServerSide
         /// </summary>
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
-        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => messageQueue;
+        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue { get => messageQueue; }
 
-        public bool ToBeRemoved = false;
-        public SslStream SslStream = null;
-        public ResourceDictionary Resources = new ResourceDictionary();
+        public bool ToBeRemoved { get; set; } = false;
+        public SslStream SslStream { get; set; } = null;
+        public SafeNetworkStream SafeNetworkStream { get; }
+        public ResourceDictionary Resources { get; set; } = new ResourceDictionary();
 
         public ClientData(TcpClient client)
         {
             this.TcpClient = client;
+            this.SafeNetworkStream = new SafeNetworkStream(this.TcpClient);
         }
-
+        #region IActiveClient Implementation
         void IActiveClient.UpdateLastReceivedMessage()
         {
             LastActivityTime = LastReceivedMessageTime = DateTime.Now;
@@ -42,7 +44,8 @@ namespace MTSC.ServerSide
         {
             LastActivityTime = DateTime.Now;
         }
-
+        #endregion
+        #region IQueueHolder Imeplementation
         void IQueueHolder<Message>.Enqueue(Message value)
         {
             (messageQueue as IProducerQueue<Message>).Enqueue(value);
@@ -57,7 +60,7 @@ namespace MTSC.ServerSide
         {
             return (messageQueue as IConsumerQueue<Message>).TryDequeue(out Value);
         }
-
+        #endregion
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
 

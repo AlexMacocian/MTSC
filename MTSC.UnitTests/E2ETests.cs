@@ -11,6 +11,7 @@ using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Schedulers;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -34,10 +35,9 @@ namespace MTSC.UnitTests
         [ClassInitialize]
         public static void InitializeServer(TestContext testContext)
         {
-            ServicePointManager.ServerCertificateValidationCallback = (_, __, ___, ____) => true;
-
             Server = new ServerSide.Server(800)
-                .WithCertificate(new X509Certificate2("myCert.cer"))
+                .WithCertificate(new X509Certificate2("mycert.pfx", "password"))
+                .WithClientCertificate(false)
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute("echo", new EchoWebsocketModule()
                         .WithReceiveTemplateProvider((message) => UTF8Encoding.UTF8.GetString(message.Data))
@@ -54,12 +54,12 @@ namespace MTSC.UnitTests
                     .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule())
                     .AddRoute(HttpMessage.HttpMethods.Post, "echo", new EchoModule())
                     .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
-                    .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(500))
-                    .WithMaximumSize(300))
+                    .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(3000))
+                    .WithMaximumSize(250000))
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
-                .SetScheduler(new FireTasksAndForgetScheduler())
+                .SetScheduler(new TaskAwaiterScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
         }
@@ -153,7 +153,7 @@ namespace MTSC.UnitTests
             client.QueueMessage(message.Take(5).ToArray());
             Thread.Sleep(300);
             client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
-            Thread.Sleep(1300);
+            Thread.Sleep(3300);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -184,14 +184,14 @@ namespace MTSC.UnitTests
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
-            request.Body = new byte[300];
+            request.Body = new byte[100000];
             Array.Fill<byte>(request.Body, 50);
             byte[] message = request.GetPackedRequest();
 
             client.QueueMessage(message.Take(5).ToArray());
-            Thread.Sleep(300);
+            Thread.Sleep(50);
             client.QueueMessage(message.Skip(5).Take(message.Length - request.BodyString.Length - 5).ToArray());
-            Thread.Sleep(300);
+            Thread.Sleep(50);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).ToArray());
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -203,6 +203,24 @@ namespace MTSC.UnitTests
                 }
             }
             Assert.Fail("Message should be discarded due to exceeding the size limit");
+        }
+
+        [TestMethod]
+        public void SendLargeHttpMessage()
+        {
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("https://localhost:800");
+            string s = string.Empty;
+            for(int i = 0; i < 200000; i++)
+            {
+                s += "C";
+            }
+            using(var sc = new ByteArrayContent(Encoding.UTF8.GetBytes(s)))
+            {
+                var response = httpClient.PostAsync("echo", sc).Result;
+                Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+                Assert.AreEqual(response.Content.ReadAsStringAsync().Result, s);
+            }
         }
 
         [TestMethod]
@@ -224,6 +242,7 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void EchoWebsocket()
         {
+            ServicePointManager.ServerCertificateValidationCallback += (o, e, s, p) => true;
             byte[] bytes = new byte[100];
             ClientWebSocket client = new ClientWebSocket();
             client.ConnectAsync(new Uri("wss://localhost:800/echo"), CancellationToken.None).Wait();

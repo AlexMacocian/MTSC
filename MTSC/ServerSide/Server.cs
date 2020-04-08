@@ -615,7 +615,7 @@ namespace MTSC.ServerSide
                 {
                     if (!client.ToBeRemoved && client.TcpClient.Available > 0)
                     {
-                        Message message = CommunicationPrimitives.GetMessage(client.TcpClient, client.SslStream);
+                        Message message = CommunicationPrimitives.GetMessage(client);
                         (client as IActiveClient).UpdateLastReceivedMessage();
                         LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                                 "\nMessage length: " + message.MessageLength);
@@ -695,8 +695,8 @@ namespace MTSC.ServerSide
             {
                 if (this.certificate != null)
                 {
-                    SslStream sslStream = new SslStream(client.TcpClient.GetStream(),
-                        true,
+                    SslStream sslStream = new SslStream(client.SafeNetworkStream,
+                        false,
                         this.RemoteCertificateValidationCallback,
                         this.LocalCertificateSelectionCallback,
                         this.EncryptionPolicy);

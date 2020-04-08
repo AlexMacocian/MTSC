@@ -4,6 +4,7 @@ using MTSC.Exceptions;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.ServerSide.Handlers
@@ -12,9 +13,7 @@ namespace MTSC.ServerSide.Handlers
     {
         private static Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
 
-        private List<ClientData> removeFragmentsList = new List<ClientData>();
         private ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
-        private ConcurrentDictionary<ClientData, (byte[], DateTime)> fragmentedMessages = new ConcurrentDictionary<ClientData, (byte[], DateTime)>();
 
         private Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase,
             Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary =
@@ -94,17 +93,18 @@ namespace MTSC.ServerSide.Handlers
             try
             {
                 var trimmedMessageBytes = message.MessageBytes.TrimTrailingNullBytes();
-                if (fragmentedMessages.ContainsKey(client))
+                if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
                 {
-                    byte[] previousBytes = fragmentedMessages[client].Item1;
+                    byte[] previousBytes = fragmentedMessage.Message;
                     if (previousBytes.Length + trimmedMessageBytes.Length > MaximumRequestSize)
                     {
                         // Discard the message if it is too big
                         server.LogDebug($"Discarded message. Message size [{previousBytes.Length + trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
-                        fragmentedMessages.TryRemove(client, out _);
+                        client.Resources.RemoveResource<FragmentedMessage>();
+                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
                         return false;
                     }
-                    byte[] repackagingBuffer = new byte[previousBytes.Length + message.MessageBytes.Length];
+                    byte[] repackagingBuffer = new byte[previousBytes.Length + trimmedMessageBytes.Length];
                     Array.Copy(previousBytes, 0, repackagingBuffer, 0, previousBytes.Length);
                     Array.Copy(trimmedMessageBytes, 0, repackagingBuffer, previousBytes.Length, trimmedMessageBytes.Length);
                     messageBytes = repackagingBuffer;
@@ -115,6 +115,7 @@ namespace MTSC.ServerSide.Handlers
                     {
                         // Discard the message if it is too big
                         server.LogDebug($"Discarded message. Message size [{trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
+                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
                         return false;
                     }
                     messageBytes = trimmedMessageBytes;
@@ -125,7 +126,7 @@ namespace MTSC.ServerSide.Handlers
                 else
                 {
                     HandleIncompleteRequest(client, server, messageBytes, partialRequest);
-                    return true;
+                    return false;
                 }
             }
             catch (Exception ex) when (
@@ -142,7 +143,7 @@ namespace MTSC.ServerSide.Handlers
                 server.LogDebug(ex.Message);
                 server.LogDebug(ex.StackTrace);
                 HandleIncompleteRequest(client, server, messageBytes);
-                return true;
+                return false;
             }
             catch (Exception e)
             {
@@ -150,9 +151,9 @@ namespace MTSC.ServerSide.Handlers
             }
 
             // The message has been parsed. If there was a cache for the current message, remove it.
-            if (fragmentedMessages.ContainsKey(client))
+            if (client.Resources.Contains<FragmentedMessage>())
             {
-                fragmentedMessages.TryRemove(client, out _);
+                client.Resources.RemoveResource<FragmentedMessage>();
             }
 
             /*
@@ -203,23 +204,22 @@ namespace MTSC.ServerSide.Handlers
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetPackedResponse(true));
                 }
             }
-            removeFragmentsList.Clear();
-            foreach (var kvp in fragmentedMessages)
+            foreach (var client in server.Clients)
             {
-                if ((DateTime.Now - kvp.Value.Item2) > FragmentsExpirationTime)
+                if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage)) 
                 {
-                    removeFragmentsList.Add(kvp.Key);
+                    if ((DateTime.Now - fragmentedMessage.LastReceived) > FragmentsExpirationTime)
+                    {
+                        client.Resources.RemoveResource<FragmentedMessage>();
+                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request timed out in [{FragmentsExpirationTime.TotalMilliseconds}] ms!" });
+                    }
                 }
-            }
-            foreach (var key in removeFragmentsList)
-            {
-                fragmentedMessages.TryRemove(key, out _);
             }
         }
 
         private void HandleIncompleteRequest(ClientData client, Server server, byte[] messageBytes, PartialHttpRequest partialRequest = null)
         {
-            fragmentedMessages[client] = (messageBytes, DateTime.Now);
+            client.Resources.SetResource(new FragmentedMessage() { Message = messageBytes, LastReceived = DateTime.Now });
             server.LogDebug("Incomplete request received!");
             if (partialRequest != null && partialRequest.Headers.ContainsHeader(HttpMessage.RequestHeaders.Expect) &&
                 partialRequest.Headers[HttpMessage.RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
@@ -228,6 +228,20 @@ namespace MTSC.ServerSide.Handlers
                 var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
                 contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
                 QueueResponse(client, contResponse);
+            }
+        }
+        
+        private class FragmentedMessage
+        {
+            public byte[] Message { get; set; }
+
+            public DateTime LastReceived { get; set; } = DateTime.Now;
+
+            public void AddToMessage(byte[] bytes)
+            {
+                byte[] newMessage = new byte[Message.Length + bytes.Length];
+                Array.Copy(Message, newMessage, Message.Length);
+                Array.Copy(bytes, 0, newMessage, Message.Length, bytes.Length);
             }
         }
     }
