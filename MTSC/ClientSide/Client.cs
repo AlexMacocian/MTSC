@@ -1,4 +1,5 @@
 ﻿using MTSC.Client.Handlers;
+using MTSC.Common;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using System;
@@ -27,6 +28,7 @@ namespace MTSC.Client
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         Queue<byte[]> messageQueue = new Queue<byte[]>();
         SslStream sslStream = null;
+        SafeNetworkStream safeNetworkStream = null;
         static Hashtable certificateErrors = new Hashtable();
         bool useSsl = false;
         #endregion
@@ -155,13 +157,14 @@ namespace MTSC.Client
                 }
                 tcpClient = new TcpClient();
                 tcpClient.Connect(address, port);
+                safeNetworkStream = new SafeNetworkStream(tcpClient);
                 if (useSsl)
                 {
                     if(this.CertificateValidationCallback == null)
                     {
                         this.CertificateValidationCallback = new RemoteCertificateValidationCallback(ValidateServerCertificate);
                     }
-                    sslStream = new SslStream(tcpClient.GetStream(), true, this.CertificateValidationCallback, null);
+                    sslStream = new SslStream(safeNetworkStream, true, this.CertificateValidationCallback, null);
                     sslStream.AuthenticateAsClient(address);
                 }
                 foreach(ILogger logger in loggers)
@@ -247,7 +250,7 @@ namespace MTSC.Client
                         /*
                          * When a message has been received, process it.
                          */
-                        Message message = CommunicationPrimitives.GetMessage(tcpClient, sslStream);
+                        Message message = CommunicationPrimitives.GetMessage(safeNetworkStream, sslStream);
                         LogDebug("Received a message of size: " + message.MessageLength);
                         /*
                          * Preprocess message.

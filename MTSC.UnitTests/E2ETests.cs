@@ -161,10 +161,11 @@ namespace MTSC.UnitTests
             {
                 if (sw.ElapsedMilliseconds > 5000)
                 {
-                    return;
+                    Assert.Fail("Should receive that message has expired!");
                 }
             }
-            Assert.Fail("Should not receive any response due to fragments expiring before being put back together!");
+            var response = HttpResponse.FromBytes(receivedMessage);
+            Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.BadRequest);
         }
 
         [TestMethod]
@@ -184,7 +185,7 @@ namespace MTSC.UnitTests
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
-            request.Body = new byte[100000];
+            request.Body = new byte[255000];
             Array.Fill<byte>(request.Body, 50);
             byte[] message = request.GetPackedRequest();
 
@@ -197,12 +198,13 @@ namespace MTSC.UnitTests
             sw.Start();
             while (receivedMessage == null)
             {
-                if (sw.ElapsedMilliseconds > 5000)
+                if (sw.ElapsedMilliseconds > 15000)
                 {
-                    return;
+                    Assert.Fail("Should receive that message has exceeded size!");
                 }
             }
-            Assert.Fail("Message should be discarded due to exceeding the size limit");
+            var response = HttpResponse.FromBytes(receivedMessage);
+            Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.BadRequest);
         }
 
         [TestMethod]

@@ -1,7 +1,7 @@
 ﻿using System.IO;
 using System.Net.Sockets;
 
-namespace MTSC.ServerSide
+namespace MTSC.Common
 {
     public class SafeNetworkStream : Stream
     {

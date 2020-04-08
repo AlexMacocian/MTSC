@@ -1,4 +1,5 @@
-﻿using MTSC.ServerSide;
+﻿using MTSC.Common;
+using MTSC.ServerSide;
 using System;
 using System.IO;
 using System.Net.Security;
@@ -15,7 +16,7 @@ namespace MTSC
         public static string SendEncryptionKey = "SYMKEY";
         public static string AcceptEncryptionKey = "SYMKEYOK";
 
-        public static Message GetMessage(TcpClient tcpClient, SslStream sslStream)
+        public static Message GetMessage(SafeNetworkStream safeStream, SslStream sslStream)
         {
             Stream stream;
             if (sslStream!= null)
@@ -24,18 +25,18 @@ namespace MTSC
             }
             else
             {
-                stream = tcpClient.GetStream();
+                stream = safeStream;
             }
-
-            var bytesToRead = tcpClient.Available;
+            safeStream.PrepareProtectedRead();
             var buffer = new byte[256];
             var ms = new MemoryStream();
+            var bytesRead = 0;
             do
             {
-                var bytesRead = stream.Read(buffer, 0, buffer.Length);
+                bytesRead = stream.Read(buffer, 0, buffer.Length);
                 ms.Write(buffer, 0, bytesRead);
-                bytesToRead -= bytesRead;
-            } while (bytesToRead > 0);
+            } while (bytesRead > 0);
+            safeStream.EndProtectedRead(out var _);
             return new Message((uint)ms.Length, ms.ToArray());
         }
 
