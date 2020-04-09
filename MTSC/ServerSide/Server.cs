@@ -524,6 +524,13 @@ namespace MTSC.ServerSide
             while (this._ConsumerMessageOutQueue.TryDequeue(out var tuple))
             {
                 (var client, var bytes) = tuple;
+                if (client.TcpClient.Available > 0)
+                {
+                    /*
+                     * Don't send while client is still sending
+                     */
+                    continue;
+                }
                 try 
                 {
                     Message sendMessage = CommunicationPrimitives.BuildMessage(bytes);
@@ -639,7 +646,47 @@ namespace MTSC.ServerSide
         {
             while(messages.TryDequeue(out var message))
             {
-                HandleClientMessage(client, message);
+                if (client.Affinity is null)
+                {
+                    HandleClientMessage(client, message);
+                }
+                else
+                {
+                    AffinityHandleClientMessage(client, message);
+                }
+            }
+        }
+
+        private void AffinityHandleClientMessage(ClientData client, Message message)
+        {
+            var handler = client.Affinity;
+            try
+            {
+                handler.PreHandleReceivedMessage(this, client, ref message);
+            }
+            catch (Exception e)
+            {
+                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                {
+                    if (exceptionHandler.HandleException(e))
+                    {
+                        break;
+                    }
+                }
+            }
+            try
+            {
+                handler.HandleReceivedMessage(this, client, message);
+            }
+            catch (Exception e)
+            {
+                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                {
+                    if (exceptionHandler.HandleException(e))
+                    {
+                        break;
+                    }
+                }
             }
         }
 
@@ -676,8 +723,6 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    LogDebug("Exception: " + e.Message);
-                    LogDebug("Stacktrace: " + e.StackTrace);
                     foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))

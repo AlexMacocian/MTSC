@@ -7,6 +7,14 @@ namespace MTSC.ServerSide
     {
         private Dictionary<Type, object> Resources = new Dictionary<Type, object>();
 
+        public void RemoveResourceIfExists<TValue>()
+        {
+            if (Resources.ContainsKey(typeof(TValue)))
+            {
+                Resources.Remove((typeof(TValue)));
+            }
+        }
+
         public void RemoveResource<TValue>()
         {
             Resources.Remove(typeof(TValue));

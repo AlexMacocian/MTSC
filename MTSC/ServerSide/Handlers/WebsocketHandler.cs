@@ -98,6 +98,7 @@ namespace MTSC.ServerSide.Handlers
                     request.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" && request.Headers.ContainsHeader(WebsocketProtocolVersionKey) &&
                     request.Headers[WebsocketProtocolVersionKey] == "13")
                 {
+                    client.SetAffinity(this);
                     /*
                      * Prepare the handshake string.
                      */
@@ -169,6 +170,7 @@ namespace MTSC.ServerSide.Handlers
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetMessageBytes());
                     if (tuple.Item2.Opcode == WebsocketMessage.Opcodes.Close)
                     {
+                        tuple.Item1.ResetAffinityIfMe(this);
                         foreach (IWebsocketModule websocketModule in websocketModules)
                         {
                             websocketModule.ConnectionClosed(server, this, tuple.Item1);

@@ -126,9 +126,13 @@ namespace MTSC.ServerSide.Handlers
                 messageBytes = messageBytes.TrimTrailingNullBytes();
                 var partialRequest = PartialHttpRequest.FromBytes(messageBytes);
                 if (partialRequest.Complete)
+                {
                     request = partialRequest.ToRequest();
+                    client.ResetAffinityIfMe(this);
+                }
                 else
                 {
+                    client.SetAffinity(this);
                     HandleIncompleteRequest(client, server, messageBytes, partialRequest);
                     return true;
                 }
@@ -146,10 +150,12 @@ namespace MTSC.ServerSide.Handlers
             {
                 server.LogDebug("Malformed request, not saving!");
                 server.LogDebug(ex.Message + "\n" + ex.StackTrace);
+                client.ResetAffinityIfMe(this);
                 return false;
             }
             catch (Exception e)
             {
+                client.ResetAffinityIfMe(this);
                 throw e;
             }
 

@@ -1,4 +1,5 @@
 ﻿using MTSC.Common;
+using MTSC.ServerSide.Handlers;
 using System;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -21,6 +22,10 @@ namespace MTSC.ServerSide
         /// Latest datetime when a message has been received or sent to the client
         /// </summary>
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+        /// <summary>
+        /// Sets the affinity of the client to a specific handler, ignoring all other handlers
+        /// </summary>
+        public IHandler Affinity { get; private set; }
 
         IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue { get => messageQueue; }
 
@@ -34,6 +39,33 @@ namespace MTSC.ServerSide
             this.TcpClient = client;
             this.SafeNetworkStream = new SafeNetworkStream(this.TcpClient);
         }
+        /// <summary>
+        /// Sets the affinity of the client.
+        /// </summary>
+        /// <param name="handler">Handler to bind to.</param>
+        public void SetAffinity(IHandler handler)
+        {
+            this.Affinity = handler;
+        }
+        /// <summary>
+        /// Resets the affinity of the client.
+        /// </summary>
+        public void ResetAffinity()
+        {
+            this.Affinity = null;
+        }
+        /// <summary>
+        /// Resets the affinity if the handler is the one binded.
+        /// </summary>
+        /// <param name="handler">The handler requesting reset.</param>
+        public void ResetAffinityIfMe(IHandler handler)
+        {
+            if(this.Affinity == handler)
+            {
+                this.Affinity = null;
+            }
+        }
+
         #region IActiveClient Implementation
         void IActiveClient.UpdateLastReceivedMessage()
         {

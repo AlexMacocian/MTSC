@@ -17,6 +17,7 @@ namespace MTSC.Common.Http
         /// </summary>
         public List<Cookie> Cookies { get; } = new List<Cookie>();
         public bool Complete { get; private set; } = false;
+        public int HeaderByteCount { get; private set; } = 0;
         public Form Form { get; } = new Form();
         public HttpMethods Method { get; set; }
         public string RequestURI { get; set; }
@@ -70,6 +71,10 @@ namespace MTSC.Common.Http
                 Array.Copy(bytesToBeAdded, 0, newBody, Body.Length, bytesToBeAdded.Length);
             }
             Body = newBody;
+            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength) && int.Parse(Headers[EntityHeaders.ContentLength]) == Body.Length)
+            {
+                this.Complete = true;
+            }
         }
 
         private HttpMethods GetMethod(string methodString)
@@ -384,6 +389,7 @@ namespace MTSC.Common.Http
                 throw new IncompleteRequestException($"Incomplete request.",
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
             }
+            this.HeaderByteCount = (int)ms.Position;
             if (Headers.ContainsHeader(EntityHeaders.ContentLength))
             {
                 int remainingBytes = int.Parse(Headers[EntityHeaders.ContentLength]);

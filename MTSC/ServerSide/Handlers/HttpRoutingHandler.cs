@@ -87,107 +87,90 @@ namespace MTSC.ServerSide.Handlers
 
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            // Parse the request. If the message is incomplete, return 100 and queue the message to be parsed later.
-            HttpRequest request = null;
-            byte[] messageBytes = null;
-            try
+            /*
+             * If a fragmented request exists, add the new messages to the body.
+             * Else, parse the messages into a partial request. If this causes an exception, let it throw out of the handler,
+             * cause the handler needs at least valid headers to work.
+             */
+            PartialHttpRequest request = null;
+            if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage)) 
             {
-                var trimmedMessageBytes = message.MessageBytes.TrimTrailingNullBytes();
-                if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
+                var bytesToBeAdded = message.MessageBytes.TrimTrailingNullBytes();
+                if(fragmentedMessage.PartialRequest.HeaderByteCount + 
+                    fragmentedMessage.PartialRequest.Body.Length + 
+                    message.MessageLength > this.MaximumRequestSize)
                 {
-                    byte[] previousBytes = fragmentedMessage.Message;
-                    if (previousBytes.Length + trimmedMessageBytes.Length > MaximumRequestSize)
-                    {
-                        // Discard the message if it is too big
-                        server.LogDebug($"Discarded message. Message size [{previousBytes.Length + trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
-                        client.Resources.RemoveResource<FragmentedMessage>();
-                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
-                        return true;
-                    }
-                    byte[] repackagingBuffer = new byte[previousBytes.Length + trimmedMessageBytes.Length];
-                    Array.Copy(previousBytes, 0, repackagingBuffer, 0, previousBytes.Length);
-                    Array.Copy(trimmedMessageBytes, 0, repackagingBuffer, previousBytes.Length, trimmedMessageBytes.Length);
-                    messageBytes = repackagingBuffer;
+                    QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{MaximumRequestSize}] bytes!" });
+                    client.ResetAffinityIfMe(this);
+                    client.Resources.RemoveResource<FragmentedMessage>();
+                    client.Resources.RemoveResourceIfExists<RequestMapping>();
                 }
-                else
-                {
-                    if (trimmedMessageBytes.Length > MaximumRequestSize)
-                    {
-                        // Discard the message if it is too big
-                        server.LogDebug($"Discarded message. Message size [{trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
-                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
-                        return true;
-                    }
-                    messageBytes = trimmedMessageBytes;
-                }
-                var partialRequest = PartialHttpRequest.FromBytes(messageBytes);
-                if (partialRequest.Complete)
-                    request = partialRequest.ToRequest();
-                else
-                {
-                    HandleIncompleteRequest(client, server, messageBytes, partialRequest);
-                    return true;
-                }
+                fragmentedMessage.AddToMessage(bytesToBeAdded);
+                request = fragmentedMessage.PartialRequest;
             }
-            catch (Exception ex) when (
-                ex is IncompleteHeaderKeyException ||
-                ex is IncompleteHeaderValueException ||
-                ex is IncompleteHttpVersionException ||
-                ex is IncompleteMethodException ||
-                ex is IncompleteRequestBodyException ||
-                ex is IncompleteRequestQueryException ||
-                ex is IncompleteRequestURIException ||
-                ex is IncompleteRequestException ||
-                ex is InvalidPostFormException)
+            else
             {
-                server.LogDebug("Malformed request, not saving!");
-                server.LogDebug(ex.Message + "\n" + ex.StackTrace);
-                return false;
-            }
-            catch (Exception e)
-            {
-                throw e;
-            }
+                if (message.MessageLength > this.MaximumRequestSize)
+                {
+                    QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{MaximumRequestSize}] bytes!" });
+                    return false;
+                }
 
-            // The message has been parsed. If there was a cache for the current message, remove it.
-            if (client.Resources.Contains<FragmentedMessage>())
-            {
-                client.Resources.RemoveResource<FragmentedMessage>();
+                request = PartialHttpRequest.FromBytes(message.MessageBytes.TrimTrailingNullBytes());
+                if (!request.Complete)
+                {
+                    client.Resources.SetResource(new FragmentedMessage { LastReceived = DateTime.Now, PartialRequest = request });
+                    client.SetAffinity(this);
+                }
             }
 
             /*
-             * Now find if a routing module exists. If not let other handlers try and handle the message.
+             * Once headers are loaded, check if mapping exists. If mapping exists between request and module,
+             * verify that the request is complete and send it to module.
+             * Otherwise, if the request is complete, send it to the mapped module. If the request is not complete,
+             * handle it and return.
              */
-            if (moduleDictionary[request.Method].ContainsKey(request.RequestURI))
+
+            if (client.Resources.TryGetResource<RequestMapping>(out var mapping))
             {
-                (var module, var routeEnabler) = moduleDictionary[request.Method][request.RequestURI];
-                var routeEnablerResponse = routeEnabler.Invoke(server, request, client);
-                if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
+                if (request.Complete)
                 {
-                    try
-                    {
-                        module.CallHandleRequest(request, client, server).ContinueWith((task) => { QueueResponse(client, task.Result); });
-                        //response = module.HandleRequest(requestTemplate.Invoke(request), client, server);
-                    }
-                    catch (Exception e)
-                    {
-                        server.LogDebug("Exception: " + e.Message);
-                        server.LogDebug("Stacktrace: " + e.StackTrace);
-                        QueueResponse(client, new HttpResponse() { StatusCode = StatusCodes.InternalServerError });
-                    }
+                    client.Resources.RemoveResource<RequestMapping>();
+                    client.Resources.RemoveResource<FragmentedMessage>();
+                    client.ResetAffinityIfMe(this);
+                    HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.RouteEnabler);
                     return true;
                 }
-                else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseIgnore)
+                else
                 {
-                    return false;
-                }
-                else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseError)
-                {
-                    QueueResponse(client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
+                    HandleIncompleteRequest(client, server, client.Resources.GetResource<FragmentedMessage>());
                     return true;
                 }
             }
-            return false;
+            else
+            {
+                if (moduleDictionary[request.Method].ContainsKey(request.RequestURI))
+                {
+                    (var module, var routeEnabler) = moduleDictionary[request.Method][request.RequestURI];
+                    if (request.Complete)
+                    {
+                        var httpRequest = request.ToRequest();
+                        client.ResetAffinityIfMe(this);
+                        return HandleCompleteRequest(client, server, httpRequest, module, routeEnabler);
+                    }
+                    else
+                    {
+                        client.Resources.SetResource(new RequestMapping { MappedModule = module, RouteEnabler = routeEnabler });
+                        return true;
+                    }
+                }
+                else
+                {
+                    client.ResetAffinityIfMe(this);
+                    client.Resources.RemoveResource<FragmentedMessage>();
+                    return false;
+                }
+            }
         }
 
         bool IHandler.HandleSendMessage(Server server, ClientData client, ref Message message) => false;
@@ -216,12 +199,12 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        private void HandleIncompleteRequest(ClientData client, Server server, byte[] messageBytes, PartialHttpRequest partialRequest = null)
+        private void HandleIncompleteRequest(ClientData client, Server server, FragmentedMessage fragmentedMessage)
         {
-            client.Resources.SetResource(new FragmentedMessage() { Message = messageBytes, LastReceived = DateTime.Now });
+            fragmentedMessage.LastReceived = DateTime.Now;
             server.LogDebug("Incomplete request received!");
-            if (partialRequest != null && partialRequest.Headers.ContainsHeader(HttpMessage.RequestHeaders.Expect) &&
-                partialRequest.Headers[HttpMessage.RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
+            if (fragmentedMessage.PartialRequest.Headers.ContainsHeader(HttpMessage.RequestHeaders.Expect) &&
+                fragmentedMessage.PartialRequest.Headers[HttpMessage.RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
             {
                 server.LogDebug("Returning 100-Continue");
                 var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
@@ -230,18 +213,59 @@ namespace MTSC.ServerSide.Handlers
             }
         }
         
+        private bool HandleCompleteRequest(
+            ClientData client, 
+            Server server, 
+            HttpRequest request, 
+            HttpRouteBase module,
+            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+        {
+            var routeEnablerResponse = routeEnabler.Invoke(server, request, client);
+            if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
+            {
+                try
+                {
+                    module.CallHandleRequest(request, client, server).ContinueWith((task) => { QueueResponse(client, task.Result); });
+                }
+                catch (Exception e)
+                {
+                    server.LogDebug("Exception: " + e.Message);
+                    server.LogDebug("Stacktrace: " + e.StackTrace);
+                    QueueResponse(client, new HttpResponse() { StatusCode = StatusCodes.InternalServerError });
+                }
+                return true;
+            }
+            else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseIgnore)
+            {
+                return false;
+            }
+            else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseError)
+            {
+                QueueResponse(client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
+                return true;
+            }
+            else
+            {
+                throw new InvalidOperationException($"RouteEnablerResponse should be one of the types {typeof(RouteEnablerResponse.RouteEnablerResponseAccept)}, {typeof(RouteEnablerResponse.RouteEnablerResponseError)} or {typeof(RouteEnablerResponse.RouteEnablerResponseIgnore)}!");
+            }
+        }
+
         private class FragmentedMessage
         {
-            public byte[] Message { get; set; }
+            public PartialHttpRequest PartialRequest { get; set; }
 
             public DateTime LastReceived { get; set; } = DateTime.Now;
 
             public void AddToMessage(byte[] bytes)
             {
-                byte[] newMessage = new byte[Message.Length + bytes.Length];
-                Array.Copy(Message, newMessage, Message.Length);
-                Array.Copy(bytes, 0, newMessage, Message.Length, bytes.Length);
+                this.PartialRequest.AddToBody(bytes);
             }
+        }
+
+        private class RequestMapping
+        {
+            public HttpRouteBase MappedModule { get; set; }
+            public Func<Server, HttpRequest, ClientData, RouteEnablerResponse> RouteEnabler { get; set; }
         }
     }
 }

@@ -59,7 +59,7 @@ namespace MTSC.UnitTests
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
-                .SetScheduler(new TaskAwaiterScheduler())
+                .SetScheduler(new ParallelScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
         }
@@ -204,7 +204,7 @@ namespace MTSC.UnitTests
                 }
             }
             var response = HttpResponse.FromBytes(receivedMessage);
-            Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.BadRequest);
+            Assert.AreNotEqual(response.StatusCode, HttpMessage.StatusCodes.OK);
         }
 
         [TestMethod]
@@ -212,6 +212,7 @@ namespace MTSC.UnitTests
         {
             HttpClient httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("https://localhost:800");
+            httpClient.DefaultRequestHeaders.ExpectContinue = true;
             string s = string.Empty;
             for(int i = 0; i < 200000; i++)
             {

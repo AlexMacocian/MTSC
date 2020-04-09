@@ -16,6 +16,8 @@ namespace MTSC.ServerSide.Schedulers
                 (var client, var messageQueue) = tuple;
                 actionList.Add(new Action(() => messageHandlingProcedure.Invoke(client, messageQueue)));
             }
+
+            Parallel.Invoke(actionList.ToArray());
         }
     }
 }
