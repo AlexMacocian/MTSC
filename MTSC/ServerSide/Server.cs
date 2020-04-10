@@ -623,7 +623,6 @@ namespace MTSC.ServerSide
             Task.Run(async () =>
             {
                 int messageCount = 0;
-                var buffer = new byte[8192];
                 int increasingDelay = 100;
                 while (true)
                 {
@@ -633,6 +632,7 @@ namespace MTSC.ServerSide
                         continue;
                     }
                     increasingDelay = 100;
+                    var buffer = new byte[Math.Min(65535, client.TcpClient.Available)];
                     Stream stream;
                     if (client.SslStream != null)
                     {
@@ -650,6 +650,7 @@ namespace MTSC.ServerSide
                             Message message = new Message((uint)byteCount, buffer.Take(byteCount).ToArray());
                             (client as IQueueHolder<Message>).Enqueue(message);
                             messageCount++;
+                            this.LogDebug($"Received message of size: {message.MessageLength}");
                         }
                     }
                     catch (Exception)
