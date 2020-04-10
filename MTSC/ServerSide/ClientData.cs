@@ -27,12 +27,12 @@ namespace MTSC.ServerSide
         /// </summary>
         public IHandler Affinity { get; private set; }
 
-        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue { get => messageQueue; }
-
         public bool ToBeRemoved { get; set; } = false;
         public SslStream SslStream { get; set; } = null;
         public SafeNetworkStream SafeNetworkStream { get; }
         public ResourceDictionary Resources { get; set; } = new ResourceDictionary();
+
+        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => messageQueue;
 
         public ClientData(TcpClient client)
         {

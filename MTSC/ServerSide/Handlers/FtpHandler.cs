@@ -58,6 +58,7 @@ namespace MTSC.ServerSide.Handlers
                 {
                     client.Resources.SetResource(State.Initialized);
                     server.QueueMessage(client, Encoding.ASCII.GetBytes(welcomeMessage));
+                    client.SetAffinity(this);
                 }
             });
             return false;

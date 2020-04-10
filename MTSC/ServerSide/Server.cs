@@ -8,6 +8,7 @@ using MTSC.ServerSide.UsageMonitors;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -434,11 +435,6 @@ namespace MTSC.ServerSide
                 }
 
                 /*
-                 * Gather all messages from clients and put them in a queue
-                 */
-                GatherReceivedMessages();
-
-                /*
                  * Call the scheduler to handle all received messages and distribute them to the handlers
                  */
 
@@ -565,6 +561,18 @@ namespace MTSC.ServerSide
                 {
                     toRemove.Add(client);
                 }
+                else
+                {
+                    if (client.TcpClient.Client.Poll(0, SelectMode.SelectRead))
+                    {
+                        byte[] buff = new byte[1];
+                        if (client.TcpClient.Client.Receive(buff, SocketFlags.Peek) == 0)
+                        {
+                            // Client disconnected
+                            toRemove.Add(client);
+                        }
+                    }
+                }
             }
             foreach (ClientData client in toRemove)
             {
@@ -610,36 +618,47 @@ namespace MTSC.ServerSide
             }
         }
 
-        private void GatherReceivedMessages()
+        private void WaitAndCollectMessages(ClientData client)
         {
-            foreach(var client in Clients)
+            Task.Run(async () =>
             {
-                if (!client.TcpClient.Connected)
+                int messageCount = 0;
+                var buffer = new byte[8192];
+                int increasingDelay = 100;
+                while (true)
                 {
-                    client.ToBeRemoved = true;
-                }
-                try
-                {
-                    if (!client.ToBeRemoved && client.TcpClient.Available > 0)
+                    if(client.TcpClient.Available == 0)
                     {
-                        Message message = CommunicationPrimitives.GetMessage(client);
-                        (client as IActiveClient).UpdateLastReceivedMessage();
-                        LogDebug("Received message from " + client.TcpClient.Client.RemoteEndPoint.ToString() +
-                                "\nMessage length: " + message.MessageLength);
-                        (client as IQueueHolder<Message>).Enqueue(message);
+                        await Task.Delay(Math.Min(increasingDelay++, 1000));
+                        continue;
                     }
-                }
-                catch(Exception e)
-                {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    increasingDelay = 100;
+                    Stream stream;
+                    if (client.SslStream != null)
                     {
-                        if (exceptionHandler.HandleException(e))
+                        stream = client.SslStream;
+                    }
+                    else
+                    {
+                        stream = client.TcpClient.GetStream();
+                    }
+                    try
+                    {
+                        var byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+                        if (byteCount > 0)
                         {
-                            break;
+                            Message message = new Message((uint)byteCount, buffer.Take(byteCount).ToArray());
+                            (client as IQueueHolder<Message>).Enqueue(message);
+                            messageCount++;
                         }
                     }
+                    catch (Exception)
+                    {
+                        client.ToBeRemoved = true;
+                        return;
+                    }
                 }
-            }
+            });
         }
 
         private void HandleClientMessages(ClientData client, IConsumerQueue<Message> messages)
@@ -747,9 +766,24 @@ namespace MTSC.ServerSide
                         this.EncryptionPolicy);
                     client.SslStream = sslStream;
 
-                    sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout);
+                    if(sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
+                    {
+                        /*
+                         * Client authenticated in the alloted time
+                         */
+                        this._ProducerClientQueue.Enqueue(client);
+                        WaitAndCollectMessages(client);
+                    }
+                    else
+                    {
+                        client.Dispose();
+                    }
                 }
-                this._ProducerClientQueue.Enqueue(client);
+                else
+                {
+                    this._ProducerClientQueue.Enqueue(client);
+                    WaitAndCollectMessages(client);
+                }
             }
             catch (Exception e)
             {

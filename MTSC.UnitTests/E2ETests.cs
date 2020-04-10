@@ -54,6 +54,7 @@ namespace MTSC.UnitTests
                     .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule())
                     .AddRoute(HttpMessage.HttpMethods.Post, "echo", new EchoModule())
                     .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
+                    .AddRoute(HttpMessage.HttpMethods.Post, "multipart", new MultipartModule())
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(3000))
                     .WithMaximumSize(250000))
                 .AddLogger(new ConsoleLogger())
@@ -79,7 +80,7 @@ namespace MTSC.UnitTests
             }
             var result = longRunningTask.Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
-            Assert.IsTrue(responses > 50);
+            Assert.IsTrue(responses > 5);
         }
 
         [TestMethod]
@@ -89,6 +90,23 @@ namespace MTSC.UnitTests
             httpClient.BaseAddress = new Uri("https://localhost:800");
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
+        }
+
+        [TestMethod]
+        public void MultipleRequestsShouldRespond()
+        {
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("https://localhost:800");
+            for (int i = 0; i < 100; i++)
+            {
+                var result = httpClient.GetAsync("").GetAwaiter().GetResult();
+                Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
+            }
+            for (int i = 0; i < 100; i++)
+            {
+                var result = httpClient.GetAsync("echo").GetAwaiter().GetResult();
+                Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
+            }
         }
 
         [TestMethod]
@@ -221,8 +239,32 @@ namespace MTSC.UnitTests
             using(var sc = new ByteArrayContent(Encoding.UTF8.GetBytes(s)))
             {
                 var response = httpClient.PostAsync("echo", sc).Result;
-                Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
                 Assert.AreEqual(response.Content.ReadAsStringAsync().Result, s);
+            }
+        }
+        
+        [TestMethod]
+        public void UploadFileShouldSucceed()
+        {
+            byte[] bytes = new byte[120000];
+
+            for(int i = 0; i < bytes.Length; i++)
+            {
+                bytes[i] = 43;
+            }
+
+            using (var client = new HttpClient())
+            {
+                using (var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString()))
+                {
+                    content.Add(new StreamContent(new MemoryStream(bytes)), "file", "upload.zip");
+
+                    using (var message = client.PostAsync("https://localhost:800/multipart", content).GetAwaiter().GetResult())
+                    {
+
+                    }
+                }
             }
         }
 
@@ -253,29 +295,6 @@ namespace MTSC.UnitTests
             client.ReceiveAsync(bytes, CancellationToken.None).Wait();
             var resultString = ASCIIEncoding.ASCII.GetString(bytes, 0, 12);
             Assert.AreEqual(resultString, "Hello world!");
-        }
-
-        [TestMethod]
-        public void HTTPStressTest()
-        {
-            var httpClient = new HttpClient();
-            httpClient.BaseAddress = new Uri("https://localhost:800");
-            for(int i = 0; i < stressIterations; i++)
-            {
-                var startTime = DateTime.Now;
-                var tasks = new Task[Environment.ProcessorCount];
-                for(int j = 0; j < Environment.ProcessorCount; j++)
-                {
-                    tasks[j] = httpClient.GetAsync("");
-                }
-                Task.WaitAll(tasks);
-                var duration = DateTime.Now - startTime;
-                foreach(Task<HttpResponseMessage> t in tasks)
-                {
-                    Assert.AreEqual(t.Result.StatusCode, System.Net.HttpStatusCode.OK);
-                }
-                TestContext.WriteLine($"{i}: Processed {tasks.Length} requests in {duration.TotalMilliseconds} ms.");
-            }           
         }
 
         [ClassCleanup]
