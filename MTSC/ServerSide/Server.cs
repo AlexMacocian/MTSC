@@ -561,18 +561,6 @@ namespace MTSC.ServerSide
                 {
                     toRemove.Add(client);
                 }
-                else
-                {
-                    if (client.TcpClient.Client.Poll(0, SelectMode.SelectRead))
-                    {
-                        byte[] buff = new byte[1];
-                        if (client.TcpClient.Client.Receive(buff, SocketFlags.Peek) == 0)
-                        {
-                            // Client disconnected
-                            toRemove.Add(client);
-                        }
-                    }
-                }
             }
             foreach (ClientData client in toRemove)
             {
@@ -650,7 +638,7 @@ namespace MTSC.ServerSide
                             Message message = new Message((uint)byteCount, buffer.Take(byteCount).ToArray());
                             (client as IQueueHolder<Message>).Enqueue(message);
                             messageCount++;
-                            this.LogDebug($"Received message of size: {message.MessageLength}");
+                            this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint).ToString()} Message length: {message.MessageLength}");
                         }
                     }
                     catch (Exception)
