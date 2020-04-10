@@ -134,6 +134,14 @@ namespace MTSC.ServerSide.Handlers
                 {
                     client.SetAffinity(this);
                     HandleIncompleteRequest(client, server, messageBytes, partialRequest);
+                    if (partialRequest != null && partialRequest.Headers.ContainsHeader(RequestHeaders.Expect) &&
+                        partialRequest.Headers[RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
+                    {
+                        server.LogDebug("Returning 100-Continue");
+                        var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
+                        contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
+                        QueueResponse(client, contResponse);
+                    }
                     return true;
                 }
             }
@@ -240,14 +248,6 @@ namespace MTSC.ServerSide.Handlers
         {
             client.Resources.SetResource(new FragmentedMessage() { Message = messageBytes, LastReceived = DateTime.Now });
             server.LogDebug("Incomplete request received!");
-            if (partialRequest != null && partialRequest.Headers.ContainsHeader(HttpMessage.RequestHeaders.Expect) &&
-                partialRequest.Headers[HttpMessage.RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
-            {
-                server.LogDebug("Returning 100-Continue");
-                var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
-                contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
-                QueueResponse(client, contResponse);
-            }
         }
         private class FragmentedMessage
         {
