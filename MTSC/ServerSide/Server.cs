@@ -396,6 +396,10 @@ namespace MTSC.ServerSide
                     }
                 }
                 /*
+                 * Check and gather messages from clients and place them in their queues.
+                 */
+                CheckAndGatherMessages();
+                /*
                  * Check if the server has any pending connections.
                  * If it has a new connection, process it.
                  */
@@ -606,48 +610,23 @@ namespace MTSC.ServerSide
             }
         }
 
-        private void WaitAndCollectMessages(ClientData client)
+        private void CheckAndGatherMessages()
         {
-            Task.Run(async () =>
+            foreach(var client in Clients)
             {
-                int messageCount = 0;
-                int increasingDelay = 100;
-                while (true)
+                if (client.TcpClient.Available > 0)
                 {
-                    if(client.TcpClient.Available == 0)
-                    {
-                        await Task.Delay(Math.Min(increasingDelay++, 1000));
-                        continue;
-                    }
-                    increasingDelay = 100;
-                    var buffer = new byte[Math.Min(65535, client.TcpClient.Available)];
-                    Stream stream;
-                    if (client.SslStream != null)
-                    {
-                        stream = client.SslStream;
-                    }
-                    else
-                    {
-                        stream = client.TcpClient.GetStream();
-                    }
-                    try
-                    {
-                        var byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
-                        if (byteCount > 0)
-                        {
-                            Message message = new Message((uint)byteCount, buffer.Take(byteCount).ToArray());
-                            (client as IQueueHolder<Message>).Enqueue(message);
-                            messageCount++;
-                            this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint).ToString()} Message length: {message.MessageLength}");
-                        }
+                    try {
+                        var message = CommunicationPrimitives.GetMessage(client);
+                        (client as IQueueHolder<Message>).Enqueue(message);
+                        this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
                     }
                     catch (Exception)
                     {
                         client.ToBeRemoved = true;
-                        return;
                     }
                 }
-            });
+            }
         }
 
         private void HandleClientMessages(ClientData client, IConsumerQueue<Message> messages)
@@ -761,7 +740,6 @@ namespace MTSC.ServerSide
                          * Client authenticated in the alloted time
                          */
                         this._ProducerClientQueue.Enqueue(client);
-                        WaitAndCollectMessages(client);
                     }
                     else
                     {
@@ -771,7 +749,6 @@ namespace MTSC.ServerSide
                 else
                 {
                     this._ProducerClientQueue.Enqueue(client);
-                    WaitAndCollectMessages(client);
                 }
             }
             catch (Exception e)

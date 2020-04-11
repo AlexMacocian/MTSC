@@ -28,7 +28,7 @@ namespace MTSC.Client
         List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
         Queue<byte[]> messageQueue = new Queue<byte[]>();
         SslStream sslStream = null;
-        SafeNetworkStream safeNetworkStream = null;
+        TimeoutSuppressedStream safeNetworkStream = null;
         static Hashtable certificateErrors = new Hashtable();
         bool useSsl = false;
         #endregion
@@ -157,7 +157,7 @@ namespace MTSC.Client
                 }
                 tcpClient = new TcpClient();
                 tcpClient.Connect(address, port);
-                safeNetworkStream = new SafeNetworkStream(tcpClient);
+                safeNetworkStream = new TimeoutSuppressedStream(tcpClient);
                 if (useSsl)
                 {
                     if(this.CertificateValidationCallback == null)

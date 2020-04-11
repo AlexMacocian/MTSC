@@ -533,7 +533,7 @@ namespace MTSC.Common.Http
         }
         private Form GetMultipartForm()
         {
-            string boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1);
+            string boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1).Trim('\"');
 
             int bodyIndex = 0;
             while (true)
@@ -578,7 +578,11 @@ namespace MTSC.Common.Http
                     var keyName = GetMultipartKeyName(bodyIndex);
                     bodyIndex += keyName.Length + 1;
                     var keyNameField = GetMultipartKeyNameField(bodyIndex);
-                    bodyIndex += keyNameField.Length + 2;
+                    bodyIndex += keyNameField.Length;
+                    while(Body[bodyIndex] != ';' && Body[bodyIndex] != '\r')
+                    {
+                        bodyIndex++;
+                    }
                     keys[keyName] = keyNameField;
                 }
 
@@ -683,18 +687,12 @@ namespace MTSC.Common.Http
         private string GetMultipartKeyNameField(int index)
         {
             StringBuilder sb = new StringBuilder();
-            if (Body[index] != '\"')
-            {
-                throw new InvalidPostFormException($"Expected [\"] but found {Body[index]}");
-            }
-            index++;
-
-            while (Body[index] != '\"')
+            while (Body[index] != ';' && Body[index] != '\n' && Body[index] != '\r')
             {
                 sb.Append((char)Body[index]);
                 index++;
             }
-            return sb.ToString();
+            return sb.ToString().Trim('\"');
         }
         private byte[] GetMultipartValue(int bodyIndex, string boundary)
         {

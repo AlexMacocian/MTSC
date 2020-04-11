@@ -29,7 +29,7 @@ namespace MTSC.ServerSide
 
         public bool ToBeRemoved { get; set; } = false;
         public SslStream SslStream { get; set; } = null;
-        public SafeNetworkStream SafeNetworkStream { get; }
+        public TimeoutSuppressedStream SafeNetworkStream { get; }
         public ResourceDictionary Resources { get; set; } = new ResourceDictionary();
 
         IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => messageQueue;
@@ -37,7 +37,8 @@ namespace MTSC.ServerSide
         public ClientData(TcpClient client)
         {
             this.TcpClient = client;
-            this.SafeNetworkStream = new SafeNetworkStream(this.TcpClient);
+            this.SafeNetworkStream = new TimeoutSuppressedStream(this.TcpClient);
+            this.SafeNetworkStream.ReadTimeout = 500;
         }
         /// <summary>
         /// Sets the affinity of the client.

@@ -16,7 +16,7 @@ namespace MTSC
         public static string SendEncryptionKey = "SYMKEY";
         public static string AcceptEncryptionKey = "SYMKEYOK";
 
-        public static Message GetMessage(SafeNetworkStream safeStream, SslStream sslStream)
+        public static Message GetMessage(TimeoutSuppressedStream safeStream, SslStream sslStream)
         {
             Stream stream;
             if (sslStream!= null)
@@ -27,46 +27,40 @@ namespace MTSC
             {
                 stream = safeStream;
             }
-            safeStream.PrepareProtectedRead();
-            var buffer = new byte[256];
+            var buffer = new byte[1024];
             var ms = new MemoryStream();
-            var bytesRead = 0;
+            stream.ReadTimeout = 1;
+            int bytesRead;
             do
             {
                 bytesRead = stream.Read(buffer, 0, buffer.Length);
                 ms.Write(buffer, 0, bytesRead);
             } while (bytesRead > 0);
-            safeStream.EndProtectedRead(out var _);
             return new Message((uint)ms.Length, ms.ToArray());
         }
 
-        public static Message GetMessage(ClientData clientData)
+        public static Message GetMessage(ClientData client)
         {
             Stream stream;
-            if (clientData.SslStream != null)
+            if (client.SslStream != null)
             {
-                stream = clientData.SslStream;
+                stream = client.SslStream;
             }
             else
             {
-                stream = clientData.SafeNetworkStream;
+                stream = client.SafeNetworkStream;
             }
-            clientData.SafeNetworkStream.PrepareProtectedRead();
-            var availableBytes = clientData.SafeNetworkStream.AvailableBytes;
-            var buffer = new byte[availableBytes];
-            var bytesRead = 0;
-            while(bytesRead < availableBytes)
+
+            var buffer = new byte[1024];
+            var ms = new MemoryStream();
+            stream.ReadTimeout = 1;
+            int bytesRead;
+            do
             {
-                var bytesReadThisTurn = stream.Read(buffer, bytesRead, (int)availableBytes - bytesRead);
-                if(bytesReadThisTurn == 0)
-                {
-                    break;
-                }
-                bytesRead += bytesReadThisTurn;
-            }
-            clientData.SafeNetworkStream.EndProtectedRead(out var _);
-            Message message = new Message((uint)buffer.Length, buffer);
-            return message;
+                bytesRead = stream.Read(buffer, 0, buffer.Length);
+                ms.Write(buffer, 0, bytesRead);
+            } while (bytesRead > 0);
+            return new Message((uint)ms.Length, ms.ToArray());
         }
 
         public static void SendMessage(TcpClient client, Message message, SslStream sslStream = null)
