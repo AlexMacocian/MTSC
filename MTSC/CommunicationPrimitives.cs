@@ -39,7 +39,7 @@ namespace MTSC
             return new Message((uint)ms.Length, ms.ToArray());
         }
 
-        public static Message GetMessage(ClientData client)
+        public static Message GetMessage(ClientData client, TimeSpan ReadTimeout)
         {
             Stream stream;
             if (client.SslStream != null)
@@ -53,7 +53,7 @@ namespace MTSC
 
             var buffer = new byte[1024];
             var ms = new MemoryStream();
-            stream.ReadTimeout = 500;
+            stream.ReadTimeout = (int)ReadTimeout.TotalMilliseconds;
             int bytesRead;
             do
             {

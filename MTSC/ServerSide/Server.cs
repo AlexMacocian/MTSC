@@ -44,10 +44,13 @@ namespace MTSC.ServerSide
         #endregion
         #region Public Properties
         /// <summary>
+        /// Timeout for socket operations on clients
+        /// </summary>
+        public TimeSpan ReadTimeout { get; set; } = TimeSpan.FromMilliseconds(50);
+        /// <summary>
         /// Client handling scheduler
         /// </summary>
         public IScheduler Scheduler { get; set; } = new ParallelScheduler();
-
         /// <summary>
         /// Queue of destinations and messages to be processed
         /// </summary>
@@ -118,6 +121,16 @@ namespace MTSC.ServerSide
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Sets the <see cref="ReadTimeout"/> property.
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        public Server WithReadTimeout(TimeSpan timeout)
+        {
+            this.ReadTimeout = timeout;
+            return this;
+        }
         /// <summary>
         /// Sets the scheduler of the server
         /// </summary>
@@ -617,7 +630,7 @@ namespace MTSC.ServerSide
                 if (client.TcpClient.Available > 0)
                 {
                     try {
-                        var message = CommunicationPrimitives.GetMessage(client);
+                        var message = CommunicationPrimitives.GetMessage(client, this.ReadTimeout);
                         (client as IQueueHolder<Message>).Enqueue(message);
                         this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
                     }
