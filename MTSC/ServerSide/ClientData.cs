@@ -38,7 +38,6 @@ namespace MTSC.ServerSide
         {
             this.TcpClient = client;
             this.SafeNetworkStream = new TimeoutSuppressedStream(this.TcpClient);
-            this.SafeNetworkStream.ReadTimeout = 500;
         }
         /// <summary>
         /// Sets the affinity of the client.

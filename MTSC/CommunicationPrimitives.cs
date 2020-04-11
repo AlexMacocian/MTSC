@@ -53,7 +53,7 @@ namespace MTSC
 
             var buffer = new byte[1024];
             var ms = new MemoryStream();
-            stream.ReadTimeout = 1;
+            stream.ReadTimeout = 500;
             int bytesRead;
             do
             {

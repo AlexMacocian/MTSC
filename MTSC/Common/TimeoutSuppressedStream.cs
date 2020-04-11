@@ -10,11 +10,6 @@ namespace MTSC.Common
     {
         NetworkStream innerStream;
 
-        public TimeoutSuppressedStream(NetworkStream pStream)
-        {
-            innerStream = pStream;
-        }
-
         public TimeoutSuppressedStream(TcpClient tcpClient)
         {
             innerStream = tcpClient.GetStream();
@@ -50,7 +45,6 @@ namespace MTSC.Common
         public override long Length => innerStream.Length;
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int size, AsyncCallback callback, object state) => innerStream.BeginRead(buffer, offset, size, callback, state);
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int size, AsyncCallback callback, object state) => innerStream.BeginWrite(buffer, offset, size, callback, state);
-        public void Close(int timeout) => innerStream.Close(timeout);
         public override int EndRead(IAsyncResult asyncResult) => innerStream.EndRead(asyncResult);
         public override void EndWrite(IAsyncResult asyncResult) => innerStream.EndWrite(asyncResult);
         public override void Flush() => innerStream.Flush();

@@ -97,12 +97,12 @@ namespace MTSC.UnitTests
         {
             HttpClient httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("https://localhost:800");
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10; i++)
             {
                 var result = httpClient.GetAsync("").GetAwaiter().GetResult();
                 Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
             }
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 10; i++)
             {
                 var result = httpClient.GetAsync("echo").GetAwaiter().GetResult();
                 Assert.AreEqual(result.StatusCode, System.Net.HttpStatusCode.OK);
@@ -129,9 +129,9 @@ namespace MTSC.UnitTests
             byte[] message = request.GetPackedRequest();
 
             client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
-            Thread.Sleep(300);
+            Thread.Sleep(1000);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
-            Thread.Sleep(300);
+            Thread.Sleep(1000);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
             Stopwatch sw = new Stopwatch();
             sw.Start();
