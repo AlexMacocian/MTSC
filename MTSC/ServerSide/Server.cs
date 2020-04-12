@@ -631,7 +631,12 @@ namespace MTSC.ServerSide
                     {
                         try
                         {
-                            var message = CommunicationPrimitives.GetMessage(client, this.ReadTimeout);
+                            var timeout = this.ReadTimeout;
+                            if (client.TcpClient.Available < 10000)
+                            {
+                                timeout = TimeSpan.FromMilliseconds(10);
+                            }
+                            var message = CommunicationPrimitives.GetMessage(client, timeout);
                             (client as IQueueHolder<Message>).Enqueue(message);
                             this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
                             (client as IActiveClient).ReadingData = false;

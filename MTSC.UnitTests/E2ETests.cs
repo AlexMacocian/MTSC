@@ -36,7 +36,7 @@ namespace MTSC.UnitTests
         public static void InitializeServer(TestContext testContext)
         {
             Server = new ServerSide.Server(800)
-                .WithReadTimeout(TimeSpan.FromMilliseconds(1))
+                .WithReadTimeout(TimeSpan.FromMilliseconds(1000))
                 .WithCertificate(new X509Certificate2("mycert.pfx", "password"))
                 .WithClientCertificate(false)
                 .AddHandler(new WebsocketRoutingHandler()
