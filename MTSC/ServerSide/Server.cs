@@ -632,9 +632,9 @@ namespace MTSC.ServerSide
                         try
                         {
                             var timeout = this.ReadTimeout;
-                            if (client.TcpClient.Available < 10000)
+                            if (client.TcpClient.Available < 1000)
                             {
-                                timeout = TimeSpan.FromMilliseconds(10);
+                                timeout = TimeSpan.FromMilliseconds(50);
                             }
                             var message = CommunicationPrimitives.GetMessage(client, timeout);
                             (client as IQueueHolder<Message>).Enqueue(message);
