@@ -26,13 +26,25 @@ namespace MTSC.ServerSide
         /// Sets the affinity of the client to a specific handler, ignoring all other handlers
         /// </summary>
         public IHandler Affinity { get; private set; }
-
+        /// <summary>
+        /// Setting this property to true will mark the client to be removed in the next server cycle
+        /// </summary>
         public bool ToBeRemoved { get; set; } = false;
+        /// <summary>
+        /// <see cref="System.Net.Security.SslStream"/> in case the server uses SSL
+        /// </summary>
         public SslStream SslStream { get; set; } = null;
+        /// <summary>
+        /// Layer over client's <see cref="NetworkStream"/> to protect the underlying stream of <see cref="TimeoutException"/>
+        /// </summary>
         public TimeoutSuppressedStream SafeNetworkStream { get; }
+        /// <summary>
+        /// Dictionary of Resources that the client holds
+        /// </summary>
         public ResourceDictionary Resources { get; set; } = new ResourceDictionary();
 
         IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => messageQueue;
+        bool IActiveClient.ReadingData { get; set; }
 
         public ClientData(TcpClient client)
         {

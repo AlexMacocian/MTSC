@@ -569,7 +569,6 @@ namespace MTSC.ServerSide
                 }
             }
         }
-
         private void CheckAndRemoveInactiveClients()
         {
             foreach (ClientData client in Clients)
@@ -604,7 +603,6 @@ namespace MTSC.ServerSide
             }
             toRemove.Clear();
         }
-
         private void TickHandler(IHandler handler)
         {
             try
@@ -622,26 +620,30 @@ namespace MTSC.ServerSide
                 }
             }
         }
-
         private void CheckAndGatherMessages()
         {
             foreach(var client in Clients)
             {
-                if (client.TcpClient.Available > 0)
+                if (client.TcpClient.Available > 0 && !(client as IActiveClient).ReadingData)
                 {
-                    try {
-                        var message = CommunicationPrimitives.GetMessage(client, this.ReadTimeout);
-                        (client as IQueueHolder<Message>).Enqueue(message);
-                        this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
-                    }
-                    catch (Exception)
+                    (client as IActiveClient).ReadingData = true;
+                    Task.Run(() =>
                     {
-                        client.ToBeRemoved = true;
-                    }
+                        try
+                        {
+                            var message = CommunicationPrimitives.GetMessage(client, this.ReadTimeout);
+                            (client as IQueueHolder<Message>).Enqueue(message);
+                            this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
+                            (client as IActiveClient).ReadingData = false;
+                        }
+                        catch (Exception)
+                        {
+                            client.ToBeRemoved = true;
+                        }
+                    });
                 }
             }
         }
-
         private void HandleClientMessages(ClientData client, IConsumerQueue<Message> messages)
         {
             while(messages.TryDequeue(out var message))
@@ -656,7 +658,6 @@ namespace MTSC.ServerSide
                 }
             }
         }
-
         private void AffinityHandleClientMessage(ClientData client, Message message)
         {
             var handler = client.Affinity;
@@ -689,7 +690,6 @@ namespace MTSC.ServerSide
                 }
             }
         }
-
         private void HandleClientMessage(ClientData client, Message message)
         {
             foreach (IHandler handler in handlers)
@@ -733,7 +733,6 @@ namespace MTSC.ServerSide
                 }
             }
         }
-
         private void AcceptClient(ClientData client)
         {
             try
