@@ -234,7 +234,11 @@ namespace MTSC.ServerSide.Handlers
             {
                 try
                 {
-                    module.CallHandleRequest(request, client, server).ContinueWith((task) => { QueueResponse(client, task.Result); });
+                    module.CallHandleRequest(request, client, server).ContinueWith((task) => 
+                    {
+                        foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, task.Result);
+                            QueueResponse(client, task.Result); 
+                    });
                 }
                 catch (Exception e)
                 {
