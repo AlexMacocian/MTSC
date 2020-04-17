@@ -1,5 +1,6 @@
 ﻿using MTSC.Common.Http;
 using MTSC.Common.Http.ServerModules;
+using MTSC.Common.Http.Telemetry;
 using MTSC.Exceptions;
 using System;
 using System.Collections.Concurrent;
@@ -16,8 +17,9 @@ namespace MTSC.ServerSide.Handlers
         private static readonly string urlEncodedHeader = "application/x-www-form-urlencoded";
         private static readonly string multipartHeader = "multipart/form-data";
         #region Fields
-        List<IHttpModule> httpModules = new List<IHttpModule>();
-        ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
+        private List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
+        private List<IHttpModule> httpModules = new List<IHttpModule>();
+        private ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
         #endregion
         #region Public Properties
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
@@ -30,6 +32,11 @@ namespace MTSC.ServerSide.Handlers
         }
         #endregion
         #region Public Methods
+        public HttpHandler AddHttpLogger(IHttpLogger httpLogger) 
+        {
+            this.httpLoggers.Add(httpLogger);
+            return this;
+        }
         public HttpHandler WithMaximumSize(double size)
         {
             this.MaximumRequestSize = size;
@@ -184,6 +191,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 response.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
             }
+            foreach (var httpLogger in this.httpLoggers) httpLogger.LogRequest(server, this, client, request);
             foreach (IHttpModule module in httpModules)
             {
                 if (module.HandleRequest(server, this, client, request, ref response))
@@ -191,6 +199,7 @@ namespace MTSC.ServerSide.Handlers
                     break;
                 }
             }
+            foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, response);
             QueueResponse(client, response);
             return true;
         }

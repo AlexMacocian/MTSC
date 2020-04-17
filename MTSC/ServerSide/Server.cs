@@ -6,9 +6,7 @@ using MTSC.ServerSide.Resources;
 using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -457,6 +455,7 @@ namespace MTSC.ServerSide
 
                 Scheduler.ScheduleHandling(
                     clients
+                        .Where(client => client.ToBeRemoved == false)
                         .Select(client => (client, (client as IQueueHolder<Message>).ConsumerQueue))
                         .ToList(),
                     HandleClientMessages);

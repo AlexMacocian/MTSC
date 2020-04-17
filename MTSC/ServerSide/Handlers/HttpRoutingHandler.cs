@@ -1,5 +1,6 @@
 ﻿using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
+using MTSC.Common.Http.Telemetry;
 using MTSC.Exceptions;
 using System;
 using System.Collections.Concurrent;
@@ -14,6 +15,8 @@ namespace MTSC.ServerSide.Handlers
         private static Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
 
         private ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
+
+        private List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
 
         private Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase,
             Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary =
@@ -32,6 +35,11 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
+        public HttpRoutingHandler AddHttpLogger(IHttpLogger logger)
+        {
+            httpLoggers.Add(logger);
+            return this;
+        }
         public HttpRoutingHandler AddRoute(
             HttpMethods method,
             string uri,
@@ -56,7 +64,6 @@ namespace MTSC.ServerSide.Handlers
             moduleDictionary[method].Remove(uri);
             return this;
         }
-
         public HttpRoutingHandler WithMaximumSize(double size)
         {
             this.MaximumRequestSize = size;
@@ -220,6 +227,8 @@ namespace MTSC.ServerSide.Handlers
             HttpRouteBase module,
             Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
         {
+            foreach (var httpLogger in this.httpLoggers) httpLogger.LogRequest(server, this, client, request);
+
             var routeEnablerResponse = routeEnabler.Invoke(server, request, client);
             if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
             {
@@ -231,7 +240,9 @@ namespace MTSC.ServerSide.Handlers
                 {
                     server.LogDebug("Exception: " + e.Message);
                     server.LogDebug("Stacktrace: " + e.StackTrace);
-                    QueueResponse(client, new HttpResponse() { StatusCode = StatusCodes.InternalServerError });
+                    var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
+                    foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, response);
+                    QueueResponse(client, response);
                 }
                 return true;
             }
@@ -241,6 +252,8 @@ namespace MTSC.ServerSide.Handlers
             }
             else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseError)
             {
+                foreach (var httpLogger in this.httpLoggers) 
+                    httpLogger.LogResponse(server, this, client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
                 QueueResponse(client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
                 return true;
             }
