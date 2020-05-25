@@ -52,6 +52,50 @@ namespace MTSC.Common.Http
         {
             return headers.ContainsKey(header);
         }
+        /// <summary>
+        /// Adds header with specified value.
+        /// </summary>
+        /// <param name="header"></param>
+        /// <param name="value"></param>
+        /// <returns>This dictionary object.</returns>
+        public HttpRequestHeaderDictionary AddHeader(RequestHeaders header, string value)
+        {
+            this[header] = value;
+            return this;
+        }
+        /// <summary>
+        /// Adds header with specified value.
+        /// </summary>
+        /// <param name="header"></param>
+        /// <param name="value"></param>
+        /// <returns>This dictionary object.</returns>
+        public HttpRequestHeaderDictionary AddHeader(GeneralHeaders header, string value)
+        {
+            this[header] = value;
+            return this;
+        }
+        /// <summary>
+        /// Adds header with specified value.
+        /// </summary>
+        /// <param name="header"></param>
+        /// <param name="value"></param>
+        /// <returns>This dictionary object.</returns>
+        public HttpRequestHeaderDictionary AddHeader(EntityHeaders header, string value)
+        {
+            this[header] = value;
+            return this;
+        }
+        /// <summary>
+        /// Adds header with specified value.
+        /// </summary>
+        /// <param name="header"></param>
+        /// <param name="value"></param>
+        /// <returns>This dictionary object.</returns>
+        public HttpRequestHeaderDictionary AddHeader(string header, string value)
+        {
+            this[header] = value;
+            return this;
+        }
 
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
