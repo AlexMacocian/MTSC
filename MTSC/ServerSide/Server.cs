@@ -13,6 +13,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace MTSC.ServerSide
@@ -81,7 +82,14 @@ namespace MTSC.ServerSide
         /// Returns the state of the server.
         /// </summary>
         public bool Running { get => listener != null; }
+        /// <summary>
+        /// If set to true, requests client certificates.
+        /// </summary>
         public bool RequestClientCertificate { get; set; } = true;
+        /// <summary>
+        /// If set to true, logs contents of the received messages.
+        /// </summary>
+        public bool LogMessageContents { get; set; } = false;
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
@@ -635,9 +643,15 @@ namespace MTSC.ServerSide
                             {
                                 timeout = TimeSpan.FromMilliseconds(50);
                             }
+
                             var message = CommunicationPrimitives.GetMessage(client, timeout);
                             (client as IQueueHolder<Message>).Enqueue(message);
                             this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
+                            if (this.LogMessageContents)
+                            {
+                                this.LogDebug(Encoding.UTF8.GetString(message.MessageBytes));
+                            }
+
                             (client as IActiveClient).ReadingData = false;
                         }
                         catch (Exception)
