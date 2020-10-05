@@ -157,6 +157,11 @@ namespace MTSC.ServerSide
             this.SslAuthenticationTimeout = timeout;
             return this;
         }
+        /// <summary>
+        /// Adds a resource to the server.
+        /// </summary>
+        /// <param name="resource"><see cref="IResource"/> resource to be added to the server.</param>
+        /// <returns><see cref="Server"/>.</returns>
         public Server WithResource(IResource resource)
         {
             Resources[resource.GetType()] = resource;
@@ -170,6 +175,16 @@ namespace MTSC.ServerSide
         public Server WithClientCertificate(bool requestCertificate)
         {
             RequestClientCertificate = requestCertificate;
+            return this;
+        }
+        /// <summary>
+        /// Sets the <see cref="LogMessageContents"/> property.
+        /// </summary>
+        /// <param name="logMessageContents">Value to be set.</param>
+        /// <returns><see cref="Server"/>.</returns>
+        public Server WithLoggingMessageContents(bool logMessageContents)
+        {
+            this.LogMessageContents = logMessageContents;
             return this;
         }
         /// <summary>
