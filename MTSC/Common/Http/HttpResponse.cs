@@ -14,8 +14,9 @@ namespace MTSC.Common.Http
         /// </summary>
         public List<Cookie> Cookies { get; } = new List<Cookie>();
         public byte[] Body { get; set; } = new byte[0];
-        public string BodyString { get => ASCIIEncoding.ASCII.GetString(Body); set => Body = ASCIIEncoding.ASCII.GetBytes(value); }
+        public string BodyString { get => Encoding.ASCII.GetString(Body); set => Body = Encoding.ASCII.GetBytes(value); }
         public StatusCodes StatusCode { get; set; }
+        public string StatusString { get; set; } = string.Empty;
         public HttpResponseHeaderDictionary Headers { get; } = new HttpResponseHeaderDictionary();
 
         public HttpResponse()
@@ -56,7 +57,9 @@ namespace MTSC.Common.Http
                 Headers[EntityHeaders.ContentLength] = Body == null ? "0" : Body.Length.ToString();
             }
             StringBuilder responseString = new StringBuilder();
-            responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP).Append((int)this.StatusCode).Append(HttpHeaders.SP).Append(this.StatusCode.ToString()).Append(HttpHeaders.CRLF);
+            responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP)
+                .Append((int)this.StatusCode).Append(HttpHeaders.SP)
+                .Append(this.StatusString != string.Empty ? this.StatusString : this.StatusCode.ToString()).Append(HttpHeaders.CRLF);
             foreach (KeyValuePair<string, string> header in Headers)
             {
                 responseString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
@@ -67,7 +70,7 @@ namespace MTSC.Common.Http
             }
             responseString.Append(HttpHeaders.CRLF);
             byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
-            byte[] responseBytes = ASCIIEncoding.ASCII.GetBytes(responseString.ToString());
+            byte[] responseBytes = Encoding.ASCII.GetBytes(responseString.ToString());
             Array.Copy(responseBytes, 0, response, 0, responseBytes.Length);
             if (Body != null)
             {
@@ -97,20 +100,17 @@ namespace MTSC.Common.Http
             {
                 if (step == 0)
                 {
-                    ParseHTTPVer(ms);
+                    this.ParseHTTPVer(ms);
                     step++;
                 }
                 else if (step == 1)
                 {
-                    StatusCode = (StatusCodes)ParseResponseCode(ms);
+                    this.StatusCode = (StatusCodes)this.ParseResponseCode(ms);
                     step++;
                 }
                 else if (step == 2)
                 {
-                    if (StatusCode != ParseResponseCodeString(ms))
-                    {
-                        throw new InvalidStatusCodeException("Status code value and text do not match!");
-                    }
+                    this.StatusString = this.ParseResponseCodeString(ms);
                     step++;
                 }
                 else if (step == 3)
@@ -301,7 +301,7 @@ namespace MTSC.Common.Http
             throw new InvalidStatusCodeException("Invalid status code. Buffer: " + parseBuffer.ToString());
         }
 
-        private StatusCodes ParseResponseCodeString(MemoryStream ms)
+        private string ParseResponseCodeString(MemoryStream ms)
         {
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
@@ -314,7 +314,7 @@ namespace MTSC.Common.Http
                 {
                     if (c == HttpHeaders.CRLF[1])
                     {
-                        return (StatusCodes)Enum.Parse(typeof(StatusCodes), parseBuffer.ToString().Trim());
+                        return parseBuffer.ToString().Trim();
                     }
                     else if (c == HttpHeaders.CRLF[0])
                     {

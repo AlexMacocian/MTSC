@@ -5,6 +5,7 @@ using MTSC.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -19,8 +20,6 @@ namespace MTSC.Client
     public sealed class Client
     {
         #region Fields
-        string address;
-        int port;
         TcpClient tcpClient;
         CancellationTokenSource cancelMonitorToken;
         List<IHandler> handlers = new List<IHandler>();
@@ -30,7 +29,6 @@ namespace MTSC.Client
         SslStream sslStream = null;
         TimeoutSuppressedStream safeNetworkStream = null;
         static Hashtable certificateErrors = new Hashtable();
-        bool useSsl = false;
         #endregion
         #region Properties
         public bool Connected
@@ -43,19 +41,42 @@ namespace MTSC.Client
                     return false;
             }
         }
-        public string Address { get => address; }
-        public int Port { get => port; }
+        public string Address { get; private set; }
+        public int Port { get; private set; }
+        public bool ForceSsl { get; private set; }
+        public Func<IPAddress[], IPAddress> AddressResolution { get; set; } = (addresses) => addresses[0];
+        public Func<string, bool> SchemeSslFilter { get; set; } = RequiresSsl;
         #endregion
         #region Constructors
         public Client(bool useSsl = false)
         {
-            this.useSsl = useSsl;
+            this.ForceSsl = useSsl;
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Sets the <see cref="SchemeSslFilter"/> property.
+        /// </summary>
+        /// <param name="schemeFilter">Function that should return true if the provided scheme should use Ssl.</param>
+        /// <returns>This client object.</returns>
+        public Client WithSchemeSslFilter(Func<string, bool> schemeFilter)
+        {
+            this.SchemeSslFilter = schemeFilter;
+            return this;
+        }
+        /// <summary>
+        /// Sets the <see cref="AddressResolution"/> property.
+        /// </summary>
+        /// <param name="addressResolutionFunc">Function to perform address resolution when the DNS returns multiple addresses.</param>
+        /// <returns>This client object.</returns>
+        public Client WithAddressResolution(Func<IPAddress[], IPAddress> addressResolutionFunc)
+        {
+            this.AddressResolution = addressResolutionFunc;
+            return this;
+        }
         public Client WithSsl(bool ssl)
         {
-            this.useSsl = ssl;
+            this.ForceSsl = ssl;
             return this;
         }
         /// <summary>
@@ -95,7 +116,7 @@ namespace MTSC.Client
         /// <returns>This client object.</returns>
         public Client SetServerAddress(string address)
         {
-            this.address = address;
+            this.Address = address;
             return this;
         }
         /// <summary>
@@ -105,7 +126,7 @@ namespace MTSC.Client
         /// <returns>This client object.</returns>
         public Client SetPort(int port)
         {
-            this.port = port;
+            this.Port = port;
             return this;
         }
         /// <summary>
@@ -150,43 +171,70 @@ namespace MTSC.Client
         {
             try
             {
-                if (tcpClient != null)
+                if (this.tcpClient != null)
                 {
-                    cancelMonitorToken?.Cancel();
-                    tcpClient.Dispose();
+                    this.cancelMonitorToken?.Cancel();
+                    this.tcpClient.Dispose();
                 }
-                tcpClient = new TcpClient();
-                tcpClient.Connect(address, port);
-                safeNetworkStream = new TimeoutSuppressedStream(tcpClient);
-                if (useSsl)
+
+                this.tcpClient = new TcpClient();
+                var shouldUseSsl = this.ForceSsl;
+                if (!IPAddress.TryParse(this.Address, out var ipAddress))
+                {
+                    if (!Uri.TryCreate(this.Address, UriKind.Absolute, out var addressUri))
+                    {
+                        throw new InvalidOperationException($"{this.Address} is not an IP Address nor a valid URI");
+                    }
+
+                    var potentialAddresses = Dns.GetHostAddresses(addressUri.DnsSafeHost);
+                    if (potentialAddresses.Length <= 0)
+                    {
+                        throw new InvalidOperationException($"Cannot connect to {this.Address}. Could not find any ip address related to specified host name.");
+                    }
+
+                    ipAddress = this.AddressResolution(potentialAddresses);
+                    if (this.SchemeSslFilter(addressUri.Scheme))
+                    {
+                        shouldUseSsl = true;
+                    }
+                    this.Address = addressUri.Host;
+                }
+
+                var ipEndpoint = new IPEndPoint(ipAddress, this.Port);
+                this.tcpClient.Connect(ipEndpoint);
+                this.safeNetworkStream = new TimeoutSuppressedStream(this.tcpClient);
+                if (shouldUseSsl)
                 {
                     if(this.CertificateValidationCallback == null)
                     {
                         this.CertificateValidationCallback = new RemoteCertificateValidationCallback(ValidateServerCertificate);
                     }
-                    sslStream = new SslStream(safeNetworkStream, true, this.CertificateValidationCallback, null);
-                    sslStream.AuthenticateAsClient(address);
+                    this.sslStream = new SslStream(this.safeNetworkStream, true, this.CertificateValidationCallback, null);
+                    this.sslStream.AuthenticateAsClient(this.Address);
                 }
-                foreach(ILogger logger in loggers)
+
+                foreach(ILogger logger in this.loggers)
                 {
-                    logger.Log("Connected to: " + tcpClient.Client.RemoteEndPoint.ToString());
+                    logger.Log("Connected to: " + this.tcpClient.Client.RemoteEndPoint.ToString());
                 }
-                foreach (IHandler handler in handlers)
+
+                foreach (IHandler handler in this.handlers)
                 {
                     if (!handler.InitializeConnection(this))
                     {
                         return false;
                     }
                 }
-                cancelMonitorToken = new CancellationTokenSource();
-                Task.Run(new Action(MonitorConnection), cancelMonitorToken.Token);
+
+                this.cancelMonitorToken = new CancellationTokenSource();
+                Task.Run(new Action(MonitorConnection), this.cancelMonitorToken.Token);
                 return true;
             }
             catch(Exception e)
             {
                 LogDebug("Exception: " + e.Message);
                 LogDebug("Stacktrace: " + e.StackTrace);
-                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                 {
                     exceptionHandler.HandleException(e);
                 }
@@ -219,13 +267,18 @@ namespace MTSC.Client
         /// <param name="chain"></param>
         /// <param name="sslPolicyErrors"></param>
         /// <returns>True if certificate is valid.</returns>
-        private static bool ValidateServerCertificate( object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        private static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             if (sslPolicyErrors == SslPolicyErrors.None)
                 return true;
 
             // Do not allow this client to communicate with unauthenticated servers.
             return true;
+        }
+
+        private static bool RequiresSsl(string scheme)
+        {
+            return scheme == "wss" || scheme == "https";
         }
 
         private void MonitorConnection()

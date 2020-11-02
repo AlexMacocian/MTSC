@@ -79,18 +79,25 @@ namespace MTSC.Client.Handlers
                     response.Headers[WebsocketHeaderAcceptKey].Trim() == expectedguid)
                 {
                     state = SocketState.Established;
+                    client.LogDebug($"Websocket handshake completed!");
                     foreach (IWebsocketModule websocketModule in websocketModules)
                     {
                         websocketModule.ConnectionInitialized(client, this);
                     }
+                }
+                else
+                {
+                    client.LogDebug($"Expected websocket handshake response. Got {response.StatusCode}");
                 }
                 return true;
             }
             else if(state == SocketState.Established)
             {
                 WebsocketMessage receivedMessage = new WebsocketMessage(message.MessageBytes);
+                client.LogDebug($"Received websocket message of length {message.MessageBytes.Length}.");
                 if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Close)
                 {
+                    client.LogDebug("Closing websocket");
                     foreach (IWebsocketModule websocketModule in websocketModules)
                     {
                         websocketModule.ConnectionClosed(client, this);
@@ -127,11 +134,13 @@ namespace MTSC.Client.Handlers
             beginRequest.RequestURI = WebsocketURI;
             beginRequest.Headers[HttpMessage.RequestHeaders.Host] = client.Address;
             beginRequest.Headers[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
+            beginRequest.Headers[HttpMessage.GeneralHeaders.Upgrade] = "websocket";
             beginRequest.Headers[WebsocketHeaderKey] = handshakeGuid;
             beginRequest.Headers["Origin"] = client.Address;
             beginRequest.Headers[WebsocketProtocolKey] = "chat";
             beginRequest.Headers[WebsocketProtocolVersionKey] = "13";
             client.QueueMessage(beginRequest.GetPackedRequest());
+            client.LogDebug("Sending websocket handshake message");
             return true;
         }
 
@@ -148,6 +157,7 @@ namespace MTSC.Client.Handlers
                 client.QueueMessage(message.GetMessageBytes());
                 if(message.Opcode == WebsocketMessage.Opcodes.Close)
                 {
+                    client.LogDebug("Closing websocket connection");
                     foreach (IWebsocketModule websocketModule in websocketModules)
                     {
                         websocketModule.ConnectionClosed(client, this);
