@@ -66,6 +66,8 @@ namespace MTSC.UnitTests
             Assert.IsNotNull(request.Form.GetValue<FileContentType>("file2"));
             Assert.IsNotNull(request.Form.GetValue<TextContentType>("text"));
             Assert.IsNotNull(request.Form.GetValue<FileContentType>("file1"));
+            request.Form.TryGetValue<FileContentType>("file2", out var value);
+            Assert.IsNotNull(value);
         }
         [TestMethod]
         public void BuiltRequestShouldContainFormData()

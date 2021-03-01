@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace MTSC.ServerSide.Schedulers
 {
-    public class FireTasksAndForgetScheduler : IScheduler
+    public sealed class FireTasksAndForgetScheduler : IScheduler
     {
-        void IScheduler.ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
+        public void ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
         {
             foreach(var tuple in clientsQueues)
             {

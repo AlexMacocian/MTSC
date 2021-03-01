@@ -19,6 +19,21 @@ namespace MTSC.Common.Http.Forms
             return dictionary[key] as T;
         }
 
+        public bool TryGetValue<T>(string key, out T value) where T : ContentTypeBase
+        {
+            if (dictionary.TryGetValue(key, out var formValue))
+            {
+                if (formValue.GetType() == typeof(T))
+                {
+                    value = formValue as T;
+                    return true;
+                }
+            }
+
+            value = null;
+            return false;
+        }
+
         public ContentTypeBase GetValue(string key)
         {
             return dictionary[key];

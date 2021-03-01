@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace MTSC.ServerSide.Schedulers
 {
-    public class TaskAwaiterScheduler : IScheduler
+    public sealed class TaskAwaiterScheduler : IScheduler
     {
-        void IScheduler.ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
+        public void ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
         {
             List<Task> tasks = new List<Task>();
             foreach(var tuple in clientsQueues)

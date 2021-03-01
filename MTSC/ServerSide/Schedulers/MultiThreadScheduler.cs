@@ -1,17 +1,20 @@
 ﻿using MTSC.Common;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace MTSC.ServerSide.Schedulers
 {
-    public sealed class SequentialProcessingScheduler : IScheduler
+    public sealed class MultiThreadScheduler : IScheduler
     {
         public void ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
         {
-            foreach(var tuple in clientsQueues)
+            foreach((var client, var messageQueue) in clientsQueues)
             {
-                (var client, var messageQueue) = tuple;
-                messageHandlingProcedure.Invoke(client, messageQueue);
+                new Thread(() => 
+                {
+                    messageHandlingProcedure(client, messageQueue);
+                }).Start();
             }
         }
     }
