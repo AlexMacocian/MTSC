@@ -1,5 +1,6 @@
 ﻿using MTSC.Client;
 using MTSC.Client.Handlers;
+using MTSC.ClientSide;
 using MTSC.Common.WebSockets.ClientModules;
 using MTSC.Logging;
 using System;
@@ -15,7 +16,8 @@ namespace MTSC_TestClient
             ChatModule chatModule = new ChatModule();
             client
                 .SetServerAddress("127.0.0.1")
-                .SetPort(80)
+                .SetPort(800)
+                .WithReconnectPolicy(ReconnectPolicy.Forever)
                 .AddHandler(websocketHandler.AddModule(chatModule))
                 //.AddHandler(new EncryptionHandler())
                 //.AddHandler(new BroadcastHandler())

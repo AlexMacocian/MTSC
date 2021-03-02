@@ -1,10 +1,12 @@
 ﻿using MTSC.Client.Handlers;
+using MTSC.ClientSide;
 using MTSC.Common;
 using MTSC.Exceptions;
 using MTSC.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -20,15 +22,14 @@ namespace MTSC.Client
     public sealed class Client
     {
         #region Fields
-        TcpClient tcpClient;
-        CancellationTokenSource cancelMonitorToken;
-        List<IHandler> handlers = new List<IHandler>();
-        List<ILogger> loggers = new List<ILogger>();
-        List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
-        Queue<byte[]> messageQueue = new Queue<byte[]>();
-        SslStream sslStream = null;
-        TimeoutSuppressedStream safeNetworkStream = null;
-        static Hashtable certificateErrors = new Hashtable();
+        private TcpClient tcpClient;
+        private CancellationTokenSource cancelMonitorToken;
+        private readonly List<IHandler> handlers = new List<IHandler>();
+        private readonly List<ILogger> loggers = new List<ILogger>();
+        private readonly List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
+        private readonly Queue<byte[]> messageQueue = new Queue<byte[]>();
+        private SslStream sslStream = null;
+        private TimeoutSuppressedStream safeNetworkStream = null;
         #endregion
         #region Properties
         public bool Connected
@@ -46,6 +47,11 @@ namespace MTSC.Client
         public bool ForceSsl { get; private set; }
         public Func<IPAddress[], IPAddress> AddressResolution { get; set; } = (addresses) => addresses[0];
         public Func<string, bool> SchemeSslFilter { get; set; } = RequiresSsl;
+        /// <summary>
+        /// Callback function used to determine if the remote certificate is valid.
+        /// </summary>
+        public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
+        public ReconnectPolicy ReconnectPolicy { get; set; } = ReconnectPolicy.Never;
         #endregion
         #region Constructors
         public Client(bool useSsl = false)
@@ -54,6 +60,26 @@ namespace MTSC.Client
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Sets the <see cref="ReconnectPolicy"/>.
+        /// </summary>
+        /// <param name="reconnectPolicy"></param>
+        /// <returns>This client.</returns>
+        public Client WithReconnectPolicy(ReconnectPolicy reconnectPolicy)
+        {
+            this.ReconnectPolicy = reconnectPolicy;
+            return this;
+        }
+        /// <summary>
+        /// Sets the certificate validation callback for ssl connection.
+        /// </summary>
+        /// <param name="remoteCertificateValidationCallback"></param>
+        /// <returns>This client object.</returns>
+        public Client WithRemoteCertificateValidationCallback(RemoteCertificateValidationCallback remoteCertificateValidationCallback)
+        {
+            this.CertificateValidationCallback = remoteCertificateValidationCallback;
+            return this;
+        }
         /// <summary>
         /// Sets the <see cref="SchemeSslFilter"/> property.
         /// </summary>
@@ -160,10 +186,6 @@ namespace MTSC.Client
             return this;
         }
         /// <summary>
-        /// Callback function used to determine if the remote certificate is valid.
-        /// </summary>
-        public RemoteCertificateValidationCallback CertificateValidationCallback { get; set; }
-        /// <summary>
         /// Attemps to connect to the specified server.
         /// </summary>
         /// <returns>True if connection was successful.</returns>
@@ -205,10 +227,7 @@ namespace MTSC.Client
                 this.safeNetworkStream = new TimeoutSuppressedStream(this.tcpClient);
                 if (shouldUseSsl)
                 {
-                    if(this.CertificateValidationCallback == null)
-                    {
-                        this.CertificateValidationCallback = new RemoteCertificateValidationCallback(ValidateServerCertificate);
-                    }
+                    this.CertificateValidationCallback = this.CertificateValidationCallback ?? new RemoteCertificateValidationCallback(ValidateServerCertificate);
                     this.sslStream = new SslStream(this.safeNetworkStream, true, this.CertificateValidationCallback, null);
                     this.sslStream.AuthenticateAsClient(this.Address);
                 }
@@ -247,15 +266,15 @@ namespace MTSC.Client
         /// <returns>True if the connection was successful.</returns>
         public Task<bool> ConnectAsync()
         {
-            return new Task<bool>(Connect);
+            return Task.Run(Connect);
         }
         /// <summary>
         /// Disconnects from the server.
         /// </summary>
         public void Disconnect()
         {
-            cancelMonitorToken?.Cancel();
-            tcpClient.Dispose();
+            this.cancelMonitorToken?.Cancel();
+            this.tcpClient.Dispose();
         }
         #endregion
         #region Private Methods
@@ -272,7 +291,6 @@ namespace MTSC.Client
             if (sslPolicyErrors == SslPolicyErrors.None)
                 return true;
 
-            // Do not allow this client to communicate with unauthenticated servers.
             return true;
         }
 
@@ -287,60 +305,102 @@ namespace MTSC.Client
             {
                 try
                 {
-                    if(messageQueue.Count > 0)
-                    {
-                        byte[] messagebytes = messageQueue.Dequeue();
-                        Message sendMessage = CommunicationPrimitives.BuildMessage(messagebytes);
-                        for(int i = handlers.Count - 1; i >= 0; i--)
-                        {
-                            IHandler handler = handlers[i];
-                            handler.HandleSendMessage(this, ref sendMessage);
-                        }
-                        CommunicationPrimitives.SendMessage(tcpClient, sendMessage, sslStream);
-                    }
-                    if (tcpClient.Available > 0)
-                    {
-                        /*
-                         * When a message has been received, process it.
-                         */
-                        Message message = CommunicationPrimitives.GetMessage(safeNetworkStream, sslStream);
-                        LogDebug("Received a message of size: " + message.MessageLength);
-                        /*
-                         * Preprocess message.
-                         */
-                        foreach (IHandler handler in handlers)
-                        {
-                            if (handler.PreHandleReceivedMessage(this, ref message))
-                            {
-                                break;
-                            }
-                        }
-                        /*
-                         * Process the final message structure.
-                         */
-                        foreach (IHandler handler in handlers)
-                        {
-                            if (handler.HandleReceivedMessage(this, message))
-                            {
-                                break;
-                            }
-                        }
-                    }
-                    foreach (IHandler handler in handlers)
-                    {
-                        handler.Tick(this);
-                    }
+                    this.SendQueuedMessages();
+                    this.ReceiveMessages();
+                    this.TickHandlers();
+                }
+                catch (IOException fatalException)
+                {
+                    this.HandleException(fatalException);
+                    break;
                 }
                 catch(Exception e)
                 {
-                    LogDebug("Exception: " + e.Message);
-                    LogDebug("Stacktrace: " + e.StackTrace);
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
-                    {
-                        exceptionHandler.HandleException(e);
-                    }
+                    this.HandleException(e);
                 }
                 Thread.Sleep(33);
+            }
+
+            if (this.ReconnectPolicy == ReconnectPolicy.Forever)
+            {
+                do
+                {
+                    this.Log("Connection failed. Attempting to reconnect...");
+                } while (this.Connect() is false);
+            }
+            else if (this.ReconnectPolicy == ReconnectPolicy.Once)
+            {
+                this.Log("Connection failed. Attempting to reconnect...");
+                this.Connect();
+            }
+        }
+
+        private void SendQueuedMessages()
+        {
+            if (this.messageQueue.Count > 0)
+            {
+                byte[] messagebytes = this.messageQueue.Dequeue();
+                Message sendMessage = CommunicationPrimitives.BuildMessage(messagebytes);
+                for (int i = handlers.Count - 1; i >= 0; i--)
+                {
+                    IHandler handler = handlers[i];
+                    handler.HandleSendMessage(this, ref sendMessage);
+                }
+                CommunicationPrimitives.SendMessage(this.tcpClient, sendMessage, this.sslStream);
+            }
+        }
+
+        private void ReceiveMessages()
+        {
+            if (this.tcpClient.Available > 0)
+            {
+                /*
+                 * When a message has been received, process it.
+                 */
+                var message = CommunicationPrimitives.GetMessage(this.safeNetworkStream, this.sslStream);
+                LogDebug("Received a message of size: " + message.MessageLength);
+                this.PrehandleReceivedMessage(message);
+                this.HandleReceivedMessage(message);
+            }
+        }
+
+        private void PrehandleReceivedMessage(Message message)
+        {
+            foreach (IHandler handler in this.handlers)
+            {
+                if (handler.PreHandleReceivedMessage(this, ref message))
+                {
+                    break;
+                }
+            }
+        }
+
+        private void HandleReceivedMessage(Message message)
+        {
+            foreach (IHandler handler in this.handlers)
+            {
+                if (handler.HandleReceivedMessage(this, message))
+                {
+                    break;
+                }
+            }
+        }
+
+        private void TickHandlers()
+        {
+            foreach (IHandler handler in this.handlers)
+            {
+                handler.Tick(this);
+            }
+        }
+
+        private void HandleException(Exception exception)
+        {
+            LogDebug("Exception: " + exception.Message);
+            LogDebug("Stacktrace: " + exception.StackTrace);
+            foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
+            {
+                exceptionHandler.HandleException(exception);
             }
         }
         #endregion
