@@ -8,7 +8,7 @@ namespace MTSC.UnitTests
 {
     public class MultipartModule : HttpRouteBase
     {
-        public override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, Server server)
+        public override Task<HttpResponse> HandleRequest(HttpRequest request)
         {
             if (request.Form.Count > 0)
             {

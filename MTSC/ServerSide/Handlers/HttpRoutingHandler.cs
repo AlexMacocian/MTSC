@@ -2,6 +2,7 @@
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.Telemetry;
 using MTSC.Exceptions;
+using Slim;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -12,16 +13,17 @@ namespace MTSC.ServerSide.Handlers
 {
     public sealed class HttpRoutingHandler : IHandler
     {
-        private static Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
+        private static readonly Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
 
-        private ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
-
-        private List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
-
-        private Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase,
+        private readonly ServiceManager serviceManager = new ServiceManager();
+        private readonly ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
+        private readonly List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
+        private readonly Dictionary<HttpMethods, Dictionary<string, (Type,
             Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary =
-            new Dictionary<HttpMethods, Dictionary<string, (HttpRouteBase,
+            new Dictionary<HttpMethods, Dictionary<string, (Type,
                 Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
+
+        private bool initialized = false;
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = double.MaxValue;
@@ -30,9 +32,11 @@ namespace MTSC.ServerSide.Handlers
         {
             foreach (HttpMethods method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
-                moduleDictionary[method] = new Dictionary<string, (HttpRouteBase,
-                    Func<ServerSide.Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
+                moduleDictionary[method] = new Dictionary<string, (Type,
+                    Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
             }
+
+            this.serviceManager.RegisterServiceManager();
         }
 
         public HttpRoutingHandler AddHttpLogger(IHttpLogger logger)
@@ -40,21 +44,38 @@ namespace MTSC.ServerSide.Handlers
             httpLoggers.Add(logger);
             return this;
         }
-        public HttpRoutingHandler AddRoute(
+        public HttpRoutingHandler AddRoute<T>(
+            HttpMethods method,
+            string uri)
+            where T : HttpRouteBase
+        {
+            this.RegisterRoute(method, uri, typeof(T), alwaysEnabled);
+            return this;
+        }
+        public HttpRoutingHandler AddRoute<T>(
             HttpMethods method,
             string uri,
-            HttpRouteBase routeModule)
+            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+            where T : HttpRouteBase
         {
-            moduleDictionary[method][uri] = (routeModule, alwaysEnabled);
+            this.RegisterRoute(method, uri, typeof(T), routeEnabler);
             return this;
         }
         public HttpRoutingHandler AddRoute(
             HttpMethods method,
             string uri,
-            HttpRouteBase routeModule,
-            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+            Type routeType)
         {
-            moduleDictionary[method][uri] = (routeModule, routeEnabler);
+            this.RegisterRoute(method, uri, routeType, alwaysEnabled);
+            return this;
+        }
+        public HttpRoutingHandler AddRoute(
+            HttpMethods method,
+            string uri,
+            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler,
+            Type routeType)
+        {
+            this.RegisterRoute(method, uri, routeType, routeEnabler);
             return this;
         }
         public HttpRoutingHandler RemoveRoute(
@@ -164,9 +185,10 @@ namespace MTSC.ServerSide.Handlers
             }
             else
             {
-                if (moduleDictionary[request.Method].ContainsKey(request.RequestURI))
+                if (this.moduleDictionary[request.Method].ContainsKey(request.RequestURI))
                 {
-                    (var module, var routeEnabler) = moduleDictionary[request.Method][request.RequestURI];
+                    (var routeType, var routeEnabler) = this.moduleDictionary[request.Method][request.RequestURI];
+                    var module = this.GetRoute(routeType, client, server);
                     if (request.Complete)
                     {
                         var httpRequest = request.ToRequest();
@@ -194,6 +216,17 @@ namespace MTSC.ServerSide.Handlers
 
         void IHandler.Tick(Server server)
         {
+            if (this.initialized is false)
+            {
+                this.initialized = true;
+                this.serviceManager.RegisterSingleton(typeof(Server), typeof(Server), (sp) => server);
+                this.serviceManager.RegisterSingleton(typeof(HttpRoutingHandler), typeof(HttpRoutingHandler), sp => this);
+                foreach(var resource in server.Resources)
+                {
+                    this.serviceManager.RegisterSingleton(resource.GetType(), resource.GetType(), (sp) => resource);
+                }
+            }
+
             while (messageOutQueue.Count > 0)
             {
                 if (messageOutQueue.TryDequeue(out Tuple<ClientData, HttpResponse> tuple))
@@ -234,7 +267,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 try
                 {
-                    module.CallHandleRequest(request, client, server).ContinueWith((task) => 
+                    module.CallHandleRequest(request).ContinueWith((task) => 
                     {
                         foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, task.Result);
                             QueueResponse(client, task.Result); 
@@ -283,6 +316,31 @@ namespace MTSC.ServerSide.Handlers
         {
             public HttpRouteBase MappedModule { get; set; }
             public Func<Server, HttpRequest, ClientData, RouteEnablerResponse> RouteEnabler { get; set; }
+        }
+
+        private HttpRouteBase GetRoute(Type routeType, ClientData client, Server server)
+        {
+            if (!typeof(HttpRouteBase).IsAssignableFrom(routeType))
+            {
+                throw new InvalidOperationException($"Cannot create new route of type {routeType.FullName}. Not of type {typeof(HttpRouteBase).FullName}");
+            }
+
+            var module = this.serviceManager.GetService(routeType) as HttpRouteBase;
+            (module as ISetHttpContext).SetClientData(client);
+            (module as ISetHttpContext).SetServer(server);
+            (module as ISetHttpContext).SetHttpRoutingHandler(this);
+            return module;
+        }
+
+        private void RegisterRoute(HttpMethods method, string uri, Type routeType, Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+        {
+            if (!typeof(HttpRouteBase).IsAssignableFrom(routeType))
+            {
+                throw new InvalidOperationException($"{routeType.FullName} must be of type {typeof(HttpRouteBase).FullName}");
+            }
+
+            this.serviceManager.RegisterSingleton(routeType, routeType);
+            this.moduleDictionary[method][uri] = (routeType, routeEnabler);
         }
     }
 }

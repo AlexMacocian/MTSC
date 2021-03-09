@@ -1,78 +1,161 @@
 ﻿using MTSC.ServerSide;
+using MTSC.ServerSide.Handlers;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MTSC.Common.Http.RoutingModules
 {
-    public abstract class HttpRouteBase
+    public abstract class HttpRouteBase : ISetHttpContext
     {
-        public async Task<HttpResponse> CallHandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
-        {
-            return await this.HandleRequest(request, client, server);
-        }
+        public ClientData ClientData { get; private set; }
+        public HttpRoutingHandler HttpRoutingHandler { get; private set; }
+        public Server Server { get; private set; }
 
-        public abstract Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server);
+        public async Task<HttpResponse> CallHandleRequest(HttpRequest request)
+        {
+            return await this.HandleRequest(request);
+        }
+        public abstract Task<HttpResponse> HandleRequest(HttpRequest request);
+
+        void ISetHttpContext.SetClientData(ClientData clientData)
+        {
+            this.ClientData = clientData;
+        }
+        void ISetHttpContext.SetHttpRoutingHandler(HttpRoutingHandler httpRoutingHandler)
+        {
+            this.HttpRoutingHandler = httpRoutingHandler;
+        }
+        void ISetHttpContext.SetServer(Server server)
+        {
+            this.Server = server;
+        }
     }
     public abstract class HttpRouteBase<T> : HttpRouteBase
     {
-        private Func<HttpRequest, T> template;
+        private readonly static object cachedLock = new object();
+        private static IRequestConverter<T> CachedConverter { get; set; }
 
-        public HttpRouteBase(Func<HttpRequest, T> template)
+        public sealed override Task<HttpResponse> HandleRequest(HttpRequest request)
         {
-            this.template = template;
+            lock (cachedLock)
+            {
+                if (CachedConverter is null)
+                {
+                    CachedConverter = ImplementConverter();
+                }
+            }
+
+            return this.HandleRequest(CachedConverter.ConvertHttpRequest(request));
         }
 
-        public HttpRouteBase()
-        {
+        public abstract Task<HttpResponse> HandleRequest(T request);
 
+        private static bool MatchesRequiredType(RequestConvertAttribute attribute)
+        {
+            if (attribute.ConverterType.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IRequestConverter<T>)))
+            {
+                return false;
+            }
+
+            return true;
         }
 
-        public HttpRouteBase<T> WithTemplateProvider(Func<HttpRequest, T> templateProvider)
+        private static IRequestConverter<T> ImplementConverter()
         {
-            this.template = templateProvider;
-            return this;
-        }
+            var converterType = typeof(T)
+                .GetCustomAttributes(true)
+                .OfType<RequestConvertAttribute>()
+                .Where(MatchesRequiredType)
+                .Select(attribute => attribute.ConverterType)
+                .FirstOrDefault();
+            if (converterType is null)
+            {
+                throw new InvalidOperationException($"No converter found for type {typeof(T).FullName}");
+            }
 
-        public async override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
-        {
-            return await HandleRequest(template.Invoke(request), client, server);
+            var converter = Activator.CreateInstance(converterType) as IRequestConverter<T>;
+            return converter;
         }
-
-        public abstract Task<HttpResponse> HandleRequest(T request, ClientData client, ServerSide.Server server);
     }
     public abstract class HttpRouteBase<TReceive, TSend> : HttpRouteBase
     {
-        private Func<HttpRequest, TReceive> receiveTemplate;
-        private Func<TSend, HttpResponse> sendTemplate;
+        private static readonly object reqLock = new object(), respLock = new object();
+        private static IRequestConverter<TReceive> CachedRequestConverter { get; set; }
+        private static IResponseConverter<TSend> CachedResponseConverter { get; set; }
 
-        public HttpRouteBase(Func<HttpRequest, TReceive> receiveTemplate, Func<TSend, HttpResponse> sendTemplate)
+        public sealed async override Task<HttpResponse> HandleRequest(HttpRequest request)
         {
-            this.receiveTemplate = receiveTemplate;
-            this.sendTemplate = sendTemplate;
+            lock (reqLock)
+            {
+                if (CachedRequestConverter is null)
+                {
+                    CachedRequestConverter = ImplementRequestConverter();
+                }
+            }
+
+            lock (respLock)
+            {
+                if (CachedResponseConverter is null)
+                {
+                    CachedResponseConverter = ImplementResponseConverter();
+                }
+            }
+
+            return CachedResponseConverter.ConvertResponse(await this.HandleRequest(CachedRequestConverter.ConvertHttpRequest(request)));
         }
 
-        public HttpRouteBase()
+        public abstract Task<TSend> HandleRequest(TReceive request);
+
+        private static bool MatchesRequiredRequestType(RequestConvertAttribute attribute)
         {
+            if (attribute.ConverterType.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IRequestConverter<TReceive>)))
+            {
+                return false;
+            }
 
+            return true;
         }
-
-        public HttpRouteBase<TReceive, TSend> WithReceiveTemplateProvider(Func<HttpRequest, TReceive> templateProvider)
+        private static bool MatchesRequiredResponseType(ResponseConvertAttribute attribute)
         {
-            this.receiveTemplate = templateProvider;
-            return this;
-        }
+            if (attribute.ConverterType.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IResponseConverter<TSend>)))
+            {
+                return false;
+            }
 
-        public HttpRouteBase<TReceive, TSend> WithSendTemplateProvider(Func<TSend, HttpResponse> templateProvider)
+            return true;
+        }
+        private static IResponseConverter<TSend> ImplementResponseConverter()
         {
-            this.sendTemplate = templateProvider;
-            return this;
-        }
+            var converterType = typeof(TSend)
+                .GetCustomAttributes(true)
+                .OfType<ResponseConvertAttribute>()
+                .Where(MatchesRequiredResponseType)
+                .Select(attribute => attribute.ConverterType)
+                .FirstOrDefault();
+            if (converterType is null)
+            {
+                throw new InvalidOperationException($"No converter found for type {typeof(TSend).FullName}");
+            }
 
-        public async override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, Server server)
+            var converter = Activator.CreateInstance(converterType) as IResponseConverter<TSend>;
+            return converter;
+        }
+        private static IRequestConverter<TReceive> ImplementRequestConverter()
         {
-            return sendTemplate.Invoke(await HandleRequest(receiveTemplate.Invoke(request), client, server));
-        }
+            var converterType = typeof(TReceive)
+                .GetCustomAttributes(true)
+                .OfType<RequestConvertAttribute>()
+                .Where(MatchesRequiredRequestType)
+                .Select(attribute => attribute.ConverterType)
+                .FirstOrDefault();
+            if (converterType is null)
+            {
+                throw new InvalidOperationException($"No converter found for type {typeof(TReceive).FullName}");
+            }
 
-        public abstract Task<TSend> HandleRequest(TReceive request, ClientData client, Server server);
+            var converter = Activator.CreateInstance(converterType) as IRequestConverter<TReceive>;
+            return converter;
+        }
     }
 }

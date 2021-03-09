@@ -9,6 +9,7 @@ using MTSC.Exceptions;
 using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Schedulers;
+using MTSC.UnitTests.RoutingModules;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -42,7 +43,7 @@ namespace MTSC.UnitTests
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute("echo", new EchoWebsocketModule()
                         .WithReceiveTemplateProvider((message) => Encoding.UTF8.GetString(message.Data))
-                        .WithSendTemplateProvider((s) => 
+                        .WithSendTemplateProvider((s) =>
                             {
                                 WebsocketMessage websocketMessage = new WebsocketMessage();
                                 websocketMessage.Data = Encoding.UTF8.GetBytes(s);
@@ -50,12 +51,12 @@ namespace MTSC.UnitTests
                                 return websocketMessage;
                             })))
                 .AddHandler(new HttpRoutingHandler()
-                    .AddRoute(HttpMessage.HttpMethods.Get, "", new Http200Module())
-                    .AddRoute(HttpMessage.HttpMethods.Get, "query", new TestQueryModule())
-                    .AddRoute(HttpMessage.HttpMethods.Get, "echo", new EchoModule())
-                    .AddRoute(HttpMessage.HttpMethods.Post, "echo", new EchoModule())
-                    .AddRoute(HttpMessage.HttpMethods.Get, "long-running", new LongRunningModule())
-                    .AddRoute(HttpMessage.HttpMethods.Post, "multipart", new MultipartModule())
+                    .AddRoute<Http200Module>(HttpMessage.HttpMethods.Get, "")
+                    .AddRoute<TestQueryModule>(HttpMessage.HttpMethods.Get, "query")
+                    .AddRoute<EchoModule>(HttpMessage.HttpMethods.Post, "echo")
+                    .AddRoute<LongRunningModule>(HttpMessage.HttpMethods.Get, "long-running")
+                    .AddRoute<MultipartModule>(HttpMessage.HttpMethods.Post, "multipart")
+                    .AddRoute<SomeRoutingModule>(HttpMessage.HttpMethods.Get, "some-module")
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(3000))
                     .WithMaximumSize(250000))
                 .AddLogger(new ConsoleLogger())
@@ -65,6 +66,15 @@ namespace MTSC.UnitTests
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
         }
+        [TestMethod]
+        public async Task ServerParsesRequestAndResponse()
+        {
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://localhost:800");
+            var response = await httpClient.GetAsync("some-module");
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+        }
+
         [TestMethod]
         public async Task ServerRespondsDuringLongRunningTask()
         {
@@ -76,7 +86,7 @@ namespace MTSC.UnitTests
             client2.BaseAddress = new Uri("http://localhost:800");
             while (!longRunningTask.IsCompleted)
             {
-                var echoResponse = await client2.GetAsync("echo");
+                _ = await client2.GetAsync("");
                 responses++;
             }
             var result = longRunningTask.Result;
@@ -103,11 +113,6 @@ namespace MTSC.UnitTests
                 var result = httpClient.GetAsync("").GetAwaiter().GetResult();
                 Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
             }
-            for (int i = 0; i < 10; i++)
-            {
-                var result = httpClient.GetAsync("echo").GetAwaiter().GetResult();
-                Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
-            }
         }
 
         [TestMethod]
@@ -123,7 +128,7 @@ namespace MTSC.UnitTests
                 .Connect();
 
             HttpRequest request = new HttpRequest();
-            request.Method = HttpMessage.HttpMethods.Get;
+            request.Method = HttpMessage.HttpMethods.Post;
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
@@ -163,7 +168,7 @@ namespace MTSC.UnitTests
                 .Connect();
 
             HttpRequest request = new HttpRequest();
-            request.Method = HttpMessage.HttpMethods.Get;
+            request.Method = HttpMessage.HttpMethods.Post;
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
@@ -200,7 +205,7 @@ namespace MTSC.UnitTests
                 .Connect();
 
             HttpRequest request = new HttpRequest();
-            request.Method = HttpMessage.HttpMethods.Get;
+            request.Method = HttpMessage.HttpMethods.Post;
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();

@@ -5,9 +5,21 @@ namespace MTSC.Common.Http.RoutingModules
 {
     public sealed class Http200Module : HttpRouteBase
     {
-        public override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
+        private readonly Server server;
+
+        public Http200Module(Server server)
         {
-            return Task.FromResult(new HttpResponse { StatusCode = HttpMessage.StatusCodes.OK });
+            this.server = server;
         }
+        
+        public override Task<HttpResponse> HandleRequest(HttpRequest request)
+        {
+            return Task.FromResult(OK);
+        }
+
+        private HttpResponse OK => new HttpResponse()
+        {
+            StatusCode = HttpMessage.StatusCodes.OK
+        };
     }
 }

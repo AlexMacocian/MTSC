@@ -7,7 +7,7 @@ namespace MTSC.UnitTests
 {
     public class EchoModule : HttpRouteBase
     {
-        public override Task<HttpResponse> HandleRequest(HttpRequest request, ClientData client, ServerSide.Server server)
+        public override Task<HttpResponse> HandleRequest(HttpRequest request)
         {
             return Task.FromResult(new HttpResponse { BodyString = request.BodyString, StatusCode = HttpMessage.StatusCodes.OK });
         }
