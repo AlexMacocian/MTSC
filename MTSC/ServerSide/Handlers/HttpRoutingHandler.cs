@@ -221,7 +221,7 @@ namespace MTSC.ServerSide.Handlers
                 this.initialized = true;
                 this.serviceManager.RegisterSingleton(typeof(Server), typeof(Server), (sp) => server);
                 this.serviceManager.RegisterSingleton(typeof(HttpRoutingHandler), typeof(HttpRoutingHandler), sp => this);
-                foreach(var resource in server.Resources)
+                foreach(var resource in server.Resources.Values)
                 {
                     this.serviceManager.RegisterSingleton(resource.GetType(), resource.GetType(), (sp) => resource);
                 }
