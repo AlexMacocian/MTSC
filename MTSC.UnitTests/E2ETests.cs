@@ -41,15 +41,9 @@ namespace MTSC.UnitTests
                 .WithReadTimeout(TimeSpan.FromMilliseconds(1000))
                 .WithClientCertificate(false)
                 .AddHandler(new WebsocketRoutingHandler()
-                    .AddRoute("echo", new EchoWebsocketModule()
-                        .WithReceiveTemplateProvider((message) => Encoding.UTF8.GetString(message.Data))
-                        .WithSendTemplateProvider((s) =>
-                            {
-                                WebsocketMessage websocketMessage = new WebsocketMessage();
-                                websocketMessage.Data = Encoding.UTF8.GetBytes(s);
-                                websocketMessage.Opcode = WebsocketMessage.Opcodes.Text;
-                                return websocketMessage;
-                            })))
+                    .AddRoute<EchoWebsocketModule>("echo")
+                    .AddRoute<EchoWebsocketModule2>("echo2")
+                    .AddRoute<RoutingModules.HelloWorldModule>("hello-world"))
                 .AddHandler(new HttpRoutingHandler()
                     .AddRoute<Http200Module>(HttpMessage.HttpMethods.Get, "")
                     .AddRoute<TestQueryModule>(HttpMessage.HttpMethods.Get, "query")
@@ -291,15 +285,36 @@ namespace MTSC.UnitTests
         }
 
         [TestMethod]
-        public void EchoWebsocket()
+        [DataRow("echo")]
+        [DataRow("echo2")]
+        public async Task EchoWebsocket(string endpoint)
         {
-            byte[] bytes = new byte[100];
+            var bytes = new byte[100];
             ClientWebSocket client = new ClientWebSocket();
-            client.ConnectAsync(new Uri("ws://localhost:800/echo"), CancellationToken.None).Wait();
-            client.SendAsync(Encoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None).Wait();
-            client.ReceiveAsync(bytes, CancellationToken.None).Wait();
+            await client.ConnectAsync(new Uri($"ws://localhost:800/{endpoint}"), CancellationToken.None);
+            await client.SendAsync(Encoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None);
+            await client.ReceiveAsync(bytes, CancellationToken.None);
             var resultString = Encoding.ASCII.GetString(bytes, 0, 12);
             Assert.AreEqual(resultString, "Hello world!");
+        }
+
+        [TestMethod]
+        public async Task HelloWorldWebsocket()
+        {
+            var bytes = new byte[100];
+            var client = new ClientWebSocket();
+            await client.ConnectAsync(new Uri($"ws://localhost:800/hello-world"), CancellationToken.None);
+            await client.SendAsync(Encoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None);
+            await client.ReceiveAsync(bytes, CancellationToken.None);
+            var resultString = Encoding.ASCII.GetString(bytes, 0, 12);
+            Assert.AreEqual(resultString, "Hello world!");
+
+            client = new ClientWebSocket();
+            await client.ConnectAsync(new Uri($"ws://localhost:800/hello-world"), CancellationToken.None);
+            await client.SendAsync(Encoding.ASCII.GetBytes("Something else"), WebSocketMessageType.Text, true, CancellationToken.None);
+            await client.ReceiveAsync(bytes, CancellationToken.None);
+            resultString = Encoding.ASCII.GetString(bytes, 0, 16);
+            Assert.AreEqual(resultString, "Not hello world!");
         }
 
         [ClassCleanup]

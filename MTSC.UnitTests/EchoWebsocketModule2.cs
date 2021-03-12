@@ -2,7 +2,7 @@
 
 namespace MTSC.UnitTests
 {
-    public class EchoWebsocketModule : WebsocketRouteBase<string, string>
+    public class EchoWebsocketModule2 : WebsocketRouteBase<byte[], byte[]>
     {
         public override void ConnectionClosed()
         {
@@ -12,7 +12,7 @@ namespace MTSC.UnitTests
         {
         }
 
-        public override void HandleReceivedMessage(string message)
+        public override void HandleReceivedMessage(byte[] message)
         {
             this.SendMessage(message);
         }

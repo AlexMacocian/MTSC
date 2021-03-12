@@ -1,8 +1,8 @@
 ﻿using MTSC.Common.WebSockets.RoutingModules;
 
-namespace MTSC.UnitTests
+namespace MTSC.UnitTests.RoutingModules
 {
-    public class EchoWebsocketModule : WebsocketRouteBase<string, string>
+    public class HelloWorldModule : WebsocketRouteBase<HelloWorldMessage, HelloWorldMessage>
     {
         public override void ConnectionClosed()
         {
@@ -12,7 +12,7 @@ namespace MTSC.UnitTests
         {
         }
 
-        public override void HandleReceivedMessage(string message)
+        public override void HandleReceivedMessage(HelloWorldMessage message)
         {
             this.SendMessage(message);
         }

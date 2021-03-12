@@ -1,99 +1,233 @@
 ﻿using MTSC.ServerSide;
 using MTSC.ServerSide.Handlers;
 using System;
+using System.Linq;
+using System.Text;
 
 namespace MTSC.Common.WebSockets.RoutingModules
 {
-    public abstract class WebsocketRouteBase
+    public abstract class WebsocketRouteBase : ISetWebsocketContext
     {
-        public void CallConnectionInitialized(Server server, WebsocketRoutingHandler handler, ClientData client)
+        protected Server Server { get; private set; }
+        protected WebsocketRoutingHandler WebsocketRoutingHandler { get; private set; }
+        protected ClientData ClientData { get; private set; }
+
+        public void CallConnectionInitialized()
         {
-            ConnectionInitialized(server, handler, client);
+            ConnectionInitialized();
         }
-        public void CallHandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, WebsocketMessage receivedMessage)
+        public void CallHandleReceivedMessage(WebsocketMessage receivedMessage)
         {
-            HandleReceivedMessage(server, handler, client, receivedMessage);
+            this.HandleReceivedMessage(receivedMessage);
         }
-        public void CallConnectionClosed(Server server, WebsocketRoutingHandler handler, ClientData client)
+        public void CallConnectionClosed()
         {
-            ConnectionClosed(server, handler, client);
+            this.ConnectionClosed();
         }
-        
-        public void SendMessage(WebsocketMessage message, ClientData client, WebsocketRoutingHandler handler)
+        public void SendMessage(WebsocketMessage message)
         {
-            handler.QueueMessage(client, message);
+            this.WebsocketRoutingHandler.QueueMessage(this.ClientData, message);
         }
 
-        public abstract void ConnectionInitialized(Server server, WebsocketRoutingHandler handler, ClientData client);
-        public abstract void HandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, WebsocketMessage receivedMessage);
-        public abstract void ConnectionClosed(Server server, WebsocketRoutingHandler handler, ClientData client);
-        public abstract void Tick(Server server, WebsocketRoutingHandler handler);
+        public abstract void ConnectionInitialized();
+        public abstract void HandleReceivedMessage(WebsocketMessage receivedMessage);
+        public abstract void ConnectionClosed();
+        public abstract void Tick();
+
+        void ISetWebsocketContext.SetServer(Server server)
+        {
+            this.Server = server;
+        }
+        void ISetWebsocketContext.SetHandler(WebsocketRoutingHandler websocketRoutingHandler)
+        {
+            this.WebsocketRoutingHandler = websocketRoutingHandler;
+        }
+        void ISetWebsocketContext.SetClient(ClientData clientData)
+        {
+            this.ClientData = clientData;
+        }
+
+        internal static IWebsocketMessageConverter<T> GetStringAdhocConverter<T>()
+        {
+            return new AdhocConverter<T>(
+                        convertFrom: message => (T)(Encoding.UTF8.GetString(message.Data) as object),
+                        convertTo: message =>
+                        {
+                            var str = (string)(message as object);
+                            return new WebsocketMessage
+                            {
+                                Data = Encoding.UTF8.GetBytes(str),
+                                Opcode = WebsocketMessage.Opcodes.Text
+                            };
+                        });
+        }
+        internal static IWebsocketMessageConverter<T> GetByteArrayAdhocConverter<T>()
+        {
+            return new AdhocConverter<T>(
+                        convertFrom: message => (T)(message.Data as object),
+                        convertTo: message =>
+                        {
+                            return new WebsocketMessage
+                            {
+                                Data = (byte[])(message as object),
+                                Opcode = WebsocketMessage.Opcodes.Binary
+                            };
+                        });
+        }
     }
     public abstract class WebsocketRouteBase<TReceive> : WebsocketRouteBase
     {
-        private Func<WebsocketMessage, TReceive> receiveTemplate;
+        private readonly static object cachedLock = new object();
+        private static IWebsocketMessageConverter<TReceive> CachedConverter { get; set; }
 
-        public WebsocketRouteBase(Func<WebsocketMessage, TReceive> receiveTemplate)
+        public sealed override void HandleReceivedMessage(WebsocketMessage receivedMessage)
         {
-            this.receiveTemplate = receiveTemplate;
-        }
+            lock (cachedLock)
+            {
+                if (CachedConverter is null)
+                {
+                    CachedConverter = ImplementConverter();
+                }
+            }
 
-        public WebsocketRouteBase()
+            this.HandleReceivedMessage(CachedConverter.ConvertFromWebsocketMessage(receivedMessage));
+        }
+        public abstract void HandleReceivedMessage(TReceive message);
+
+        private static bool MatchesRequiredType(WebsocketMessageConvertAttribute attribute)
         {
+            if (attribute.ConverterType.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IWebsocketMessageConverter<TReceive>)))
+            {
+                return false;
+            }
 
+            return true;
         }
-
-        public WebsocketRouteBase<TReceive> WithReceiveTemplateProvider(Func<WebsocketMessage, TReceive> templateProvider)
+        private static IWebsocketMessageConverter<TReceive> ImplementConverter()
         {
-            this.receiveTemplate = templateProvider;
-            return this;
-        }
+            var converterType = typeof(TReceive)
+                .GetCustomAttributes(true)
+                .OfType<WebsocketMessageConvertAttribute>()
+                .Where(MatchesRequiredType)
+                .Select(attribute => attribute.ConverterType)
+                .FirstOrDefault();
+            if (converterType is null)
+            {
+                if (typeof(TReceive) == typeof(string))
+                {
+                    return GetStringAdhocConverter<TReceive>();
+                }
+                else if (typeof(TReceive) == typeof(byte[]))
+                {
+                    return GetByteArrayAdhocConverter<TReceive>();
+                }
 
-        public override void HandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, WebsocketMessage receivedMessage)
-        {
-            HandleReceivedMessage(server, handler, client, receiveTemplate.Invoke(receivedMessage));
-        }
+                throw new InvalidOperationException($"No converter found for type {typeof(TReceive).FullName}");
+            }
 
-        public abstract void HandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, TReceive message);
+            var converter = Activator.CreateInstance(converterType) as IWebsocketMessageConverter<TReceive>;
+            return converter;
+        }
     }
     public abstract class WebsocketRouteBase<TReceive, TSend> : WebsocketRouteBase
     {
-        private Func<WebsocketMessage, TReceive> receiveTemplate;
-        private Func<TSend, WebsocketMessage> sendTemplate;
+        private readonly static object recLock = new object(), sendLock = new object();
+        private static IWebsocketMessageConverter<TReceive> CachedReceiveConverter { get; set; }
+        private static IWebsocketMessageConverter<TSend> CachedSendConverter { get; set; }
 
-        public WebsocketRouteBase(Func<WebsocketMessage, TReceive> receiveTemplate, Func<TSend, WebsocketMessage> sendTemplate)
+        public void SendMessage(TSend message)
         {
-            this.receiveTemplate = receiveTemplate;
-            this.sendTemplate = sendTemplate;
-        }
+            lock (sendLock)
+            {
+                if (CachedSendConverter is null)
+                {
+                    CachedSendConverter = ImplementSendConverter();
+                }
+            }
 
-        public WebsocketRouteBase()
+            base.SendMessage(CachedSendConverter.ConvertToWebsocketMessage(message));
+        }
+        public sealed override void HandleReceivedMessage(WebsocketMessage receivedMessage)
         {
-
+            lock (recLock)
+            {
+                if (CachedReceiveConverter is null)
+                {
+                    CachedReceiveConverter = ImplementReceiveConverter();
+                }
+            }
+            
+            this.HandleReceivedMessage(CachedReceiveConverter.ConvertFromWebsocketMessage(receivedMessage));
         }
+        public abstract void HandleReceivedMessage(TReceive message);
 
-        public WebsocketRouteBase<TReceive, TSend> WithReceiveTemplateProvider(Func<WebsocketMessage, TReceive> templateProvider)
+        private static bool MatchesRequiredReceiveType(WebsocketMessageConvertAttribute attribute)
         {
-            this.receiveTemplate = templateProvider;
-            return this;
-        }
+            if (attribute.ConverterType.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IWebsocketMessageConverter<TReceive>)))
+            {
+                return false;
+            }
 
-        public WebsocketRouteBase<TReceive, TSend> WithSendTemplateProvider(Func<TSend, WebsocketMessage> templateProvider)
+            return true;
+        }
+        private static bool MatchesRequiredSendType(WebsocketMessageConvertAttribute attribute)
         {
-            this.sendTemplate = templateProvider;
-            return this;
-        }
+            if (attribute.ConverterType.GetInterfaces().Any(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IWebsocketMessageConverter<TSend>)))
+            {
+                return false;
+            }
 
-        public void SendMessage(TSend message, ClientData client, WebsocketRoutingHandler handler)
+            return true;
+        }
+        private static IWebsocketMessageConverter<TSend> ImplementSendConverter()
         {
-            base.SendMessage(sendTemplate.Invoke(message), client, handler);
-        }
+            var converterType = typeof(TSend)
+                .GetCustomAttributes(true)
+                .OfType<WebsocketMessageConvertAttribute>()
+                .Where(MatchesRequiredSendType)
+                .Select(attribute => attribute.ConverterType)
+                .FirstOrDefault();
+            if (converterType is null)
+            {
+                if (typeof(TSend) == typeof(string))
+                {
+                    return GetStringAdhocConverter<TSend>();
+                }
+                else if (typeof(TSend) == typeof(byte[]))
+                {
+                    return GetByteArrayAdhocConverter<TSend>();
+                }
 
-        public override void HandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, WebsocketMessage receivedMessage)
+                throw new InvalidOperationException($"No converter found for type {typeof(TSend).FullName}");
+            }
+
+            var converter = Activator.CreateInstance(converterType) as IWebsocketMessageConverter<TSend>;
+            return converter;
+        }
+        private static IWebsocketMessageConverter<TReceive> ImplementReceiveConverter()
         {
-            HandleReceivedMessage(server, handler, client, receiveTemplate.Invoke(receivedMessage));
-        }
+            var converterType = typeof(TReceive)
+                .GetCustomAttributes(true)
+                .OfType<WebsocketMessageConvertAttribute>()
+                .Where(MatchesRequiredReceiveType)
+                .Select(attribute => attribute.ConverterType)
+                .FirstOrDefault();
+            if (converterType is null)
+            {
+                if (typeof(TReceive) == typeof(string))
+                {
+                    return GetStringAdhocConverter<TReceive>();
+                }
+                else if (typeof(TReceive) == typeof(byte[]))
+                {
+                    return GetByteArrayAdhocConverter<TReceive>();
+                }
 
-        public abstract void HandleReceivedMessage(Server server, WebsocketRoutingHandler handler, ClientData client, TReceive message);
+                throw new InvalidOperationException($"No converter found for type {typeof(TReceive).FullName}");
+            }
+
+            var converter = Activator.CreateInstance(converterType) as IWebsocketMessageConverter<TReceive>;
+            return converter;
+        }
     }
 }

@@ -5,6 +5,7 @@ using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Resources;
 using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
+using Slim;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,22 +25,23 @@ namespace MTSC.ServerSide
     public sealed class Server
     {
         #region Fields
-        bool running;
-        X509Certificate2 certificate;
-        TcpListener listener;
-        ProducerConsumerQueue<ClientData> addQueue = new ProducerConsumerQueue<ClientData>();
-        List<ClientData> clients = new List<ClientData>();
-        List<ClientData> toRemove = new List<ClientData>();
-        List<IHandler> handlers = new List<IHandler>();
-        List<ILogger> loggers = new List<ILogger>();
-        List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
-        List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
-        ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new ProducerConsumerQueue<(ClientData, byte[])>();
+        private bool running;
+        private X509Certificate2 certificate;
+        private TcpListener listener;
+        private readonly ProducerConsumerQueue<ClientData> addQueue = new ProducerConsumerQueue<ClientData>();
+        private readonly List<ClientData> clients = new List<ClientData>();
+        private readonly List<ClientData> toRemove = new List<ClientData>();
+        private readonly List<IHandler> handlers = new List<IHandler>();
+        private readonly List<ILogger> loggers = new List<ILogger>();
+        private readonly List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
+        private readonly List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
+        private readonly ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new ProducerConsumerQueue<(ClientData, byte[])>();
+        private readonly IServiceManager serviceManager = new ServiceManager();
         #endregion
         #region Private Properties
-        private IConsumerQueue<ClientData> _ConsumerClientQueue { get => addQueue; }
-        private IProducerQueue<ClientData> _ProducerClientQueue { get => addQueue; }
-        private IConsumerQueue<(ClientData, byte[])> _ConsumerMessageOutQueue { get => messageOutQueue; }
+        private IConsumerQueue<ClientData> ConsumerClientQueue { get => addQueue; }
+        private IProducerQueue<ClientData> ProducerClientQueue { get => addQueue; }
+        private IConsumerQueue<(ClientData, byte[])> ConsumerMessageOutQueue { get => messageOutQueue; }
         #endregion
         #region Public Properties
         /// <summary>
@@ -93,11 +95,11 @@ namespace MTSC.ServerSide
         /// <summary>
         /// List of clients currently connected to the server.
         /// </summary>
-        public IReadOnlyCollection<ClientData> Clients { get => clients.AsReadOnly(); }
+        public IReadOnlyCollection<ClientData> Clients { get => this.clients.AsReadOnly(); }
         /// <summary>
-        /// Dictionary of resources
+        /// <see cref="IServiceManager"/> for configuring and retrieving services.
         /// </summary>
-        public Dictionary<Type, IResource> Resources { get; } = new Dictionary<Type, IResource>();
+        public IServiceManager ServiceManager { get => this.serviceManager; }
         #endregion
         #region Constructors
         /// <summary>
@@ -105,7 +107,6 @@ namespace MTSC.ServerSide
         /// </summary>
         public Server()
         {
-            
         }
         /// <summary>
         /// Creates an instance of server.
@@ -127,6 +128,90 @@ namespace MTSC.ServerSide
         }
         #endregion
         #region Public Methods
+        /// <summary>
+        /// Adds a service with transient lifetime.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddTransientService<TInterface, TService>()
+            where TService : TInterface
+            where TInterface : class
+        {
+            this.serviceManager.RegisterTransient<TInterface, TService>();
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with transient lifetime. Registers the service for all the interfaces it implements.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddTransientService<TService>()
+            where TService : class
+        {
+            this.serviceManager.RegisterTransient<TService>();
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with transient lifetime.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddTransientService<TInterface, TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
+            where TService : TInterface
+            where TInterface : class
+        {
+            this.serviceManager.RegisterTransient<TInterface, TService>(serviceFactory);
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with transient lifetime. Registers the service for all the interfaces it implements.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddTransientService<TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
+            where TService : class
+        {
+            this.serviceManager.RegisterTransient<TService>(serviceFactory);
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with singleton lifetime.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddSingletonService<TInterface, TService>()
+            where TService : TInterface
+            where TInterface : class
+        {
+            this.serviceManager.RegisterSingleton<TInterface, TService>();
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with singleton lifetime. Registers the service for all the interfaces it implements.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddSingletonService<TService>()
+            where TService : class
+        {
+            this.serviceManager.RegisterSingleton<TService>();
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with singleton lifetime.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddSingletonService<TInterface, TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
+            where TService : TInterface
+            where TInterface : class
+        {
+            this.serviceManager.RegisterSingleton<TInterface, TService>(serviceFactory);
+            return this;
+        }
+        /// <summary>
+        /// Adds a service with singleton lifetime. Registers the service for all the interfaces it implements.
+        /// </summary>
+        /// <returns>This server object.</returns>
+        public Server AddSingletonService<TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
+            where TService : class
+        {
+            this.serviceManager.RegisterSingleton<TService>(serviceFactory);
+            return this;
+        }
         /// <summary>
         /// Sets the <see cref="ReadTimeout"/> property.
         /// </summary>
@@ -155,16 +240,6 @@ namespace MTSC.ServerSide
         public Server WithSslAuthenticationTimeout(TimeSpan timeout)
         {
             this.SslAuthenticationTimeout = timeout;
-            return this;
-        }
-        /// <summary>
-        /// Adds a resource to the server.
-        /// </summary>
-        /// <param name="resource"><see cref="IResource"/> resource to be added to the server.</param>
-        /// <returns><see cref="Server"/>.</returns>
-        public Server WithResource(IResource resource)
-        {
-            Resources[resource.GetType()] = resource;
             return this;
         }
         /// <summary>
@@ -254,7 +329,7 @@ namespace MTSC.ServerSide
         /// <returns>This server object.</returns>
         public Server AddHandler(IHandler handler)
         {
-            handlers.Add(handler);
+            this.handlers.Add(handler);
             return this;
         }
         /// <summary>
@@ -264,7 +339,7 @@ namespace MTSC.ServerSide
         /// <returns>This server object.</returns>
         public Server AddLogger(ILogger logger)
         {
-            loggers.Add(logger);
+            this.loggers.Add(logger);
             return this;
         }
         /// <summary>
@@ -274,7 +349,7 @@ namespace MTSC.ServerSide
         /// <returns>This server object.</returns>
         public Server AddExceptionHandler(IExceptionHandler handler)
         {
-            exceptionHandlers.Add(handler);
+            this.exceptionHandlers.Add(handler);
             return this;
         }
         /// <summary>
@@ -284,17 +359,18 @@ namespace MTSC.ServerSide
         /// <returns>This server object.</returns>
         public Server AddServerUsageMonitor(IServerUsageMonitor serverUsageMonitor)
         {
-            serverUsageMonitors.Add(serverUsageMonitor);
+            this.serverUsageMonitors.Add(serverUsageMonitor);
             return this;
         }
         /// <summary>
-        /// Get the resource of provided type
+        /// Gets a required service.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="T">Type of the service used during registration.</typeparam>
         /// <returns></returns>
-        public T GetResource<T>()
+        public T GetService<T>()
+            where T : class
         {
-            return (T)Resources[typeof(T)];
+            return this.serviceManager.GetService<T>();
         }
         /// <summary>
         /// Get handler of provided type
@@ -303,7 +379,7 @@ namespace MTSC.ServerSide
         /// <returns></returns>
         public T GetHandler<T>() where T : class
         {
-            foreach(var handler in handlers)
+            foreach(var handler in this.handlers)
             {
                 if(handler is T)
                 {
@@ -319,7 +395,7 @@ namespace MTSC.ServerSide
         /// <returns></returns>
         public T GetExceptionHandler<T>() where T : class
         {
-            foreach (var exceptionHandler in exceptionHandlers)
+            foreach (var exceptionHandler in this.exceptionHandlers)
             {
                 if (exceptionHandler is T)
                 {
@@ -335,7 +411,7 @@ namespace MTSC.ServerSide
         /// <returns></returns>
         public T GetLogger<T>() where T : class
         {
-            foreach (var logger in loggers)
+            foreach (var logger in this.loggers)
             {
                 if (logger is T)
                 {
@@ -351,7 +427,7 @@ namespace MTSC.ServerSide
         /// <returns></returns>
         public T GetServerUsageMonitor<T>() where T : class
         {
-            foreach (var serverMonitor in serverUsageMonitors)
+            foreach (var serverMonitor in this.serverUsageMonitors)
             {
                 if(serverMonitor is T)
                 {
@@ -375,7 +451,7 @@ namespace MTSC.ServerSide
         /// <param name="log">Message to be logged</param>
         public void Log(string log)
         {
-            foreach (ILogger logger in loggers)
+            foreach (ILogger logger in this.loggers)
             {
                 if (logger.Log(log))
                 {
@@ -389,7 +465,7 @@ namespace MTSC.ServerSide
         /// <param name="debugMessage">Debug message to be logged</param>
         public void LogDebug(string debugMessage)
         {
-            foreach (ILogger logger in loggers)
+            foreach (ILogger logger in this.loggers)
             {
                 if (logger.LogDebug(debugMessage))
                 {
@@ -402,11 +478,18 @@ namespace MTSC.ServerSide
         /// </summary>
         public void Run()
         {
-            listener?.Stop();
-            listener = new TcpListener(IPAddress.Any, Port);
-            listener.Start();
-            running = true;
-            Log("Server started on: " + listener.LocalEndpoint.ToString());
+            this.listener?.Stop();
+            this.listener = new TcpListener(IPAddress.Any, Port);
+            this.listener.Start();
+            this.running = true;
+            this.Log("Server started on: " + this.listener.LocalEndpoint.ToString());
+            foreach(var toBeRunOnStartup in this.handlers.OfType<IRunOnStartup>())
+            {
+                toBeRunOnStartup.OnStartup(this);
+            }
+
+            this.serviceManager.RegisterServiceManager();
+            this.serviceManager.RegisterSingleton<Server, Server>(sp => this);
             DateTime startLoopTime;
             while (running)
             {
@@ -417,11 +500,11 @@ namespace MTSC.ServerSide
                  */
                 try
                 {
-                    CheckAndRemoveInactiveClients();
+                    this.CheckAndRemoveInactiveClients();
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
                         {
@@ -432,23 +515,23 @@ namespace MTSC.ServerSide
                 /*
                  * Check and gather messages from clients and place them in their queues.
                  */
-                CheckAndGatherMessages();
+                this.CheckAndGatherMessages();
                 /*
                  * Check if the server has any pending connections.
                  * If it has a new connection, process it.
                  */
                 try
                 {
-                    while (listener.Pending())
+                    while (this.listener.Pending())
                     {
-                        TcpClient tcpClient = listener.AcceptTcpClient();
-                        ClientData clientStruct = new ClientData(tcpClient);
-                        Task.Run(() => AcceptClient(clientStruct));
+                        var tcpClient = this.listener.AcceptTcpClient();
+                        var clientStruct = new ClientData(tcpClient);
+                        Task.Run(() => this.AcceptClient(clientStruct));
                     }
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
                         {
@@ -459,11 +542,11 @@ namespace MTSC.ServerSide
                 /*
                  * Add all accepted clients to the list
                  */
-                while(this._ConsumerClientQueue.TryDequeue(out var client)) 
+                while(this.ConsumerClientQueue.TryDequeue(out var client)) 
                 {
-                    Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-                    clients.Add(client);
-                    foreach (IHandler handler in handlers)
+                    this.Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                    this.clients.Add(client);
+                    foreach (IHandler handler in this.handlers)
                     {
                         if (handler.HandleClient(this, client))
                         {
@@ -476,30 +559,30 @@ namespace MTSC.ServerSide
                  * Call the scheduler to handle all received messages and distribute them to the handlers
                  */
 
-                Scheduler.ScheduleHandling(
-                    clients
+                this.Scheduler.ScheduleHandling(
+                    this.clients
                         .Where(client => client.ToBeRemoved == false)
                         .Select(client => (client, (client as IQueueHolder<Message>).ConsumerQueue))
                         .ToList(),
-                    HandleClientMessages);
+                    this.HandleClientMessages);
 
                 /*
                  * Iterate through all the handlers, running periodic operations.
                  */
-                foreach(IHandler handler in handlers)
+                foreach(IHandler handler in this.handlers)
                 {
-                    TickHandler(handler);
+                    this.TickHandler(handler);
                 }
 
                 /*
                  * Check if there are messages queued to be sent.
                  */
-                SendQueuedMessages();
+                this.SendQueuedMessages();
 
                 /*
                  * Call the usage monitors and let them scale or determine current resource usage.
                  */
-                foreach (IServerUsageMonitor usageMonitor in serverUsageMonitors)
+                foreach (IServerUsageMonitor usageMonitor in this.serverUsageMonitors)
                 {
                     try
                     {
@@ -507,7 +590,7 @@ namespace MTSC.ServerSide
                     }
                     catch(Exception e)
                     {
-                        foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                        foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                         {
                             if (exceptionHandler.HandleException(e))
                             {
@@ -517,8 +600,8 @@ namespace MTSC.ServerSide
                     }
                 }
             }
-            listener.Stop();
-            foreach (var client in Clients)
+            this.listener.Stop();
+            foreach (var client in this.Clients)
             {
                 try
                 {
@@ -527,13 +610,13 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (var handler in exceptionHandlers)
+                    foreach (var handler in this.exceptionHandlers)
                     {
                         handler.HandleException(e);
                     }
                 }
             }
-            listener = null;
+            this.listener = null;
         }
         /// <summary>
         /// Runs the server async.
@@ -556,7 +639,7 @@ namespace MTSC.ServerSide
         #region Private Methods
         private void SendQueuedMessages()
         {
-            while (this._ConsumerMessageOutQueue.TryDequeue(out var tuple))
+            while (this.ConsumerMessageOutQueue.TryDequeue(out var tuple))
             {
                 (var client, var bytes) = tuple;
                 if (client.TcpClient.Available > 0)
@@ -569,19 +652,19 @@ namespace MTSC.ServerSide
                 try 
                 {
                     Message sendMessage = CommunicationPrimitives.BuildMessage(bytes);
-                    for (int i = handlers.Count - 1; i >= 0; i--)
+                    for (int i = this.handlers.Count - 1; i >= 0; i--)
                     {
                         IHandler handler = handlers[i];
                         handler.HandleSendMessage(this, client, ref sendMessage);
                     }
                     CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage, client.SslStream);
                     (client as IActiveClient).UpdateLastActivity();
-                    LogDebug("Sent message to " + client.TcpClient.Client.RemoteEndPoint.ToString() +
+                    this.LogDebug("Sent message to " + client.TcpClient.Client.RemoteEndPoint.ToString() +
                         "\nMessage length: " + sendMessage.MessageLength);
                 }
                 catch(Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
                         {
@@ -593,27 +676,27 @@ namespace MTSC.ServerSide
         }
         private void CheckAndRemoveInactiveClients()
         {
-            foreach (ClientData client in Clients)
+            foreach (ClientData client in this.Clients)
             {
                 if (!client.TcpClient.Connected || client.ToBeRemoved)
                 {
-                    toRemove.Add(client);
+                    this.toRemove.Add(client);
                 }
             }
-            foreach (ClientData client in toRemove)
+            foreach (ClientData client in this.toRemove)
             {
                 try
                 {
-                    foreach (IHandler handler in handlers)
+                    foreach (IHandler handler in this.handlers)
                     {
                         handler.ClientRemoved(this, client);
                     }
-                    LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
+                    this.LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
                     client.Dispose();
                 }
                 catch(Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
                         {
@@ -621,9 +704,9 @@ namespace MTSC.ServerSide
                         }
                     }
                 }
-                clients.Remove(client);
+                this.clients.Remove(client);
             }
-            toRemove.Clear();
+            this.toRemove.Clear();
         }
         private void TickHandler(IHandler handler)
         {
@@ -633,7 +716,7 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                 {
                     if (exceptionHandler.HandleException(e))
                     {
@@ -644,7 +727,7 @@ namespace MTSC.ServerSide
         }
         private void CheckAndGatherMessages()
         {
-            foreach(var client in Clients)
+            foreach(var client in this.Clients)
             {
                 if (client.TcpClient.Available > 0 && !(client as IActiveClient).ReadingData)
                 {
@@ -683,11 +766,11 @@ namespace MTSC.ServerSide
             {
                 if (client.Affinity is null)
                 {
-                    HandleClientMessage(client, message);
+                    this.HandleClientMessage(client, message);
                 }
                 else
                 {
-                    AffinityHandleClientMessage(client, message);
+                    this.AffinityHandleClientMessage(client, message);
                 }
             }
         }
@@ -700,7 +783,7 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                 {
                     if (exceptionHandler.HandleException(e))
                     {
@@ -714,7 +797,7 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                 {
                     if (exceptionHandler.HandleException(e))
                     {
@@ -725,7 +808,7 @@ namespace MTSC.ServerSide
         }
         private void HandleClientMessage(ClientData client, Message message)
         {
-            foreach (IHandler handler in handlers)
+            foreach (IHandler handler in this.handlers)
             {
                 try
                 {
@@ -736,7 +819,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
                         {
@@ -745,7 +828,7 @@ namespace MTSC.ServerSide
                     }
                 }
             }
-            foreach (IHandler handler in handlers)
+            foreach (IHandler handler in this.handlers)
             {
                 try
                 {
@@ -756,7 +839,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                     {
                         if (exceptionHandler.HandleException(e))
                         {
@@ -784,7 +867,7 @@ namespace MTSC.ServerSide
                         /*
                          * Client authenticated in the alloted time
                          */
-                        this._ProducerClientQueue.Enqueue(client);
+                        this.ProducerClientQueue.Enqueue(client);
                     }
                     else
                     {
@@ -793,12 +876,12 @@ namespace MTSC.ServerSide
                 }
                 else
                 {
-                    this._ProducerClientQueue.Enqueue(client);
+                    this.ProducerClientQueue.Enqueue(client);
                 }
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in exceptionHandlers)
+                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
                 {
                     if (exceptionHandler.HandleException(e))
                     {

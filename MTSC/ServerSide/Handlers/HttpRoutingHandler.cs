@@ -1,29 +1,22 @@
 ﻿using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.Telemetry;
-using MTSC.Exceptions;
-using Slim;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
 using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.ServerSide.Handlers
 {
-    public sealed class HttpRoutingHandler : IHandler
+    public sealed class HttpRoutingHandler : IHandler, IRunOnStartup
     {
         private static readonly Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
-
-        private readonly ServiceManager serviceManager = new ServiceManager();
         private readonly ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
         private readonly List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
         private readonly Dictionary<HttpMethods, Dictionary<string, (Type,
             Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary =
             new Dictionary<HttpMethods, Dictionary<string, (Type,
                 Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
-
-        private bool initialized = false;
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = double.MaxValue;
@@ -32,16 +25,14 @@ namespace MTSC.ServerSide.Handlers
         {
             foreach (HttpMethods method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
-                moduleDictionary[method] = new Dictionary<string, (Type,
+                this.moduleDictionary[method] = new Dictionary<string, (Type,
                     Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
             }
-
-            this.serviceManager.RegisterServiceManager();
         }
 
         public HttpRoutingHandler AddHttpLogger(IHttpLogger logger)
         {
-            httpLoggers.Add(logger);
+            this.httpLoggers.Add(logger);
             return this;
         }
         public HttpRoutingHandler AddRoute<T>(
@@ -120,7 +111,7 @@ namespace MTSC.ServerSide.Handlers
              * Else, parse the messages into a partial request. If this causes an exception, let it throw out of the handler,
              * cause the handler needs at least valid headers to work.
              */
-            PartialHttpRequest request = null;
+            PartialHttpRequest request;
             if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage)) 
             {
                 var bytesToBeAdded = message.MessageBytes.TrimTrailingNullBytes();
@@ -128,7 +119,7 @@ namespace MTSC.ServerSide.Handlers
                     fragmentedMessage.PartialRequest.Body.Length + 
                     message.MessageLength > this.MaximumRequestSize)
                 {
-                    QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{MaximumRequestSize}] bytes!" });
+                    this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{MaximumRequestSize}] bytes!" });
                     client.ResetAffinityIfMe(this);
                     client.Resources.RemoveResource<FragmentedMessage>();
                     client.Resources.RemoveResourceIfExists<RequestMapping>();
@@ -140,7 +131,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 if (message.MessageLength > this.MaximumRequestSize)
                 {
-                    QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{MaximumRequestSize}] bytes!" });
+                    this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{MaximumRequestSize}] bytes!" });
                     return false;
                 }
 
@@ -155,7 +146,7 @@ namespace MTSC.ServerSide.Handlers
                         server.LogDebug("Returning 100-Continue");
                         var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
                         contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
-                        QueueResponse(client, contResponse);
+                        this.QueueResponse(client, contResponse);
                     }
                 }
             }
@@ -174,12 +165,12 @@ namespace MTSC.ServerSide.Handlers
                     client.Resources.RemoveResource<RequestMapping>();
                     client.Resources.RemoveResource<FragmentedMessage>();
                     client.ResetAffinityIfMe(this);
-                    HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.RouteEnabler);
+                    this.HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.RouteEnabler);
                     return true;
                 }
                 else
                 {
-                    HandleIncompleteRequest(client, server, client.Resources.GetResource<FragmentedMessage>());
+                    this.HandleIncompleteRequest(server, client.Resources.GetResource<FragmentedMessage>());
                     return true;
                 }
             }
@@ -193,7 +184,7 @@ namespace MTSC.ServerSide.Handlers
                     {
                         var httpRequest = request.ToRequest();
                         client.ResetAffinityIfMe(this);
-                        return HandleCompleteRequest(client, server, httpRequest, module, routeEnabler);
+                        return this.HandleCompleteRequest(client, server, httpRequest, module, routeEnabler);
                     }
                     else
                     {
@@ -216,20 +207,9 @@ namespace MTSC.ServerSide.Handlers
 
         void IHandler.Tick(Server server)
         {
-            if (this.initialized is false)
+            while (this.messageOutQueue.Count > 0)
             {
-                this.initialized = true;
-                this.serviceManager.RegisterSingleton(typeof(Server), typeof(Server), (sp) => server);
-                this.serviceManager.RegisterSingleton(typeof(HttpRoutingHandler), typeof(HttpRoutingHandler), sp => this);
-                foreach(var resource in server.Resources.Values)
-                {
-                    this.serviceManager.RegisterSingleton(resource.GetType(), resource.GetType(), (sp) => resource);
-                }
-            }
-
-            while (messageOutQueue.Count > 0)
-            {
-                if (messageOutQueue.TryDequeue(out Tuple<ClientData, HttpResponse> tuple))
+                if (this.messageOutQueue.TryDequeue(out Tuple<ClientData, HttpResponse> tuple))
                 {
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetPackedResponse(true));
                 }
@@ -238,16 +218,27 @@ namespace MTSC.ServerSide.Handlers
             {
                 if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage)) 
                 {
-                    if ((DateTime.Now - fragmentedMessage.LastReceived) > FragmentsExpirationTime)
+                    if ((DateTime.Now - fragmentedMessage.LastReceived) > this.FragmentsExpirationTime)
                     {
                         client.Resources.RemoveResource<FragmentedMessage>();
-                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request timed out in [{FragmentsExpirationTime.TotalMilliseconds}] ms!" });
+                        this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request timed out in [{this.FragmentsExpirationTime.TotalMilliseconds}] ms!" });
                     }
                 }
             }
         }
 
-        private void HandleIncompleteRequest(ClientData client, Server server, FragmentedMessage fragmentedMessage)
+        void IRunOnStartup.OnStartup(Server server)
+        {
+            foreach (var routes in this.moduleDictionary.Values)
+            {
+                foreach ((var routeType, _) in routes.Values)
+                {
+                    server.ServiceManager.RegisterTransient(routeType, routeType);
+                }
+            }
+        }
+
+        private void HandleIncompleteRequest(Server server, FragmentedMessage fragmentedMessage)
         {
             fragmentedMessage.LastReceived = DateTime.Now;
             server.LogDebug("Incomplete request received!");
@@ -270,7 +261,7 @@ namespace MTSC.ServerSide.Handlers
                     module.CallHandleRequest(request).ContinueWith((task) => 
                     {
                         foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, task.Result);
-                            QueueResponse(client, task.Result); 
+                            this.QueueResponse(client, task.Result); 
                     });
                 }
                 catch (Exception e)
@@ -279,7 +270,7 @@ namespace MTSC.ServerSide.Handlers
                     server.LogDebug("Stacktrace: " + e.StackTrace);
                     var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
                     foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, response);
-                    QueueResponse(client, response);
+                    this.QueueResponse(client, response);
                 }
                 return true;
             }
@@ -291,7 +282,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 foreach (var httpLogger in this.httpLoggers) 
                     httpLogger.LogResponse(server, this, client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
-                QueueResponse(client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
+                this.QueueResponse(client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
                 return true;
             }
             else
@@ -325,7 +316,7 @@ namespace MTSC.ServerSide.Handlers
                 throw new InvalidOperationException($"Cannot create new route of type {routeType.FullName}. Not of type {typeof(HttpRouteBase).FullName}");
             }
 
-            var module = this.serviceManager.GetService(routeType) as HttpRouteBase;
+            var module = server.ServiceManager.GetService(routeType) as HttpRouteBase;
             (module as ISetHttpContext).SetClientData(client);
             (module as ISetHttpContext).SetServer(server);
             (module as ISetHttpContext).SetHttpRoutingHandler(this);
@@ -339,7 +330,6 @@ namespace MTSC.ServerSide.Handlers
                 throw new InvalidOperationException($"{routeType.FullName} must be of type {typeof(HttpRouteBase).FullName}");
             }
 
-            this.serviceManager.RegisterSingleton(routeType, routeType);
             this.moduleDictionary[method][uri] = (routeType, routeEnabler);
         }
     }

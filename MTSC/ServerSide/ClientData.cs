@@ -11,7 +11,7 @@ namespace MTSC.ServerSide
     /// </summary>
     public class ClientData : IDisposable, IActiveClient, IQueueHolder<Message>
     {
-        private ProducerConsumerQueue<Message> messageQueue = new ProducerConsumerQueue<Message>();
+        private readonly ProducerConsumerQueue<Message> messageQueue = new ProducerConsumerQueue<Message>();
 
         public TcpClient TcpClient { get; }
         /// <summary>
