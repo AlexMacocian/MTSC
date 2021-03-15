@@ -204,11 +204,12 @@ namespace MTSC.ServerSide.Handlers
                 if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Close)
                 {
                     client.ToBeRemoved = true;
-                    WebsocketMessage closeFrame = new WebsocketMessage
-                    {
-                        Opcode = WebsocketMessage.Opcodes.Close
-                    };
-                    this.QueueMessage(client, closeFrame);
+                    this.QueueMessage(client, new byte[0], WebsocketMessage.Opcodes.Close);
+                    return true;
+                }
+                else if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Ping)
+                {
+                    this.QueueMessage(client, new byte[0] ,WebsocketMessage.Opcodes.Pong);
                     return true;
                 }
                 else
