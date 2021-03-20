@@ -81,6 +81,10 @@ namespace MTSC.ServerSide
         /// </summary>
         public int Port { get; set; } = 80;
         /// <summary>
+        /// IPAddress used by the server.
+        /// </summary>
+        public IPAddress IPAddress { get; set; } = IPAddress.Any;
+        /// <summary>
         /// Returns the state of the server.
         /// </summary>
         public bool Running { get => listener != null; }
@@ -125,6 +129,28 @@ namespace MTSC.ServerSide
         {
             this.certificate = certificate;
             this.Port = port;
+        }
+        /// <summary>
+        /// Creates an instance of server.
+        /// </summary>
+        /// <param name="ipAddress">IPAddress to be used by the server.</param>
+        /// <param name="port">Port to be used by the server.</param>
+        public Server(IPAddress ipAddress, int port)
+        {
+            this.IPAddress = ipAddress;
+            this.Port = port;
+        }
+        /// <summary>
+        /// Creates an instance of server.
+        /// </summary>
+        /// <param name="ipAddress">IPAddress to be used by the server.</param>
+        /// <param name="certificate">Certificate for SSL.</param>
+        /// <param name="port">Port to be used by the server.</param>
+        public Server(X509Certificate2 certificate, IPAddress ipAddress, int port)
+        {
+            this.certificate = certificate;
+            this.Port = port;
+            this.IPAddress = ipAddress;
         }
         #endregion
         #region Public Methods
@@ -323,6 +349,16 @@ namespace MTSC.ServerSide
             return this;
         }
         /// <summary>
+        /// Sets the <see cref="IPAddress"/> of the server.
+        /// </summary>
+        /// <param name="iPAddress">Address used by the server.</param>
+        /// <returns>This server object.</returns>
+        public Server SetIPAddress(IPAddress iPAddress)
+        {
+            this.IPAddress = iPAddress;
+            return this;
+        }
+        /// <summary>
         /// Adds a <see cref="IHandler"/> to the server.
         /// </summary>
         /// <param name="handler">Handler to be added.</param>
@@ -479,7 +515,7 @@ namespace MTSC.ServerSide
         public void Run()
         {
             this.listener?.Stop();
-            this.listener = new TcpListener(IPAddress.Any, Port);
+            this.listener = new TcpListener(this.IPAddress, this.Port);
             this.listener.Start();
             this.running = true;
             this.Log("Server started on: " + this.listener.LocalEndpoint.ToString());
