@@ -12,14 +12,13 @@ namespace MTSC.ServerSide.Handlers
     {
         private static readonly Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
         private readonly ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
-        private readonly List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
+        private readonly List<IHttpLogger> httpLoggers = new();
         private readonly Dictionary<HttpMethods, Dictionary<string, (Type,
-            Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary =
-            new Dictionary<HttpMethods, Dictionary<string, (Type,
-                Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>>();
+            Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary = new();
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = double.MaxValue;
+        public bool Return500OnException { get; set; } = true;
 
         public HttpRoutingHandler()
         {
@@ -30,6 +29,11 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
+        public HttpRoutingHandler WithReturn500OnException(bool return500OnException)
+        {
+            this.Return500OnException = return500OnException;
+            return this;
+        }
         public HttpRoutingHandler AddHttpLogger(IHttpLogger logger)
         {
             this.httpLoggers.Add(logger);

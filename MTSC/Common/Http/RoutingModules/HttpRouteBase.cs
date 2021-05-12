@@ -8,13 +8,32 @@ namespace MTSC.Common.Http.RoutingModules
 {
     public abstract class HttpRouteBase : ISetHttpContext
     {
+        private static HttpResponse InternalServerError500 { get; } =
+            new HttpResponse
+            {
+                StatusCode = HttpMessage.StatusCodes.InternalServerError,
+                BodyString = "An exception ocurred while processing the request"
+            };
+
         public ClientData ClientData { get; private set; }
         public HttpRoutingHandler HttpRoutingHandler { get; private set; }
         public Server Server { get; private set; }
 
         public async Task<HttpResponse> CallHandleRequest(HttpRequest request)
         {
-            return await this.HandleRequest(request);
+            try
+            {
+                return await this.HandleRequest(request);
+            }
+            catch
+            {
+                if (this.HttpRoutingHandler.Return500OnException is true)
+                {
+                    return InternalServerError500;
+                }
+
+                throw;
+            }
         }
         public abstract Task<HttpResponse> HandleRequest(HttpRequest request);
 

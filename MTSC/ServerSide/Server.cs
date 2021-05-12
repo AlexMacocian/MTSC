@@ -28,14 +28,14 @@ namespace MTSC.ServerSide
         private bool running;
         private X509Certificate2 certificate;
         private TcpListener listener;
-        private readonly ProducerConsumerQueue<ClientData> addQueue = new ProducerConsumerQueue<ClientData>();
-        private readonly List<ClientData> clients = new List<ClientData>();
-        private readonly List<ClientData> toRemove = new List<ClientData>();
-        private readonly List<IHandler> handlers = new List<IHandler>();
-        private readonly List<ILogger> loggers = new List<ILogger>();
-        private readonly List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
-        private readonly List<IServerUsageMonitor> serverUsageMonitors = new List<IServerUsageMonitor>();
-        private readonly ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new ProducerConsumerQueue<(ClientData, byte[])>();
+        private readonly ProducerConsumerQueue<ClientData> addQueue = new();
+        private readonly List<ClientData> clients = new();
+        private readonly List<ClientData> toRemove = new();
+        private readonly List<IHandler> handlers = new();
+        private readonly List<ILogger> loggers = new();
+        private readonly List<IExceptionHandler> exceptionHandlers = new();
+        private readonly List<IServerUsageMonitor> serverUsageMonitors = new();
+        private readonly ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new();
         private readonly IServiceManager serviceManager = new ServiceManager();
         #endregion
         #region Private Properties
@@ -540,13 +540,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                    {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
-                    }
+                    this.HandleException(e);
                 }
                 /*
                  * Check and gather messages from clients and place them in their queues.
@@ -567,13 +561,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                    {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
-                    }
+                    this.HandleException(e);
                 }
                 /*
                  * Add all accepted clients to the list
@@ -626,13 +614,7 @@ namespace MTSC.ServerSide
                     }
                     catch(Exception e)
                     {
-                        foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                        {
-                            if (exceptionHandler.HandleException(e))
-                            {
-                                break;
-                            }
-                        }
+                        this.HandleException(e);
                     }
                 }
             }
@@ -700,13 +682,7 @@ namespace MTSC.ServerSide
                 }
                 catch(Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                    {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
-                    }
+                    this.HandleException(e);
                 }
             }
         }
@@ -732,13 +708,7 @@ namespace MTSC.ServerSide
                 }
                 catch(Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                    {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
-                    }
+                    this.HandleException(e);
                 }
                 this.clients.Remove(client);
             }
@@ -752,13 +722,7 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                {
-                    if (exceptionHandler.HandleException(e))
-                    {
-                        break;
-                    }
-                }
+                this.HandleException(e);
             }
         }
         private void CheckAndGatherMessages()
@@ -819,13 +783,7 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                {
-                    if (exceptionHandler.HandleException(e))
-                    {
-                        break;
-                    }
-                }
+                this.HandleException(e);
             }
             try
             {
@@ -833,13 +791,7 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                {
-                    if (exceptionHandler.HandleException(e))
-                    {
-                        break;
-                    }
-                }
+                this.HandleException(e);
             }
         }
         private void HandleClientMessage(ClientData client, Message message)
@@ -855,13 +807,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                    {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
-                    }
+                    this.HandleException(e);
                 }
             }
             foreach (IHandler handler in this.handlers)
@@ -875,13 +821,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                    {
-                        if (exceptionHandler.HandleException(e))
-                        {
-                            break;
-                        }
-                    }
+                    this.HandleException(e);
                 }
             }
         }
@@ -891,7 +831,7 @@ namespace MTSC.ServerSide
             {
                 if (this.certificate != null)
                 {
-                    SslStream sslStream = new SslStream(client.SafeNetworkStream,
+                    SslStream sslStream = new(client.SafeNetworkStream,
                         false,
                         this.RemoteCertificateValidationCallback,
                         this.LocalCertificateSelectionCallback,
@@ -917,14 +857,18 @@ namespace MTSC.ServerSide
             }
             catch (Exception e)
             {
-                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
-                {
-                    if (exceptionHandler.HandleException(e))
-                    {
-                        break;
-                    }
-                }
+                this.HandleException(e);
                 client.Dispose();
+            }
+        }
+        private void HandleException(Exception exception)
+        {
+            foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
+            {
+                if (exceptionHandler.HandleException(exception))
+                {
+                    break;
+                }
             }
         }
         #endregion

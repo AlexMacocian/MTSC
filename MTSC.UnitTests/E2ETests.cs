@@ -43,8 +43,12 @@ namespace MTSC.UnitTests
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute<EchoWebsocketModule>("echo")
                     .AddRoute<EchoWebsocketModule2>("echo2")
-                    .AddRoute<RoutingModules.HelloWorldModule>("hello-world"))
+                    .AddRoute<RoutingModules.HelloWorldModule>("hello-world")
+                    .WithHeartbeatEnabled(true)
+                    .WithHeartbeatFrequency(TimeSpan.FromMilliseconds(100)))
                 .AddHandler(new HttpRoutingHandler()
+                    .WithReturn500OnException(true)
+                    .AddRoute<ExceptionThrowingModule>(HttpMessage.HttpMethods.Get, "throw")
                     .AddRoute<Http200Module>(HttpMessage.HttpMethods.Get, "")
                     .AddRoute<TestQueryModule>(HttpMessage.HttpMethods.Get, "query")
                     .AddRoute<EchoModule>(HttpMessage.HttpMethods.Post, "echo")
@@ -60,6 +64,16 @@ namespace MTSC.UnitTests
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.RunAsync();
         }
+
+        [TestMethod]
+        public async Task ServerReturns500OnError()
+        {
+            HttpClient httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://localhost:800");
+            var response = await httpClient.GetAsync("throw");
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.InternalServerError);
+        }
+
         [TestMethod]
         public async Task ServerParsesRequestAndResponse()
         {

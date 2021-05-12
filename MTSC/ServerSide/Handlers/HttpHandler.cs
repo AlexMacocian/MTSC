@@ -14,14 +14,13 @@ namespace MTSC.ServerSide.Handlers
     /// </summary>
     public sealed class HttpHandler : IHandler
     {
-        private static readonly string urlEncodedHeader = "application/x-www-form-urlencoded";
-        private static readonly string multipartHeader = "multipart/form-data";
         #region Fields
-        private List<IHttpLogger> httpLoggers = new List<IHttpLogger>();
-        private List<IHttpModule> httpModules = new List<IHttpModule>();
-        private ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new ConcurrentQueue<Tuple<ClientData, HttpResponse>>();
+        private readonly List<IHttpLogger> httpLoggers = new();
+        private readonly List<IHttpModule> httpModules = new();
+        private readonly ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new();
         #endregion
         #region Public Properties
+        public bool Return500OnException { get; set; } = true;
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = 15000;
         #endregion
@@ -40,6 +39,11 @@ namespace MTSC.ServerSide.Handlers
         public HttpHandler WithMaximumSize(double size)
         {
             this.MaximumRequestSize = size;
+            return this;
+        }
+        public HttpHandler WithReturn500OnException(bool return500OnException)
+        {
+            this.Return500OnException = return500OnException;
             return this;
         }
         /// <summary>
@@ -180,7 +184,7 @@ namespace MTSC.ServerSide.Handlers
                 client.Resources.RemoveResource<FragmentedMessage>();
             }
 
-            HttpResponse response = new HttpResponse();
+            HttpResponse response = new();
             if (request.Headers.ContainsHeader(HttpMessage.GeneralHeaders.Connection) &&
                 request.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "close")
             {
@@ -194,13 +198,27 @@ namespace MTSC.ServerSide.Handlers
             foreach (var httpLogger in this.httpLoggers) httpLogger.LogRequest(server, this, client, request);
             foreach (IHttpModule module in httpModules)
             {
-                if (module.HandleRequest(server, this, client, request, ref response))
+                try
                 {
-                    break;
+                    if (module.HandleRequest(server, this, client, request, ref response))
+                    {
+                        break;
+                    }
+                }
+                catch
+                {
+                    if (this.Return500OnException)
+                    {
+                        response.StatusCode = StatusCodes.InternalServerError;
+                        response.BodyString = "An exception ocurred while processing the request";
+                        break;
+                    }
+
+                    throw;
                 }
             }
             foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, response);
-            QueueResponse(client, response);
+            this.QueueResponse(client, response);
             return true;
         }
         /// <summary>

@@ -28,11 +28,28 @@ namespace MTSC.ServerSide.Handlers
             Closed
         }
         #region Fields
+        private byte[] emptyData = new byte[0];
+        private DateTime ellapsedTime = DateTime.Now;
+        private DateTime previousHeartbeatProc = DateTime.Now;
         private readonly Dictionary<string, (Type, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)> moduleDictionary =
             new Dictionary<string, (Type, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
         private readonly ConcurrentQueue<Tuple<ClientData, WebsocketMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, WebsocketMessage>>();
         #endregion
+        #region Properties
+        public bool HeartbeatEnabled { get; set; }
+        public TimeSpan HeartbeatFrequency { get; set; }
+        #endregion
         #region Public Methods
+        public WebsocketRoutingHandler WithHeartbeatFrequency(TimeSpan heartbeatFrequency)
+        {
+            this.HeartbeatFrequency = heartbeatFrequency;
+            return this;
+        }
+        public WebsocketRoutingHandler WithHeartbeatEnabled(bool heartbeatEnabled)
+        {
+            this.HeartbeatEnabled = heartbeatEnabled;
+            return this;
+        }
         public WebsocketRoutingHandler AddRoute<T>(string uri)
             where T : WebsocketRouteBase
         {
@@ -212,6 +229,11 @@ namespace MTSC.ServerSide.Handlers
                     this.QueueMessage(client, new byte[0] ,WebsocketMessage.Opcodes.Pong);
                     return true;
                 }
+                else if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Pong)
+                {
+                    // According to https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers, ignore unrequested pings.
+                    return true;
+                }
                 else
                 {
                     try 
@@ -244,11 +266,18 @@ namespace MTSC.ServerSide.Handlers
 
         void IHandler.Tick(Server server)
         {
+            this.ellapsedTime = DateTime.Now;
             foreach(var client in server.Clients)
             {
                 if (client.Resources.TryGetResource<WebsocketRouteBase>(out var route))
                 {
                     route.Tick();
+                    if (this.HeartbeatEnabled is true &&
+                        (this.ellapsedTime - this.previousHeartbeatProc) > this.HeartbeatFrequency)
+                    {
+                        this.previousHeartbeatProc = DateTime.Now;
+                        this.QueueMessage(client, emptyData, WebsocketMessage.Opcodes.Ping);
+                    }
                 }
             }
 
