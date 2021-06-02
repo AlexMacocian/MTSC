@@ -5,6 +5,7 @@ using System.Threading;
 namespace MTSC.UnitTests
 {
     [TestClass]
+    [TestCategory("ServerTests")]
     public class ServerTests
     {
         [TestMethod]

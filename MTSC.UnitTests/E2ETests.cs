@@ -26,6 +26,7 @@ using System.Web;
 namespace MTSC.UnitTests
 {
     [TestClass]
+    [TestCategory("ServerTests")]
     public class E2ETests
     {
         private volatile byte[] receivedMessage = null;
@@ -124,7 +125,6 @@ namespace MTSC.UnitTests
         }
 
         [TestMethod]
-        [TestCategory("LocalTest")]
         public void SendFragmentedHttpMessage()
         {
             Client.Client client = new Client.Client();
@@ -165,7 +165,6 @@ namespace MTSC.UnitTests
         }
 
         [TestMethod]
-        [TestCategory("LocalTest")]
         public void SendFragmentedHttpMessageShouldExpire()
         {
             Client.Client client = new Client.Client();
@@ -203,7 +202,6 @@ namespace MTSC.UnitTests
         }
 
         [TestMethod]
-        [TestCategory("LocalTest")]
         public void SendFragmentedHttpMessageExceedingSizeShouldExpire()
         {
             Client.Client client = new Client.Client();
