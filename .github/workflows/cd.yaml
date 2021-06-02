@@ -44,7 +44,7 @@ jobs:
       env:
         RuntimeIdentifier: win-${{ matrix.targetplatform }}
 
-    - name: Build Slim project
+    - name: Build MTSC project
       run: dotnet build MTSC -c $env:Configuration
 
     - name: Push nuget package
