@@ -1,0 +1,55 @@
+name:  MTSC CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+      
+jobs:
+
+  build:
+    environment: Default
+    strategy:
+      matrix:
+        targetplatform: [x64]
+
+    runs-on: windows-latest
+
+    env:
+      Configuration: Release
+      Solution_Path: MTSC.sln
+      Test_Project_Path: MTSC.UnitTests\MTSC.UnitTests.csproj
+      Source_Project_Path: MTSC\MTSC.csproj
+      Actions_Allow_Unsecure_Commands: true
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '5.0.202'
+
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v1.0.1
+
+    - name: Restore project
+      run: msbuild $env:Solution_Path /t:Restore /p:Configuration=$env:Configuration /p:RuntimeIdentifier=$env:RuntimeIdentifier
+      env:
+        RuntimeIdentifier: win-${{ matrix.targetplatform }}
+
+    - name: Build Slim project
+      run: dotnet build MTSC -c $env:Configuration
+
+    - name: Push nuget package
+      uses: brandedoutcast/publish-nuget@v2.5.5
+      with:
+         PROJECT_FILE_PATH: MTSC\MTSC.csproj
+         NUGET_KEY: ${{secrets.NUGET_API_KEY}}
+    
