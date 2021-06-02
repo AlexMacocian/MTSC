@@ -26,6 +26,7 @@ using System.Web;
 namespace MTSC.UnitTests
 {
     [TestClass]
+    [TestCategory("ServerTests")]
     public class E2ETests
     {
         private volatile byte[] receivedMessage = null;
