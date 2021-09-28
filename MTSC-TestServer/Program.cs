@@ -16,7 +16,7 @@ namespace MTSC_TestServer
     {
         static void Main(string[] args)
         {
-            Server server = new Server(800);
+            var server = new Server(800);
             server
                 .AddLogger(new ConsoleLogger())
                 .AddLogger(new DebugConsoleLogger())

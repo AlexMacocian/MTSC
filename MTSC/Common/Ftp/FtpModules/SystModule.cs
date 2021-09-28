@@ -12,6 +12,7 @@ namespace MTSC.Common.Ftp.FtpModules
                 handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.NAMESystemType, Message = "MTSC Webserver " + System.Reflection.Assembly.GetEntryAssembly().GetName().Version });
                 return true;
             }
+
             return false;
         }
     }

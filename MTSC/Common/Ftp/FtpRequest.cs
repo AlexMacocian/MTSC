@@ -23,6 +23,7 @@ namespace MTSC.Common.Ftp
             {
                 throw new UnknownFtpCommandException($"Unknown FTP command: {tokens[0]}");
             }
+
             this.Command = command;
             this.Arguments = tokens.Length > 1 ? tokens.Skip(1).ToArray() : new string[0];
         }
@@ -34,12 +35,13 @@ namespace MTSC.Common.Ftp
 
         public static byte[] ToBytes(FtpRequest request)
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.Append(request.Command.ToString());
-            foreach(string argument in request.Arguments)
+            foreach(var argument in request.Arguments)
             {
                 sb.Append(' ').Append(argument);
             }
+
             sb.Append("\r\n");
             return Encoding.UTF8.GetBytes(sb.ToString());
         }

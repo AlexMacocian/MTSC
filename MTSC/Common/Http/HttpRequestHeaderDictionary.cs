@@ -11,10 +11,10 @@ namespace MTSC.Common.Http
     {
         private Dictionary<string, string> headers { get; } = new Dictionary<string, string>();
 
-        public string this[string key] { get => headers[key]; set => headers[key] = value; }
-        public string this[GeneralHeaders key] { get => headers[HttpHeaders.GeneralHeaders[(int)key]]; set => headers[HttpHeaders.GeneralHeaders[(int)key]] = value; }
-        public string this[EntityHeaders key] { get => headers[HttpHeaders.EntityHeaders[(int)key]]; set => headers[HttpHeaders.EntityHeaders[(int)key]] = value; }
-        public string this[RequestHeaders key] { get => headers[HttpHeaders.RequestHeaders[(int)key]]; set => headers[HttpHeaders.RequestHeaders[(int)key]] = value; }
+        public string this[string key] { get => this.headers[key]; set => this.headers[key] = value; }
+        public string this[GeneralHeaders key] { get => this.headers[HttpHeaders.GeneralHeaders[(int)key]]; set => this.headers[HttpHeaders.GeneralHeaders[(int)key]] = value; }
+        public string this[EntityHeaders key] { get => this.headers[HttpHeaders.EntityHeaders[(int)key]]; set => this.headers[HttpHeaders.EntityHeaders[(int)key]] = value; }
+        public string this[RequestHeaders key] { get => this.headers[HttpHeaders.RequestHeaders[(int)key]]; set => this.headers[HttpHeaders.RequestHeaders[(int)key]] = value; }
 
         /// <summary>
         /// Check if the message contains a header.
@@ -23,7 +23,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(RequestHeaders header)
         {
-            return ContainsHeader(HttpHeaders.RequestHeaders[(int)header]);
+            return this.ContainsHeader(HttpHeaders.RequestHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -32,7 +32,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(GeneralHeaders header)
         {
-            return ContainsHeader(HttpHeaders.GeneralHeaders[(int)header]);
+            return this.ContainsHeader(HttpHeaders.GeneralHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -41,7 +41,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(EntityHeaders header)
         {
-            return ContainsHeader(HttpHeaders.EntityHeaders[(int)header]);
+            return this.ContainsHeader(HttpHeaders.EntityHeaders[(int)header]);
         }
         /// <summary>
         /// Check if the message contains a header.
@@ -50,7 +50,7 @@ namespace MTSC.Common.Http
         /// <returns>True if the message contains a header with the provided key.</returns>
         public bool ContainsHeader(string header)
         {
-            return headers.ContainsKey(header);
+            return this.headers.ContainsKey(header);
         }
         /// <summary>
         /// Adds header with specified value.
@@ -99,12 +99,12 @@ namespace MTSC.Common.Http
 
         public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
         {
-            return ((IEnumerable<KeyValuePair<string, string>>)headers).GetEnumerator();
+            return ((IEnumerable<KeyValuePair<string, string>>)this.headers).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return ((IEnumerable<KeyValuePair<string, string>>)headers).GetEnumerator();
+            return ((IEnumerable<KeyValuePair<string, string>>)this.headers).GetEnumerator();
         }
     }
 }

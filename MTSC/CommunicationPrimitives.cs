@@ -27,6 +27,7 @@ namespace MTSC
             {
                 stream = safeStream;
             }
+
             var buffer = new byte[1024];
             var ms = new MemoryStream();
             stream.ReadTimeout = 1;
@@ -74,13 +75,14 @@ namespace MTSC
             {
                 stream = client.GetStream();
             }
+
             stream.Write(message.MessageBytes, 0, (int)message.MessageLength);
             stream.Flush();
         }
 
         public static Message BuildMessage(byte[] msgData)
         {
-            Message message = new Message((uint)msgData.Length, msgData);
+            var message = new Message((uint)msgData.Length, msgData);
             return message;
         }
     }

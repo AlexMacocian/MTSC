@@ -14,7 +14,7 @@ namespace MTSC.Common.WebSockets.ServerModules
         #region Interface Implementation
         bool IWebsocketModule.HandleReceivedMessage(ServerSide.Server server, WebsocketHandler handler, ClientData client, WebsocketMessage receivedMessage)
         {
-            SendMessage(handler, client, receivedMessage);
+            this.SendMessage(handler, client, receivedMessage);
             return false;
         }
 

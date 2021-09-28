@@ -14,6 +14,7 @@ namespace MTSC.UnitTests
             {
                 return Task.FromResult(new HttpResponse { StatusCode = HttpMessage.StatusCodes.OK });
             }
+
             return Task.FromResult(new HttpResponse { StatusCode = HttpMessage.StatusCodes.BadRequest });
         }
     }

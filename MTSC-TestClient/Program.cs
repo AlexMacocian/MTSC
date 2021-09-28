@@ -11,9 +11,9 @@ namespace MTSC_TestClient
     {
         static void Main(string[] args)
         {
-            Client client = new Client();
-            WebsocketHandler websocketHandler = new WebsocketHandler();
-            ChatModule chatModule = new ChatModule();
+            var client = new Client();
+            var websocketHandler = new WebsocketHandler();
+            var chatModule = new ChatModule();
             client
                 .SetServerAddress("127.0.0.1")
                 .SetPort(800)
@@ -26,7 +26,7 @@ namespace MTSC_TestClient
                 .Connect();
             while (true)
             {
-                string message = Console.ReadLine();
+                var message = Console.ReadLine();
                 chatModule.SendMessage(websocketHandler, message);
             }
         }

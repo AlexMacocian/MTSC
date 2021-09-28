@@ -21,15 +21,15 @@ namespace MTSC.Common.Ftp.FtpModules
 
         bool IFtpModule.HandleRequest(FtpRequest request, ClientData client, FtpHandler handler, Server server)
         {
-            if (!Directory.Exists(Path.GetFullPath(RootPath)))
+            if (!Directory.Exists(Path.GetFullPath(this.RootPath)))
             {
-                server.Log($"Root path [{Path.GetFullPath(RootPath)}] doesn't exist! Creating it now!");
-                Directory.CreateDirectory(Path.GetFullPath(RootPath));
+                server.Log($"Root path [{Path.GetFullPath(this.RootPath)}] doesn't exist! Creating it now!");
+                Directory.CreateDirectory(Path.GetFullPath(this.RootPath));
             }
 
             if (!client.Resources.TryGetResource<FtpData>(out var ftpData))
             {
-                client.Resources.SetResource(new FtpData { CurrentDirectory = Path.GetFullPath(RootPath) });
+                client.Resources.SetResource(new FtpData { CurrentDirectory = Path.GetFullPath(this.RootPath) });
             }
 
             if (string.IsNullOrEmpty(ftpData.CurrentDirectory))
@@ -39,27 +39,27 @@ namespace MTSC.Common.Ftp.FtpModules
 
             if (request.Command == FtpRequestCommands.MKD)
             {
-                handler.QueueFtpResponse(server, client, CreateDirectory(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.CreateDirectory(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.PWD)
             {
-                handler.QueueFtpResponse(server, client, PrintCurrentDirectory(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.PrintCurrentDirectory(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.CWD)
             {
-                handler.QueueFtpResponse(server, client, ChangeCurrentDirectory(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.ChangeCurrentDirectory(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.CDUP)
             {
-                handler.QueueFtpResponse(server, client, ChangeToParentDirectory(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.ChangeToParentDirectory(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.RMD)
             {
-                handler.QueueFtpResponse(server, client, RemoveDirectory(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.RemoveDirectory(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.LIST)
@@ -69,7 +69,8 @@ namespace MTSC.Common.Ftp.FtpModules
                     handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.FileStatusOkay, Message = "Opening data connection" });
                     ftpData.OpenDataConnection();
                 }
-                handler.QueueFtpResponse(server, client, ListFolder(request, ftpData));
+
+                handler.QueueFtpResponse(server, client, this.ListFolder(request, ftpData));
                 ftpData.CloseDataConnection();
                 return true;
             }
@@ -88,6 +89,7 @@ namespace MTSC.Common.Ftp.FtpModules
             {
                 relativePath = relativePath.Substring(this.RootPath.Length) + "\\";
             }
+
             return new FtpResponse { StatusCode = FtpResponseCodes.PATHNAMECreated, Message = $"\"{relativePath}\" is current directory" };
         }
 
@@ -96,14 +98,14 @@ namespace MTSC.Common.Ftp.FtpModules
             var path = request.Arguments.Length > 0 ?
                 Path.GetFullPath(ftpData.CurrentDirectory + request.Arguments.Aggregate((prev, next) => prev + " " + next)) :
                 ftpData.CurrentDirectory;
-            IEnumerable<string> directories = Directory.EnumerateDirectories(path);
-            IEnumerable<string> files = Directory.EnumerateFiles(path);
+            var directories = Directory.EnumerateDirectories(path);
+            var files = Directory.EnumerateFiles(path);
 
-            foreach (string dir in directories)
+            foreach (var dir in directories)
             {
-                DateTime editDate = Directory.GetLastWriteTime(dir);
+                var editDate = Directory.GetLastWriteTime(dir);
 
-                string date = editDate < DateTime.Now.Subtract(TimeSpan.FromDays(180)) ?
+                var date = editDate < DateTime.Now.Subtract(TimeSpan.FromDays(180)) ?
                     editDate.ToString("MMM dd  yyyy", CultureInfo.InvariantCulture) :
                     editDate.ToString("MMM dd HH:mm", CultureInfo.InvariantCulture);
 
@@ -112,11 +114,11 @@ namespace MTSC.Common.Ftp.FtpModules
                 ftpData.SendData(bytes, bytes.Length);
             }
 
-            foreach (string file in files)
+            foreach (var file in files)
             {
-                FileInfo f = new FileInfo(file);
+                var f = new FileInfo(file);
 
-                string date = f.LastWriteTime < DateTime.Now.Subtract(TimeSpan.FromDays(180)) ?
+                var date = f.LastWriteTime < DateTime.Now.Subtract(TimeSpan.FromDays(180)) ?
                     f.LastWriteTime.ToString("MMM dd  yyyy", CultureInfo.InvariantCulture) :
                     f.LastWriteTime.ToString("MMM dd HH:mm", CultureInfo.InvariantCulture);
 
@@ -126,7 +128,7 @@ namespace MTSC.Common.Ftp.FtpModules
 
                 if (length.Length < 8)
                 {
-                    for (int i = 0; i < 8 - length.Length; i++)
+                    for (var i = 0; i < 8 - length.Length; i++)
                     {
                         line += ' ';
                     }
@@ -136,6 +138,7 @@ namespace MTSC.Common.Ftp.FtpModules
                 var bytes = Encoding.UTF8.GetBytes(line);
                 ftpData.SendData(bytes, bytes.Length);
             }
+
             return new FtpResponse { StatusCode = FtpResponseCodes.ClosingDataConnection, Message = "Transfer complete" };
         }
 
@@ -193,7 +196,7 @@ namespace MTSC.Common.Ftp.FtpModules
         private FtpResponse ChangeToParentDirectory(FtpRequest request, FtpData ftpData)
         {
             var directoryInfo = Directory.GetParent(ftpData.CurrentDirectory);
-            if (!directoryInfo.FullName.IsSubPathOf(Path.GetFullPath(RootPath)))
+            if (!directoryInfo.FullName.IsSubPathOf(Path.GetFullPath(this.RootPath)))
             {
                 return new FtpResponse { StatusCode = FtpResponseCodes.SyntaxError, Message = "Cannot CDUP from root directory!" };
             }

@@ -127,7 +127,7 @@ namespace MTSC.Common.Http
             LastModified = 9
         }
 
-        private Dictionary<string, string> headers = new Dictionary<string, string>();
-        private List<Cookie> cookies = new List<Cookie>();
+        private Dictionary<string, string> headers = new();
+        private List<Cookie> cookies = new();
     }
 }

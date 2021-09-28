@@ -5,7 +5,7 @@ namespace MTSC.Client.Handlers
 {
     public sealed class BroadcastHandler : IHandler
     {
-        private List<string> buffer = new List<string>();
+        private List<string> buffer = new();
         /// <summary>
         /// Creates a new instance of BroadcastHandler.
         /// </summary>

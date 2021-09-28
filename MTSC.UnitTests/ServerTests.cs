@@ -11,7 +11,7 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void Stop()
         {
-            Server server = new Server();
+            var server = new Server();
             server.RunAsync();
             Thread.Sleep(1000);
             Assert.IsTrue(server.Running);

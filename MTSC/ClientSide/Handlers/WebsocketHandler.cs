@@ -29,8 +29,8 @@ namespace MTSC.Client.Handlers
 
         #region Fields
         SocketState state = SocketState.Initial;
-        Queue<WebsocketMessage> messageQueue = new Queue<WebsocketMessage>();
-        List<IWebsocketModule> websocketModules = new List<IWebsocketModule>();
+        Queue<WebsocketMessage> messageQueue = new();
+        List<IWebsocketModule> websocketModules = new();
         string expectedguid = string.Empty;
         #endregion
         #region Properties
@@ -39,7 +39,7 @@ namespace MTSC.Client.Handlers
         #region Constructors
         public WebsocketHandler()
         {
-            WebsocketURI = "/";
+            this.WebsocketURI = "/";
         }
         #endregion
         #region Public Methods
@@ -50,7 +50,7 @@ namespace MTSC.Client.Handlers
         /// <returns>This handler object.</returns>
         public WebsocketHandler AddModule(IWebsocketModule websocketModule)
         {
-            websocketModules.Add(websocketModule);
+            this.websocketModules.Add(websocketModule);
             return this;
         }
         /// <summary>
@@ -59,7 +59,7 @@ namespace MTSC.Client.Handlers
         /// <param name="message">Message to be sent.</param>
         public void QueueMessage(WebsocketMessage message)
         {
-            messageQueue.Enqueue(message);
+            this.messageQueue.Enqueue(message);
         }
         #endregion
         #region Handler Implementation
@@ -70,17 +70,17 @@ namespace MTSC.Client.Handlers
 
         bool IHandler.HandleReceivedMessage(Client client, Message message)
         {
-            if(state == SocketState.Handshaking)
+            if(this.state == SocketState.Handshaking)
             {
-                HttpResponse response = new HttpResponse(message.MessageBytes);
+                var response = new HttpResponse(message.MessageBytes);
                 if(response.StatusCode == HttpMessage.StatusCodes.SwitchingProtocols &&
                     response.Headers["Upgrade"] == "websocket" &&
                     response.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" &&
-                    response.Headers[WebsocketHeaderAcceptKey].Trim() == expectedguid)
+                    response.Headers[WebsocketHeaderAcceptKey].Trim() == this.expectedguid)
                 {
-                    state = SocketState.Established;
+                    this.state = SocketState.Established;
                     client.LogDebug($"Websocket handshake completed!");
-                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    foreach (var websocketModule in this.websocketModules)
                     {
                         websocketModule.ConnectionInitialized(client, this);
                     }
@@ -89,23 +89,24 @@ namespace MTSC.Client.Handlers
                 {
                     client.LogDebug($"Expected websocket handshake response. Got {response.StatusCode}");
                 }
+
                 return true;
             }
-            else if(state == SocketState.Established)
+            else if(this.state == SocketState.Established)
             {
-                WebsocketMessage receivedMessage = new WebsocketMessage(message.MessageBytes);
+                var receivedMessage = new WebsocketMessage(message.MessageBytes);
                 client.LogDebug($"Received websocket message of length {message.MessageBytes.Length}.");
                 if (receivedMessage.Opcode == WebsocketMessage.Opcodes.Close)
                 {
                     client.LogDebug("Closing websocket");
-                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    foreach (var websocketModule in this.websocketModules)
                     {
                         websocketModule.ConnectionClosed(client, this);
                     }
                 }
                 else
                 {
-                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    foreach (var websocketModule in this.websocketModules)
                     {
                         if (websocketModule.HandleReceivedMessage(client, this, receivedMessage))
                         {
@@ -113,8 +114,10 @@ namespace MTSC.Client.Handlers
                         }
                     }
                 }
+
                 return true;
             }
+
             return false;
         }
 
@@ -125,13 +128,13 @@ namespace MTSC.Client.Handlers
 
         bool IHandler.InitializeConnection(Client client)
         {
-            state = SocketState.Handshaking;
-            string handshakeGuid = Guid.NewGuid().ToString();
-            string handshakeKey = handshakeGuid+ GlobalUniqueIdentifier;
-            expectedguid = Convert.ToBase64String(sha1Provider.ComputeHash(Encoding.UTF8.GetBytes(handshakeKey)));
-            HttpRequest beginRequest = new HttpRequest();
+            this.state = SocketState.Handshaking;
+            var handshakeGuid = Guid.NewGuid().ToString();
+            var handshakeKey = handshakeGuid+ GlobalUniqueIdentifier;
+            this.expectedguid = Convert.ToBase64String(sha1Provider.ComputeHash(Encoding.UTF8.GetBytes(handshakeKey)));
+            var beginRequest = new HttpRequest();
             beginRequest.Method = HttpMessage.HttpMethods.Get;
-            beginRequest.RequestURI = WebsocketURI;
+            beginRequest.RequestURI = this.WebsocketURI;
             beginRequest.Headers[HttpMessage.RequestHeaders.Host] = client.Address;
             beginRequest.Headers[HttpMessage.GeneralHeaders.Connection] = "Upgrade";
             beginRequest.Headers[HttpMessage.GeneralHeaders.Upgrade] = "websocket";
@@ -151,14 +154,14 @@ namespace MTSC.Client.Handlers
 
         void IHandler.Tick(Client client)
         {
-            while(messageQueue.Count > 0)
+            while(this.messageQueue.Count > 0)
             {
-                WebsocketMessage message = messageQueue.Dequeue();
+                var message = this.messageQueue.Dequeue();
                 client.QueueMessage(message.GetMessageBytes());
                 if(message.Opcode == WebsocketMessage.Opcodes.Close)
                 {
                     client.LogDebug("Closing websocket connection");
-                    foreach (IWebsocketModule websocketModule in websocketModules)
+                    foreach (var websocketModule in this.websocketModules)
                     {
                         websocketModule.ConnectionClosed(client, this);
                     }

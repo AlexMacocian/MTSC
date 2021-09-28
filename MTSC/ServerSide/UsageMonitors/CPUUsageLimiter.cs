@@ -17,10 +17,10 @@ namespace MTSC.ServerSide.UsageMonitors
         /// <summary>
         /// Set the CPU usage limit. Bounded between 0 and  100%.
         /// </summary>
-        public int CPUUsageLimit { get => cpuUsageLimit; 
+        public int CPUUsageLimit { get => this.cpuUsageLimit; 
             set 
             {
-                cpuUsageLimit = Math.Max(Math.Min(value, 100), 0);
+                this.cpuUsageLimit = Math.Max(Math.Min(value, 100), 0);
             }
         }
         /// <summary>
@@ -30,26 +30,26 @@ namespace MTSC.ServerSide.UsageMonitors
         /// <returns>This <see cref="CPUUsageLimiter"/></returns>
         public CPUUsageLimiter SetCPUUsageLimit(int cpuUsageLimit)
         {
-            CPUUsageLimit = cpuUsageLimit;
+            this.CPUUsageLimit = cpuUsageLimit;
             return this;
         }
 
         void IServerUsageMonitor.Tick(Server server)
         {
-            PollCPUUsage();
-            while(cpuUsage > cpuUsageLimit)
+            this.PollCPUUsage();
+            while(this.cpuUsage > this.cpuUsageLimit)
             {
-                server.LogDebug($"Throttling server due to CPUUsage = {cpuUsage}%!");
+                server.LogDebug($"Throttling server due to CPUUsage = {this.cpuUsage}%!");
                 Thread.Sleep(10);
-                PollCPUUsage();
+                this.PollCPUUsage();
             }
         }
 
         private async void PollCPUUsage()
         {
-            if (!polling)
+            if (!this.polling)
             {
-                polling = true;
+                this.polling = true;
                 var startTime = DateTime.UtcNow;
                 var startCpuUsage = Process.GetCurrentProcess().TotalProcessorTime;
                 await Task.Delay(500);
@@ -59,8 +59,8 @@ namespace MTSC.ServerSide.UsageMonitors
                 var cpuUsedMs = (endCpuUsage - startCpuUsage).TotalMilliseconds;
                 var totalMsPassed = (endTime - startTime).TotalMilliseconds;
                 var cpuUsageTotal = cpuUsedMs / (Environment.ProcessorCount * totalMsPassed);
-                cpuUsage = cpuUsageTotal * 100;
-                polling = false;
+                this.cpuUsage = cpuUsageTotal * 100;
+                this.polling = false;
             }
         }
     }

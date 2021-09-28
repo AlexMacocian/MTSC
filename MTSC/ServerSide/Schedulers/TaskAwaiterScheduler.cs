@@ -9,12 +9,13 @@ namespace MTSC.ServerSide.Schedulers
     {
         public void ScheduleHandling(List<(ClientData, IConsumerQueue<Message>)> clientsQueues, Action<ClientData, IConsumerQueue<Message>> messageHandlingProcedure)
         {
-            List<Task> tasks = new List<Task>();
+            var tasks = new List<Task>();
             foreach(var tuple in clientsQueues)
             {
                 (var client, var messageQueue) = tuple;
                 tasks.Add(Task.Run(() => messageHandlingProcedure.Invoke(client, messageQueue)));
             }
+
             Task.WaitAll(tasks.ToArray());
         }
     }

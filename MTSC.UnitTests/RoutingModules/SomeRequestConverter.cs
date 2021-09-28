@@ -1,13 +1,30 @@
-﻿using MTSC.Common.Http;
-using MTSC.Common.Http.RoutingModules;
+﻿using System;
+using System.ComponentModel;
+using System.Globalization;
+using MTSC.Common.Http;
 
 namespace MTSC.UnitTests.RoutingModules
 {
-    public class SomeRequestConverter : IRequestConverter<SomeRoutingRequest>
+    public class SomeRequestConverter : TypeConverter
     {
-        public SomeRoutingRequest ConvertHttpRequest(HttpRequest httpRequest)
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
-            return new SomeRoutingRequest();
+            if (sourceType == typeof(HttpRequest))
+            {
+                return true;
+            }
+
+            return base.CanConvertFrom(context, sourceType);
+        }
+
+        public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
+        {
+            if (value is HttpRequest)
+            {
+                return new SomeRoutingRequest();
+            }
+
+            return base.ConvertFrom(context, culture, value);
         }
     }
 }

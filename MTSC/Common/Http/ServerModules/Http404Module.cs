@@ -25,6 +25,7 @@ namespace MTSC.Common.Http.ServerModules
                 response.StatusCode = HttpMessage.StatusCodes.NotFound;
                 response.Headers[HttpMessage.GeneralHeaders.Date] = DateTime.Now.ToString();
             }
+
             return true;
         }
 

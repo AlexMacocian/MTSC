@@ -39,9 +39,9 @@ namespace MTSC.ServerSide
         private readonly IServiceManager serviceManager = new ServiceManager();
         #endregion
         #region Private Properties
-        private IConsumerQueue<ClientData> ConsumerClientQueue { get => addQueue; }
-        private IProducerQueue<ClientData> ProducerClientQueue { get => addQueue; }
-        private IConsumerQueue<(ClientData, byte[])> ConsumerMessageOutQueue { get => messageOutQueue; }
+        private IConsumerQueue<ClientData> ConsumerClientQueue { get => this.addQueue; }
+        private IProducerQueue<ClientData> ProducerClientQueue { get => this.addQueue; }
+        private IConsumerQueue<(ClientData, byte[])> ConsumerMessageOutQueue { get => this.messageOutQueue; }
         #endregion
         #region Public Properties
         /// <summary>
@@ -55,7 +55,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Queue of destinations and messages to be processed
         /// </summary>
-        public IProducerQueue<(ClientData, byte[])> MessageOutQueue { get => messageOutQueue; }
+        public IProducerQueue<(ClientData, byte[])> MessageOutQueue { get => this.messageOutQueue; }
         /// <summary>
         /// Duration until ssl authentication gives up during the authentication process
         /// </summary>
@@ -87,7 +87,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Returns the state of the server.
         /// </summary>
-        public bool Running { get => listener != null; }
+        public bool Running { get => this.listener != null; }
         /// <summary>
         /// If set to true, requests client certificates.
         /// </summary>
@@ -275,7 +275,7 @@ namespace MTSC.ServerSide
         /// <returns>This server object</returns>
         public Server WithClientCertificate(bool requestCertificate)
         {
-            RequestClientCertificate = requestCertificate;
+            this.RequestClientCertificate = requestCertificate;
             return this;
         }
         /// <summary>
@@ -422,6 +422,7 @@ namespace MTSC.ServerSide
                     return handler as T;
                 }
             }
+
             return null;
         }
         /// <summary>
@@ -438,6 +439,7 @@ namespace MTSC.ServerSide
                     return exceptionHandler as T;
                 }
             }
+
             return null;
         }
         /// <summary>
@@ -454,6 +456,7 @@ namespace MTSC.ServerSide
                     return logger as T;
                 }
             }
+
             return null;
         }
         /// <summary>
@@ -470,6 +473,7 @@ namespace MTSC.ServerSide
                     return serverMonitor as T;
                 }
             }
+
             return null;
         }
         /// <summary>
@@ -479,7 +483,7 @@ namespace MTSC.ServerSide
         /// <param name="message">Message to be sent.</param>
         public void QueueMessage(ClientData target, byte[] message)
         {
-            (MessageOutQueue as IProducerQueue<(ClientData, byte[])>).Enqueue((target, message));
+            (this.MessageOutQueue as IProducerQueue<(ClientData, byte[])>).Enqueue((target, message));
         }
         /// <summary>
         /// Adds a message to be logged by the associated loggers.
@@ -487,7 +491,7 @@ namespace MTSC.ServerSide
         /// <param name="log">Message to be logged</param>
         public void Log(string log)
         {
-            foreach (ILogger logger in this.loggers)
+            foreach (var logger in this.loggers)
             {
                 if (logger.Log(log))
                 {
@@ -501,7 +505,7 @@ namespace MTSC.ServerSide
         /// <param name="debugMessage">Debug message to be logged</param>
         public void LogDebug(string debugMessage)
         {
-            foreach (ILogger logger in this.loggers)
+            foreach (var logger in this.loggers)
             {
                 if (logger.LogDebug(debugMessage))
                 {
@@ -527,7 +531,7 @@ namespace MTSC.ServerSide
             this.serviceManager.RegisterServiceManager();
             this.serviceManager.RegisterSingleton<Server, Server>(sp => this);
             DateTime startLoopTime;
-            while (running)
+            while (this.running)
             {
                 startLoopTime = DateTime.Now;
                 /*
@@ -570,7 +574,7 @@ namespace MTSC.ServerSide
                 {
                     this.Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
                     this.clients.Add(client);
-                    foreach (IHandler handler in this.handlers)
+                    foreach (var handler in this.handlers)
                     {
                         if (handler.HandleClient(this, client))
                         {
@@ -593,7 +597,7 @@ namespace MTSC.ServerSide
                 /*
                  * Iterate through all the handlers, running periodic operations.
                  */
-                foreach(IHandler handler in this.handlers)
+                foreach(var handler in this.handlers)
                 {
                     this.TickHandler(handler);
                 }
@@ -606,7 +610,7 @@ namespace MTSC.ServerSide
                 /*
                  * Call the usage monitors and let them scale or determine current resource usage.
                  */
-                foreach (IServerUsageMonitor usageMonitor in this.serverUsageMonitors)
+                foreach (var usageMonitor in this.serverUsageMonitors)
                 {
                     try
                     {
@@ -618,6 +622,7 @@ namespace MTSC.ServerSide
                     }
                 }
             }
+
             this.listener.Stop();
             foreach (var client in this.Clients)
             {
@@ -634,6 +639,7 @@ namespace MTSC.ServerSide
                     }
                 }
             }
+
             this.listener = null;
         }
         /// <summary>
@@ -641,16 +647,16 @@ namespace MTSC.ServerSide
         /// </summary>
         public Task RunAsync()
         {
-            return Task.Run(Run);
+            return Task.Run(this.Run);
         }
         /// <summary>
         /// Stop the server.
         /// </summary>
         public void Stop()
         {
-            if (running)
+            if (this.running)
             {
-                running = false;
+                this.running = false;
             }
         }
         #endregion
@@ -667,14 +673,16 @@ namespace MTSC.ServerSide
                      */
                     continue;
                 }
+
                 try 
                 {
-                    Message sendMessage = CommunicationPrimitives.BuildMessage(bytes);
-                    for (int i = this.handlers.Count - 1; i >= 0; i--)
+                    var sendMessage = CommunicationPrimitives.BuildMessage(bytes);
+                    for (var i = this.handlers.Count - 1; i >= 0; i--)
                     {
-                        IHandler handler = handlers[i];
+                        var handler = this.handlers[i];
                         handler.HandleSendMessage(this, client, ref sendMessage);
                     }
+
                     CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage, client.SslStream);
                     (client as IActiveClient).UpdateLastActivity();
                     this.LogDebug("Sent message to " + client.TcpClient.Client.RemoteEndPoint.ToString() +
@@ -688,21 +696,23 @@ namespace MTSC.ServerSide
         }
         private void CheckAndRemoveInactiveClients()
         {
-            foreach (ClientData client in this.Clients)
+            foreach (var client in this.Clients)
             {
                 if (!client.TcpClient.Connected || client.ToBeRemoved)
                 {
                     this.toRemove.Add(client);
                 }
             }
-            foreach (ClientData client in this.toRemove)
+
+            foreach (var client in this.toRemove)
             {
                 try
                 {
-                    foreach (IHandler handler in this.handlers)
+                    foreach (var handler in this.handlers)
                     {
                         handler.ClientRemoved(this, client);
                     }
+
                     this.LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
                     client.Dispose();
                 }
@@ -710,8 +720,10 @@ namespace MTSC.ServerSide
                 {
                     this.HandleException(e);
                 }
+
                 this.clients.Remove(client);
             }
+
             this.toRemove.Clear();
         }
         private void TickHandler(IHandler handler)
@@ -785,6 +797,7 @@ namespace MTSC.ServerSide
             {
                 this.HandleException(e);
             }
+
             try
             {
                 handler.HandleReceivedMessage(this, client, message);
@@ -796,7 +809,7 @@ namespace MTSC.ServerSide
         }
         private void HandleClientMessage(ClientData client, Message message)
         {
-            foreach (IHandler handler in this.handlers)
+            foreach (var handler in this.handlers)
             {
                 try
                 {
@@ -810,7 +823,8 @@ namespace MTSC.ServerSide
                     this.HandleException(e);
                 }
             }
-            foreach (IHandler handler in this.handlers)
+
+            foreach (var handler in this.handlers)
             {
                 try
                 {
@@ -838,7 +852,7 @@ namespace MTSC.ServerSide
                         this.EncryptionPolicy);
                     client.SslStream = sslStream;
 
-                    if(sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(SslAuthenticationTimeout))
+                    if(sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(this.SslAuthenticationTimeout))
                     {
                         /*
                          * Client authenticated in the alloted time
@@ -863,7 +877,7 @@ namespace MTSC.ServerSide
         }
         private void HandleException(Exception exception)
         {
-            foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
+            foreach (var exceptionHandler in this.exceptionHandlers)
             {
                 if (exceptionHandler.HandleException(exception))
                 {

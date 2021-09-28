@@ -35,16 +35,17 @@ namespace MTSC.Client.Handlers
         #region Private Methods
         private string GetUniqueKey(int size)
         {
-            return Convert.ToBase64String(GetUniqueByteKey(size));
+            return Convert.ToBase64String(this.GetUniqueByteKey(size));
         }
 
         private byte[] GetUniqueByteKey(int size)
         {
-            byte[] data = new byte[size];
-            using (RNGCryptoServiceProvider crypto = new RNGCryptoServiceProvider())
+            var data = new byte[size];
+            using (var crypto = new RNGCryptoServiceProvider())
             {
                 crypto.GetBytes(data);
             }
+
             return data;
         }
 
@@ -54,16 +55,16 @@ namespace MTSC.Client.Handlers
 
             // Set your salt here, change it to meet your flavor:
             // The salt bytes must be at least 8 bytes.
-            byte[] saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            var saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
-                using (RijndaelManaged AES = new RijndaelManaged())
+                using (var AES = new RijndaelManaged())
                 {
                     AES.KeySize = 256;
                     AES.BlockSize = 128;
                     AES.Mode = CipherMode.CBC;
-                    var key = new Rfc2898DeriveBytes(aesKey, saltBytes, 1000);
+                    var key = new Rfc2898DeriveBytes(this.aesKey, saltBytes, 1000);
                     AES.Key = key.GetBytes(AES.KeySize / 8);
                     AES.IV = key.GetBytes(AES.BlockSize / 8);
 
@@ -72,6 +73,7 @@ namespace MTSC.Client.Handlers
                         cs.Write(bytesToBeEncrypted, 0, bytesToBeEncrypted.Length);
                         cs.Close();
                     }
+
                     encryptedBytes = ms.ToArray();
                 }
             }
@@ -85,18 +87,18 @@ namespace MTSC.Client.Handlers
 
             // Set your salt here, change it to meet your flavor:
             // The salt bytes must be at least 8 bytes.
-            byte[] saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            var saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
-                using (RijndaelManaged AES = new RijndaelManaged())
+                using (var AES = new RijndaelManaged())
                 {
                     AES.KeySize = 256;
                     AES.BlockSize = 128;
 
                     AES.Mode = CipherMode.CBC;
 
-                    var key = new Rfc2898DeriveBytes(aesKey, saltBytes, 1000);
+                    var key = new Rfc2898DeriveBytes(this.aesKey, saltBytes, 1000);
                     AES.Key = key.GetBytes(AES.KeySize / 8);
                     AES.IV = key.GetBytes(AES.BlockSize / 8);
 
@@ -107,6 +109,7 @@ namespace MTSC.Client.Handlers
                         cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
                         cs.Close();
                     }
+
                     decryptedBytes = ms.ToArray();
                 }
             }
@@ -117,11 +120,11 @@ namespace MTSC.Client.Handlers
         private string EncryptText(string input)
         {
             // Get the bytes of the string
-            byte[] bytesToBeEncrypted = Encoding.UTF8.GetBytes(input);
+            var bytesToBeEncrypted = Encoding.UTF8.GetBytes(input);
 
-            byte[] bytesEncrypted = EncryptBytes(bytesToBeEncrypted);
+            var bytesEncrypted = this.EncryptBytes(bytesToBeEncrypted);
 
-            string result = Encoding.UTF8.GetString(bytesEncrypted);
+            var result = Encoding.UTF8.GetString(bytesEncrypted);
 
             return result;
         }
@@ -129,11 +132,11 @@ namespace MTSC.Client.Handlers
         private string DecryptText(string input)
         {
             // Get the bytes of the string
-            byte[] bytesToBeDecrypted = Encoding.UTF8.GetBytes(input);
+            var bytesToBeDecrypted = Encoding.UTF8.GetBytes(input);
 
-            byte[] bytesDecrypted = DecryptBytes(bytesToBeDecrypted);
+            var bytesDecrypted = this.DecryptBytes(bytesToBeDecrypted);
 
-            string result = Encoding.UTF8.GetString(bytesDecrypted);
+            var result = Encoding.UTF8.GetString(bytesDecrypted);
 
             return result;
         }
@@ -165,13 +168,14 @@ namespace MTSC.Client.Handlers
         /// <returns>True if no other handler should process the message further.</returns>
         bool IHandler.HandleSendMessage(Client client, ref Message message)
         {
-            if (connectionState == ConnectionState.Encrypted)
+            if (this.connectionState == ConnectionState.Encrypted)
             {
-                byte[] decryptedBytes = message.MessageBytes;
-                byte[] encryptedBytes = EncryptBytes(decryptedBytes);
+                var decryptedBytes = message.MessageBytes;
+                var encryptedBytes = this.EncryptBytes(decryptedBytes);
                 message = CommunicationPrimitives.BuildMessage(encryptedBytes);
                 return true;
             }
+
             return false;
         }
         /// <summary>
@@ -182,13 +186,14 @@ namespace MTSC.Client.Handlers
         /// <returns>True if no other handler should process it further.</returns>
         bool IHandler.PreHandleReceivedMessage(Client client, ref Message message)
         {
-            if (connectionState == ConnectionState.Encrypted)
+            if (this.connectionState == ConnectionState.Encrypted)
             {
-                byte[] encryptedBytes = message.MessageBytes;
-                byte[] decryptedBytes = DecryptBytes(encryptedBytes);
+                var encryptedBytes = message.MessageBytes;
+                var decryptedBytes = this.DecryptBytes(encryptedBytes);
                 message = CommunicationPrimitives.BuildMessage(decryptedBytes);
                 return false;
             }
+
             return false;
         }
         /// <summary>
@@ -199,17 +204,17 @@ namespace MTSC.Client.Handlers
         /// <returns>True if no other handler should handle the message further.</returns>
         bool IHandler.HandleReceivedMessage(Client client, Message message)
         {
-            if (connectionState == ConnectionState.RequestingPublicKey)
+            if (this.connectionState == ConnectionState.RequestingPublicKey)
             {
-                string ascii = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
+                var ascii = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
                 if (ascii.Contains(CommunicationPrimitives.SendPublicKey))
                 {
-                    byte[] publicKeyBytes = new byte[message.MessageLength - CommunicationPrimitives.SendPublicKey.Length - 1];
+                    var publicKeyBytes = new byte[message.MessageLength - CommunicationPrimitives.SendPublicKey.Length - 1];
                     Array.Copy(message.MessageBytes, CommunicationPrimitives.SendPublicKey.Length + 1, publicKeyBytes, 0, publicKeyBytes.Length);
-                    string publicKey = ASCIIEncoding.ASCII.GetString(publicKeyBytes);
-                    RSACryptoServiceProvider rsa = new RSACryptoServiceProvider(1024);
-                    RSAParameters parameters = new RSAParameters();
-                    XmlDocument xmlDoc = new XmlDocument();
+                    var publicKey = ASCIIEncoding.ASCII.GetString(publicKeyBytes);
+                    var rsa = new RSACryptoServiceProvider(1024);
+                    var parameters = new RSAParameters();
+                    var xmlDoc = new XmlDocument();
                     xmlDoc.LoadXml(publicKey);
                     if (xmlDoc.DocumentElement.Name.Equals("RSAKeyValue"))
                     {
@@ -228,33 +233,35 @@ namespace MTSC.Client.Handlers
                             }
                         }
                     }
+
                     rsa.ImportParameters(parameters);
-                    byte[] symkeyBytes = GetUniqueByteKey(32);
-                    byte[] encryptedSymKey = rsa.Encrypt(symkeyBytes, false);
-                    aesKey = symkeyBytes;
-                    byte[] messageHeader = ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendEncryptionKey + ":");
-                    byte[] messageBytes = new byte[encryptedSymKey.Length + messageHeader.Length];
+                    var symkeyBytes = this.GetUniqueByteKey(32);
+                    var encryptedSymKey = rsa.Encrypt(symkeyBytes, false);
+                    this.aesKey = symkeyBytes;
+                    var messageHeader = ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendEncryptionKey + ":");
+                    var messageBytes = new byte[encryptedSymKey.Length + messageHeader.Length];
                     Array.Copy(messageHeader, 0, messageBytes, 0, messageHeader.Length);
                     Array.Copy(encryptedSymKey, 0, messageBytes, messageHeader.Length, encryptedSymKey.Length);
                     client.QueueMessage(messageBytes);
-                    connectionState = ConnectionState.NegotiatingSymKey;
+                    this.connectionState = ConnectionState.NegotiatingSymKey;
                     return true;
                 }
             }
-            else if (connectionState == ConnectionState.NegotiatingSymKey)
+            else if (this.connectionState == ConnectionState.NegotiatingSymKey)
             {
-                string ascii = ASCIIEncoding.ASCII.GetString(DecryptBytes(message.MessageBytes));
+                var ascii = ASCIIEncoding.ASCII.GetString(this.DecryptBytes(message.MessageBytes));
                 if (ascii == CommunicationPrimitives.AcceptEncryptionKey)
                 {
-                    connectionState = ConnectionState.Encrypted;
+                    this.connectionState = ConnectionState.Encrypted;
                     return true;
                 }
                 else
                 {
-                    connectionState = ConnectionState.Initial;
+                    this.connectionState = ConnectionState.Initial;
                     return false;
                 }
             }
+
             return false;
         }
         /// <summary>
@@ -264,7 +271,7 @@ namespace MTSC.Client.Handlers
         /// <param name="tcpClient">Client connection.</param>
         void IHandler.Tick(Client client)
         {
-            if (connectionState == ConnectionState.Initial)
+            if (this.connectionState == ConnectionState.Initial)
             {
 
                 client.QueueMessage(ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.RequestPublicKey));

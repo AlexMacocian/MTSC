@@ -37,8 +37,8 @@ namespace MTSC.ServerSide.Handlers
         public EncryptionHandler(RSACryptoServiceProvider rsa)
         {
             this.rsa = rsa;
-            privateKey = HelperFunctions.ToXmlString(rsa, true);
-            publicKey = HelperFunctions.ToXmlString(rsa, false);
+            this.privateKey = HelperFunctions.ToXmlString(rsa, true);
+            this.publicKey = HelperFunctions.ToXmlString(rsa, false);
         }
         #endregion
         #region Public Methods
@@ -51,11 +51,11 @@ namespace MTSC.ServerSide.Handlers
 
             // Set your salt here, change it to meet your flavor:
             // The salt bytes must be at least 8 bytes.
-            byte[] saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            var saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
-                using (RijndaelManaged AES = new RijndaelManaged())
+                using (var AES = new RijndaelManaged())
                 {
                     AES.KeySize = 256;
                     AES.BlockSize = 128;
@@ -73,6 +73,7 @@ namespace MTSC.ServerSide.Handlers
                         cs.Write(bytesToBeEncrypted, 0, bytesToBeEncrypted.Length);
                         cs.Close();
                     }
+
                     encryptedBytes = ms.ToArray();
                 }
             }
@@ -86,11 +87,11 @@ namespace MTSC.ServerSide.Handlers
 
             // Set your salt here, change it to meet your flavor:
             // The salt bytes must be at least 8 bytes.
-            byte[] saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+            var saltBytes = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
 
-            using (MemoryStream ms = new MemoryStream())
+            using (var ms = new MemoryStream())
             {
-                using (RijndaelManaged AES = new RijndaelManaged())
+                using (var AES = new RijndaelManaged())
                 {
                     AES.KeySize = 256;
                     AES.BlockSize = 128;
@@ -108,6 +109,7 @@ namespace MTSC.ServerSide.Handlers
                         cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
                         cs.Close();
                     }
+
                     decryptedBytes = ms.ToArray();
                 }
             }
@@ -145,18 +147,18 @@ namespace MTSC.ServerSide.Handlers
             var additionalData = client.Resources.GetResource<AdditionalData>();
             if (additionalData.ClientState == ClientState.Initial || additionalData.ClientState == ClientState.Negotiating)
             {
-                string asciiMessage = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
+                var asciiMessage = ASCIIEncoding.ASCII.GetString(message.MessageBytes);
                 if (asciiMessage == CommunicationPrimitives.RequestPublicKey)
                 {
-                    server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendPublicKey + ":" + publicKey));
+                    server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.SendPublicKey + ":" + this.publicKey));
                     additionalData.ClientState = ClientState.Negotiating;
                     return true;
                 }
                 else if (asciiMessage.Contains(CommunicationPrimitives.SendEncryptionKey))
                 {
-                    byte[] encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length - 1];
+                    var encryptedKey = new byte[message.MessageLength - CommunicationPrimitives.SendEncryptionKey.Length - 1];
                     Array.Copy(message.MessageBytes, CommunicationPrimitives.SendEncryptionKey.Length + 1, encryptedKey, 0, encryptedKey.Length);
-                    byte[] decryptedKey = rsa.Decrypt(encryptedKey, false);
+                    var decryptedKey = this.rsa.Decrypt(encryptedKey, false);
                     additionalData.Key = decryptedKey;
                     server.QueueMessage(client, ASCIIEncoding.ASCII.GetBytes(CommunicationPrimitives.AcceptEncryptionKey));
                     additionalData.ClientState = ClientState.Encrypted;
@@ -186,8 +188,8 @@ namespace MTSC.ServerSide.Handlers
                 /*
                  * Decrypt message before returning.
                  */
-                byte[] encryptedBytes = message.MessageBytes;
-                byte[] decryptedBytes = DecryptBytes(additionalData.Key, encryptedBytes);
+                var encryptedBytes = message.MessageBytes;
+                var decryptedBytes = this.DecryptBytes(additionalData.Key, encryptedBytes);
                 message = new Message((uint)decryptedBytes.Length, decryptedBytes);
                 return false;
             }
@@ -217,8 +219,9 @@ namespace MTSC.ServerSide.Handlers
             var additionalData = client.Resources.GetResource<AdditionalData>();
             if (additionalData.ClientState == ClientState.Encrypted)
             {
-                message = CommunicationPrimitives.BuildMessage(EncryptBytes(additionalData.Key, message.MessageBytes));
+                message = CommunicationPrimitives.BuildMessage(this.EncryptBytes(additionalData.Key, message.MessageBytes));
             }
+
             return false;
         }
         #endregion

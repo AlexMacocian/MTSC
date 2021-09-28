@@ -18,16 +18,18 @@ namespace MTSC.Common.Ftp
 
         private FtpResponse(byte[] bytes)
         {
-            string message = Encoding.UTF8.GetString(bytes);
+            var message = Encoding.UTF8.GetString(bytes);
             var tokens = message.Trim('\0').Trim('\n').Trim('\r').Split(' ');
             if (!int.TryParse(tokens[0], out var statusCodeInt))
             {
                 throw new InvalidFtpStatusCodeException($"Expected status code but found [{tokens[0]}]");
             }
+
             if (!Enum.IsDefined(typeof(FtpResponseCodes), statusCodeInt))
             {
                 throw new InvalidFtpStatusCodeException($"Undefined status code [{statusCodeInt}]");
             }
+
             this.StatusCode = (FtpResponseCodes)statusCodeInt;
             this.Message = tokens.Length > 1 ? tokens.Skip(1).Aggregate((current, next) => current + ' ' + next) : null;
         }
@@ -39,12 +41,13 @@ namespace MTSC.Common.Ftp
 
         public static byte[] ToBytes(FtpResponse response)
         {
-            StringBuilder sb = new StringBuilder();
+            var sb = new StringBuilder();
             sb.Append((int)response.StatusCode);
             if (!string.IsNullOrWhiteSpace(response.Message))
             {
                 sb.Append(' ').Append(response.Message);
             }
+
             sb.Append("\r\n");
             return Encoding.UTF8.GetBytes(sb.ToString());
         }

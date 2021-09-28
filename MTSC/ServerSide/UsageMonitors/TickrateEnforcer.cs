@@ -26,7 +26,7 @@ namespace MTSC.ServerSide.UsageMonitors
         /// <returns>This <see cref="TickrateEnforcer"/></returns>
         public TickrateEnforcer SetTicksPerSecond(int ticksPerSecond)
         {
-            TicksPerSecond = ticksPerSecond;
+            this.TicksPerSecond = ticksPerSecond;
             return this;
         }
 
@@ -37,20 +37,24 @@ namespace MTSC.ServerSide.UsageMonitors
         /// <returns></returns>
         public TickrateEnforcer SetSilent(bool silent)
         {
-            Silent = silent;
+            this.Silent = silent;
             return this;
         }
 
         void IServerUsageMonitor.Tick(Server server)
         {
-            if((DateTime.Now - lastTickTime).TotalMilliseconds < 1000f / TicksPerSecond)
+            if((DateTime.Now - this.lastTickTime).TotalMilliseconds < 1000f / this.TicksPerSecond)
             {
-                int sleepTime = (int)Math.Ceiling(Math.Max(1000f / TicksPerSecond - (DateTime.Now - lastTickTime).TotalMilliseconds, 0)) + 1;
-                if(!Silent)
+                var sleepTime = (int)Math.Ceiling(Math.Max(1000f / this.TicksPerSecond - (DateTime.Now - this.lastTickTime).TotalMilliseconds, 0)) + 1;
+                if(!this.Silent)
+                {
                     server.LogDebug($"Sleeping thread for {sleepTime} ms due to throttling!");
+                }
+
                 Thread.Sleep(sleepTime);
             }
-            lastTickTime = DateTime.Now;
+
+            this.lastTickTime = DateTime.Now;
         }
     }
 }

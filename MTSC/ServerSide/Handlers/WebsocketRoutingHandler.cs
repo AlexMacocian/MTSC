@@ -19,7 +19,7 @@ namespace MTSC.ServerSide.Handlers
         private const string GlobalUniqueIdentifier = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         private static readonly Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, message, client) => RouteEnablerResponse.Accept;
         private static readonly SHA1 sha1Provider = SHA1.Create();
-        private static readonly RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
+        private static readonly RNGCryptoServiceProvider rng = new();
         public enum SocketState
         {
             Initial,
@@ -32,8 +32,8 @@ namespace MTSC.ServerSide.Handlers
         private DateTime ellapsedTime = DateTime.Now;
         private DateTime previousHeartbeatProc = DateTime.Now;
         private readonly Dictionary<string, (Type, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)> moduleDictionary =
-            new Dictionary<string, (Type, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
-        private readonly ConcurrentQueue<Tuple<ClientData, WebsocketMessage>> messageQueue = new ConcurrentQueue<Tuple<ClientData, WebsocketMessage>>();
+            new();
+        private readonly ConcurrentQueue<Tuple<ClientData, WebsocketMessage>> messageQueue = new();
         #endregion
         #region Properties
         public bool HeartbeatEnabled { get; set; }
@@ -85,7 +85,7 @@ namespace MTSC.ServerSide.Handlers
 
         public void QueueMessage(ClientData client, byte[] message, WebsocketMessage.Opcodes opcode = WebsocketMessage.Opcodes.Text)
         {
-            WebsocketMessage sendMessage = new WebsocketMessage
+            var sendMessage = new WebsocketMessage
             {
                 Data = message,
                 FIN = true,
@@ -103,7 +103,7 @@ namespace MTSC.ServerSide.Handlers
 
         public void CloseConnection(ClientData client)
         {
-            WebsocketMessage websocketMessage = new WebsocketMessage
+            var websocketMessage = new WebsocketMessage
             {
                 FIN = true,
                 Opcode = WebsocketMessage.Opcodes.Close,
@@ -142,6 +142,7 @@ namespace MTSC.ServerSide.Handlers
                     server.LogDebug(e.Message + "\n" + e.StackTrace);
                     return false;
                 }
+
                 if (request.Method == HttpMessage.HttpMethods.Get && request.Headers.ContainsHeader(HttpMessage.GeneralHeaders.Connection) &&
                     request.Headers[HttpMessage.GeneralHeaders.Connection].ToLower() == "upgrade" && request.Headers.ContainsHeader(WebsocketProtocolVersionKey) &&
                     request.Headers[WebsocketProtocolVersionKey] == "13")
@@ -151,7 +152,7 @@ namespace MTSC.ServerSide.Handlers
                         this.QueueMessage(client, new HttpResponse { StatusCode = HttpMessage.StatusCodes.NotFound, BodyString = "URI not found" }.GetPackedResponse(true));
                     }
 
-                    (var moduleType, var routeEnabler) = moduleDictionary[request.RequestURI];
+                    (var moduleType, var routeEnabler) = this.moduleDictionary[request.RequestURI];
                     var routeEnablerResponse = routeEnabler.Invoke(server, request.ToRequest(), client);
                     if(routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseIgnore)
                     {
@@ -276,14 +277,14 @@ namespace MTSC.ServerSide.Handlers
                         (this.ellapsedTime - this.previousHeartbeatProc) > this.HeartbeatFrequency)
                     {
                         this.previousHeartbeatProc = DateTime.Now;
-                        this.QueueMessage(client, emptyData, WebsocketMessage.Opcodes.Ping);
+                        this.QueueMessage(client, this.emptyData, WebsocketMessage.Opcodes.Ping);
                     }
                 }
             }
 
             while (this.messageQueue.Count > 0)
             {
-                if (this.messageQueue.TryDequeue(out Tuple<ClientData, WebsocketMessage> tuple))
+                if (this.messageQueue.TryDequeue(out var tuple))
                 {
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetMessageBytes());
                     if (tuple.Item2.Opcode == WebsocketMessage.Opcodes.Close)
@@ -292,6 +293,7 @@ namespace MTSC.ServerSide.Handlers
                         {
                             route.CallConnectionClosed();
                         }
+
                         tuple.Item1.ToBeRemoved = true;
                     }
                 }

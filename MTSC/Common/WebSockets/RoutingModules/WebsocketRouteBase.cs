@@ -14,7 +14,7 @@ namespace MTSC.Common.WebSockets.RoutingModules
 
         public void CallConnectionInitialized()
         {
-            ConnectionInitialized();
+            this.ConnectionInitialized();
         }
         public void CallHandleReceivedMessage(WebsocketMessage receivedMessage)
         {
@@ -77,7 +77,7 @@ namespace MTSC.Common.WebSockets.RoutingModules
     }
     public abstract class WebsocketRouteBase<TReceive> : WebsocketRouteBase
     {
-        private readonly static object cachedLock = new object();
+        private readonly static object cachedLock = new();
         private static IWebsocketMessageConverter<TReceive> CachedConverter { get; set; }
 
         public sealed override void HandleReceivedMessage(WebsocketMessage receivedMessage)
@@ -131,7 +131,7 @@ namespace MTSC.Common.WebSockets.RoutingModules
     }
     public abstract class WebsocketRouteBase<TReceive, TSend> : WebsocketRouteBase
     {
-        private readonly static object recLock = new object(), sendLock = new object();
+        private readonly static object recLock = new(), sendLock = new();
         private static IWebsocketMessageConverter<TReceive> CachedReceiveConverter { get; set; }
         private static IWebsocketMessageConverter<TSend> CachedSendConverter { get; set; }
 

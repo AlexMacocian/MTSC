@@ -1,8 +1,9 @@
-﻿using MTSC.Common.Http.RoutingModules;
+﻿using System.ComponentModel;
+using MTSC.Common.Http.RoutingModules;
 
 namespace MTSC.UnitTests.RoutingModules
 {
-    [RequestConvert(typeof(SomeRequestConverter))]
+    [TypeConverter(typeof(SomeRequestConverter))]
     public class SomeRoutingRequest
     {
     }

@@ -17,23 +17,23 @@ namespace MTSC.Common.WebSockets
             Pong = 10
         }
 
-        byte controlByte = new byte();
+        byte controlByte = new();
         byte[] lengthBytes;
         byte[] data;
         /// <summary>
         /// FIN bit.
         /// </summary>
-        public bool FIN { get => (controlByte & 0x80) == 0x80; set => controlByte = (byte)(value? controlByte | 0x80 : controlByte & 0x7F);}
+        public bool FIN { get => (this.controlByte & 0x80) == 0x80; set => this.controlByte = (byte)(value? this.controlByte | 0x80 : this.controlByte & 0x7F);}
         /// <summary>
         /// Frame Opcode
         /// </summary>
         /// <remarks>Gets and sets the 4 lower bits of the first byte.</remarks>
-        public Opcodes Opcode { get => (Opcodes)(controlByte & 0xF);
-            set => controlByte = (byte)((controlByte & 0xF0) | ((int)value & 0xF)); }
+        public Opcodes Opcode { get => (Opcodes)(this.controlByte & 0xF);
+            set => this.controlByte = (byte)((this.controlByte & 0xF0) | ((int)value & 0xF)); }
         /// <summary>
         /// Mask bit.
         /// </summary>
-        public bool Masked { get => (lengthBytes[0] & 0x80) == 0x80; set => lengthBytes[0] = (byte)(value ? lengthBytes[0] | 0x80 : lengthBytes[0] & 0x7F); }
+        public bool Masked { get => (this.lengthBytes[0] & 0x80) == 0x80; set => this.lengthBytes[0] = (byte)(value ? this.lengthBytes[0] | 0x80 : this.lengthBytes[0] & 0x7F); }
         /// <summary>
         /// Length of message.
         /// </summary>
@@ -41,18 +41,18 @@ namespace MTSC.Common.WebSockets
         {
             get
             {
-                if ((lengthBytes[0] & 0x7F) <= 125)
+                if ((this.lengthBytes[0] & 0x7F) <= 125)
                 {
-                    return (ulong)(lengthBytes[0] & 0x7F);
+                    return (ulong)(this.lengthBytes[0] & 0x7F);
                 }
-                else if ((lengthBytes[0] & 0x7F) == 126)
+                else if ((this.lengthBytes[0] & 0x7F) == 126)
                 {
-                    return (ulong)((lengthBytes[1] << 8) + lengthBytes[2]);
+                    return (ulong)((this.lengthBytes[1] << 8) + this.lengthBytes[2]);
                 }
-                else if ((lengthBytes[0] & 0x7F) == 127)
+                else if ((this.lengthBytes[0] & 0x7F) == 127)
                 {
-                    return (ulong)((lengthBytes[1] << 56) + (lengthBytes[2] << 48) + (lengthBytes[3] << 40) + (lengthBytes[4] << 32) + 
-                        (lengthBytes[5] << 24) + (lengthBytes[6] << 16) + (lengthBytes[7] << 8) + lengthBytes[8]);
+                    return (ulong)((this.lengthBytes[1] << 56) + (this.lengthBytes[2] << 48) + (this.lengthBytes[3] << 40) + (this.lengthBytes[4] << 32) + 
+                        (this.lengthBytes[5] << 24) + (this.lengthBytes[6] << 16) + (this.lengthBytes[7] << 8) + this.lengthBytes[8]);
                 }
                 else
                 {
@@ -63,41 +63,44 @@ namespace MTSC.Common.WebSockets
             {
                 if(value <= 125)
                 {
-                    if(lengthBytes.Length != 1)
+                    if(this.lengthBytes.Length != 1)
                     {
-                        byte[] newLengthBytes = new byte[1];
-                        newLengthBytes[0] = lengthBytes[0];
-                        lengthBytes = newLengthBytes;
+                        var newLengthBytes = new byte[1];
+                        newLengthBytes[0] = this.lengthBytes[0];
+                        this.lengthBytes = newLengthBytes;
                     }
-                    lengthBytes[0] = (byte)((lengthBytes[0] & 0x80) | ((byte)value & 0x7F));
+
+                    this.lengthBytes[0] = (byte)((this.lengthBytes[0] & 0x80) | ((byte)value & 0x7F));
                 }
                 else if(value <= UInt16.MaxValue)
                 {
-                    if (lengthBytes.Length != 3)
+                    if (this.lengthBytes.Length != 3)
                     {
-                        byte[] newLengthBytes = new byte[3];
-                        newLengthBytes[0] = (byte)(lengthBytes[0] & 0x80);
+                        var newLengthBytes = new byte[3];
+                        newLengthBytes[0] = (byte)(this.lengthBytes[0] & 0x80);
                         newLengthBytes[0] += 126;
-                        lengthBytes = newLengthBytes;
+                        this.lengthBytes = newLengthBytes;
                     }
-                    for(int i = 1; i < 3; i++)
+
+                    for(var i = 1; i < 3; i++)
                     {
-                        lengthBytes[3 - i] = (byte)(value & 0xFF);
+                        this.lengthBytes[3 - i] = (byte)(value & 0xFF);
                         value >>= 8;
                     }
                 }
                 else if(value <= UInt64.MaxValue)
                 {
-                    if (lengthBytes.Length != 8)
+                    if (this.lengthBytes.Length != 8)
                     {
-                        byte[] newLengthBytes = new byte[9];
-                        newLengthBytes[0] = (byte)(lengthBytes[0] & 0x80);
+                        var newLengthBytes = new byte[9];
+                        newLengthBytes[0] = (byte)(this.lengthBytes[0] & 0x80);
                         newLengthBytes[0] += 127;
-                        lengthBytes = newLengthBytes;
+                        this.lengthBytes = newLengthBytes;
                     }
-                    for (int i = 1; i < 9; i++)
+
+                    for (var i = 1; i < 9; i++)
                     {
-                        lengthBytes[9 - i] = (byte)(value & 0xFF);
+                        this.lengthBytes[9 - i] = (byte)(value & 0xFF);
                         value >>= 8;
                     }
                 }
@@ -116,11 +119,11 @@ namespace MTSC.Common.WebSockets
         /// </summary>
         public byte[] Data
         {
-            get => data;
+            get => this.data;
             set
             {
-                MessageLength = (ulong)value.Length;
-                data = value;
+                this.MessageLength = (ulong)value.Length;
+                this.data = value;
             }
         }
 
@@ -130,22 +133,22 @@ namespace MTSC.Common.WebSockets
         /// <param name="messageBytes">Byte array containing the message bytes.</param>
         public WebsocketMessage(byte[] messageBytes)
         {
-            controlByte = messageBytes[0];
-            Mask = new byte[4];
+            this.controlByte = messageBytes[0];
+            this.Mask = new byte[4];
             ulong dataLength = 0;
-            int dataIndex = 0;
+            var dataIndex = 0;
             if ((messageBytes[1] & 0x7F) <= 125)
             {
-                lengthBytes = new byte[1];
-                lengthBytes[0] = messageBytes[1];
+                this.lengthBytes = new byte[1];
+                this.lengthBytes[0] = messageBytes[1];
                 dataLength = (ulong)(messageBytes[1] & 0x7F);
                 dataIndex = 2;
             }
             else if ((messageBytes[1] & 0x7F) == 126)
             {
                 dataLength = (ulong)((messageBytes[2] << 8) + messageBytes[3]);
-                lengthBytes = new byte[3];
-                Array.Copy(messageBytes, 1, lengthBytes, 0, 3);
+                this.lengthBytes = new byte[3];
+                Array.Copy(messageBytes, 1, this.lengthBytes, 0, 3);
                 dataIndex = 4;
             }
             else if ((messageBytes[1] & 0x7F) == 127)
@@ -153,23 +156,25 @@ namespace MTSC.Common.WebSockets
                 dataLength = (ulong)((messageBytes[3] << 56) + (messageBytes[3] << 48) + (messageBytes[4] << 40) + (messageBytes[5] << 32) +
                     (messageBytes[6] << 24) + (messageBytes[7] << 16) + (messageBytes[8] << 8) + messageBytes[9]);
                 dataIndex = 10;
-                lengthBytes = new byte[9];
-                Array.Copy(messageBytes, 1, lengthBytes, 0, 9);
+                this.lengthBytes = new byte[9];
+                Array.Copy(messageBytes, 1, this.lengthBytes, 0, 9);
             }
             else
             {
-                lengthBytes = new byte[0];
+                this.lengthBytes = new byte[0];
                 throw new InvalidWebsocketFormatException("Length formatting is wrong");
             }
+
             if ((messageBytes[1] & 0x80) > 0)
             {
-                Array.Copy(messageBytes, dataIndex, Mask, 0, 4);
+                Array.Copy(messageBytes, dataIndex, this.Mask, 0, 4);
                 dataIndex += 4;
             }
-            data = new byte[dataLength];
+
+            this.data = new byte[dataLength];
             for(ulong i = 0; i < dataLength; i++)
             {
-                data[i] = (byte)(messageBytes[(ulong)dataIndex + i] ^ Mask[i % 4]);
+                this.data[i] = (byte)(messageBytes[(ulong)dataIndex + i] ^ this.Mask[i % 4]);
             }
         }
         /// <summary>
@@ -177,10 +182,10 @@ namespace MTSC.Common.WebSockets
         /// </summary>
         public WebsocketMessage()
         {
-            controlByte = new byte();
-            Mask = new byte[4];
-            data = new byte[0];
-            lengthBytes = new byte[1];
+            this.controlByte = new byte();
+            this.Mask = new byte[4];
+            this.data = new byte[0];
+            this.lengthBytes = new byte[1];
         }
         /// <summary>
         /// Get the packed message bytes.
@@ -188,21 +193,24 @@ namespace MTSC.Common.WebSockets
         /// <returns>An array containing the message.</returns>
         public byte[] GetMessageBytes()
         {
-            if(data == null)
+            if(this.data == null)
             {
                 throw new NoDataException("There is no data in the message");
             }
-            byte[] messageBytes = new byte[1 + lengthBytes.Length + (Masked ? 4 : 0) + data.Length];
-            messageBytes[0] = controlByte;
-            Array.Copy(lengthBytes, 0, messageBytes, 1, lengthBytes.Length);
-            if (Masked)
+
+            var messageBytes = new byte[1 + this.lengthBytes.Length + (this.Masked ? 4 : 0) + this.data.Length];
+            messageBytes[0] = this.controlByte;
+            Array.Copy(this.lengthBytes, 0, messageBytes, 1, this.lengthBytes.Length);
+            if (this.Masked)
             {
-                Array.Copy(Mask, 0, messageBytes, 1 + lengthBytes.Length, Mask.Length);
+                Array.Copy(this.Mask, 0, messageBytes, 1 + this.lengthBytes.Length, this.Mask.Length);
             }
-            for(int i = 0; i < data.Length; i++)
+
+            for(var i = 0; i < this.data.Length; i++)
             {
-                messageBytes[1 + lengthBytes.Length + (Masked ? 4 : 0) + i] = (byte)(Masked ? data[i] ^ Mask[i % 4] : data[i]);
+                messageBytes[1 + this.lengthBytes.Length + (this.Masked ? 4 : 0) + i] = (byte)(this.Masked ? this.data[i] ^ this.Mask[i % 4] : this.data[i]);
             }
+
             return messageBytes;
         }
     }

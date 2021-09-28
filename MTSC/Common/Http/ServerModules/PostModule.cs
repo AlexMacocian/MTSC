@@ -23,16 +23,16 @@ namespace MTSC.Common.Http.ServerModules
             }
             else
             {
-                Dictionary<string, string> formData = new Dictionary<string, string>();
-                int length = int.Parse(request.Headers[HttpMessage.EntityHeaders.ContentLength]);
+                var formData = new Dictionary<string, string>();
+                var length = int.Parse(request.Headers[HttpMessage.EntityHeaders.ContentLength]);
                 int step = 0, parsedLength = 0;
-                StringBuilder fieldBuilder = new StringBuilder();
-                StringBuilder valueBuilder = new StringBuilder();
+                var fieldBuilder = new StringBuilder();
+                var valueBuilder = new StringBuilder();
                 /*
                  * Parse request body to obtain the form data.
                  * Example of a form: field1=value1&field2=value2
                  */
-                for (int i = 0; i < request.Body.Length; i++)
+                for (var i = 0; i < request.Body.Length; i++)
                 {
                     if (request.Body[i] == '\n')
                     {
@@ -70,6 +70,7 @@ namespace MTSC.Common.Http.ServerModules
                         }
                     }
                 }
+
                 return formData;
             }
         }
@@ -88,14 +89,14 @@ namespace MTSC.Common.Http.ServerModules
             {
                 if (request.Headers[HttpMessage.EntityHeaders.ContentType].Contains(urlEncodedHeader))
                 {
-                    Dictionary<string, string> form = ParseFormUrlEncoded(request);
+                    var form = this.ParseFormUrlEncoded(request);
                     FormReceived?.Invoke(this, form);
                     server.LogDebug("Received POST form of " + form.Keys.Count + " keys!");
                     return true;
                 }
                 else if (request.Headers[HttpMessage.EntityHeaders.ContentType].Contains(multipartHeader))
                 {
-                    Dictionary<string, string> form = ParseFormMultipart(request);
+                    var form = this.ParseFormMultipart(request);
                     FormReceived?.Invoke(this, form);
                     server.LogDebug("Received POST form of " + form.Keys.Count + " keys!");
                     return true;

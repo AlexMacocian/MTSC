@@ -10,6 +10,7 @@ using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Schedulers;
 using MTSC.UnitTests.RoutingModules;
+using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -55,7 +56,7 @@ namespace MTSC.UnitTests
                     .AddRoute<EchoModule>(HttpMessage.HttpMethods.Post, "echo")
                     .AddRoute<LongRunningModule>(HttpMessage.HttpMethods.Get, "long-running")
                     .AddRoute<MultipartModule>(HttpMessage.HttpMethods.Post, "multipart")
-                    .AddRoute<SomeRoutingModule>(HttpMessage.HttpMethods.Get, "some-module")
+                    .AddRoute<SomeRoutingModule>(HttpMessage.HttpMethods.Post, "some-module/{someValue}/test/{intValue}/test")
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(3000))
                     .WithMaximumSize(250000))
                 .AddLogger(new ConsoleLogger())
@@ -69,7 +70,7 @@ namespace MTSC.UnitTests
         [TestMethod]
         public async Task ServerReturns500OnError()
         {
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
             var response = await httpClient.GetAsync("throw");
             Assert.AreEqual(response.StatusCode, HttpStatusCode.InternalServerError);
@@ -78,26 +79,27 @@ namespace MTSC.UnitTests
         [TestMethod]
         public async Task ServerParsesRequestAndResponse()
         {
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
-            var response = await httpClient.GetAsync("some-module");
+            var response = await httpClient.PostAsync("some-module/1234asvB9/test/99213/test", new StringContent(JsonConvert.SerializeObject(new HelloWorldMessage { HelloWorld = true })));
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
         }
 
         [TestMethod]
         public async Task ServerRespondsDuringLongRunningTask()
         {
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
             var longRunningTask = httpClient.GetAsync("long-running");
-            int responses = 0;
-            HttpClient client2 = new HttpClient();
+            var responses = 0;
+            var client2 = new HttpClient();
             client2.BaseAddress = new Uri("http://localhost:800");
             while (!longRunningTask.IsCompleted)
             {
                 _ = await client2.GetAsync("");
                 responses++;
             }
+
             var result = longRunningTask.Result;
             Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
             Assert.IsTrue(responses > 5);
@@ -106,7 +108,7 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void HelloWorldHTTP()
         {
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
@@ -115,9 +117,9 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void MultipleRequestsShouldRespond()
         {
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
-            for (int i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
                 var result = httpClient.GetAsync("").GetAwaiter().GetResult();
                 Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
@@ -127,37 +129,38 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void SendFragmentedHttpMessage()
         {
-            Client.Client client = new Client.Client();
+            var client = new Client.Client();
             var notifyHandler = new NotifyReceivedMessageHandler();
-            notifyHandler.ReceivedMessage += (o, m) => { receivedMessage = m.MessageBytes; };
+            notifyHandler.ReceivedMessage += (o, m) => { this.receivedMessage = m.MessageBytes; };
             client.SetServerAddress("127.0.0.1")
                 .SetPort(800)
                 .AddHandler(notifyHandler)
                 .WithSsl(false)
                 .Connect();
 
-            HttpRequest request = new HttpRequest();
+            var request = new HttpRequest();
             request.Method = HttpMessage.HttpMethods.Post;
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
-            byte[] message = request.GetPackedRequest();
+            var message = request.GetPackedRequest();
 
             client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
             Thread.Sleep(1000);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
             Thread.Sleep(1000);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
-            Stopwatch sw = new Stopwatch();
+            var sw = new Stopwatch();
             sw.Start();
-            while (receivedMessage == null)
+            while (this.receivedMessage == null)
             {
                 if(sw.ElapsedMilliseconds > 15000)
                 {
                     throw new Exception("Response not received!");
                 }
             }
-            HttpResponse response = HttpResponse.FromBytes(receivedMessage);
+
+            var response = HttpResponse.FromBytes(this.receivedMessage);
             //Trim the null bytes from encryption/decryption
             response.BodyString = response.BodyString.Trim('\0');
             Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.OK);
@@ -167,90 +170,93 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void SendFragmentedHttpMessageShouldExpire()
         {
-            Client.Client client = new Client.Client();
+            var client = new Client.Client();
             var notifyHandler = new NotifyReceivedMessageHandler();
-            notifyHandler.ReceivedMessage += (o, m) => { receivedMessage = m.MessageBytes; };
+            notifyHandler.ReceivedMessage += (o, m) => { this.receivedMessage = m.MessageBytes; };
             client.SetServerAddress("127.0.0.1")
                 .SetPort(800)
                 .AddHandler(notifyHandler)
                 .WithSsl(false)
                 .Connect();
 
-            HttpRequest request = new HttpRequest();
+            var request = new HttpRequest();
             request.Method = HttpMessage.HttpMethods.Post;
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
-            byte[] message = request.GetPackedRequest();
+            var message = request.GetPackedRequest();
 
             client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
             Thread.Sleep(300);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
             Thread.Sleep(3300);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
-            Stopwatch sw = new Stopwatch();
+            var sw = new Stopwatch();
             sw.Start();
-            while (receivedMessage == null)
+            while (this.receivedMessage == null)
             {
                 if (sw.ElapsedMilliseconds > 5000)
                 {
                     Assert.Fail("Should receive that message has expired!");
                 }
             }
-            var response = HttpResponse.FromBytes(receivedMessage);
+
+            var response = HttpResponse.FromBytes(this.receivedMessage);
             Assert.AreEqual(response.StatusCode, HttpMessage.StatusCodes.BadRequest);
         }
 
         [TestMethod]
         public void SendFragmentedHttpMessageExceedingSizeShouldExpire()
         {
-            Client.Client client = new Client.Client();
+            var client = new Client.Client();
             var notifyHandler = new NotifyReceivedMessageHandler();
-            notifyHandler.ReceivedMessage += (o, m) => { receivedMessage = m.MessageBytes; };
+            notifyHandler.ReceivedMessage += (o, m) => { this.receivedMessage = m.MessageBytes; };
             client.SetServerAddress("127.0.0.1")
                 .SetPort(800)
                 .AddHandler(notifyHandler)
                 .WithSsl(false)
                 .Connect();
 
-            HttpRequest request = new HttpRequest();
+            var request = new HttpRequest();
             request.Method = HttpMessage.HttpMethods.Post;
             request.BodyString = "Brought a message to you my guy!";
             request.RequestURI = "/echo";
             request.Headers[HttpMessage.EntityHeaders.ContentLength] = request.BodyString.Length.ToString();
             request.Body = new byte[255000];
             Array.Fill<byte>(request.Body, 50);
-            byte[] message = request.GetPackedRequest();
+            var message = request.GetPackedRequest();
 
             client.QueueMessage(message.Take(message.Length - request.BodyString.Length).ToArray());
             Thread.Sleep(5);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length).Take(10).ToArray());
             Thread.Sleep(5);
             client.QueueMessage(message.Skip(message.Length - request.BodyString.Length + 10).Take(request.BodyString.Length - 10).ToArray());
-            Stopwatch sw = new Stopwatch();
+            var sw = new Stopwatch();
             sw.Start();
-            while (receivedMessage == null)
+            while (this.receivedMessage == null)
             {
                 if (sw.ElapsedMilliseconds > 15000)
                 {
                     Assert.Fail("Should receive that message has exceeded size!");
                 }
             }
-            var response = HttpResponse.FromBytes(receivedMessage);
+
+            var response = HttpResponse.FromBytes(this.receivedMessage);
             Assert.AreNotEqual(response.StatusCode, HttpMessage.StatusCodes.OK);
         }
 
         [TestMethod]
         public void SendLargeHttpMessage()
         {
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri("http://localhost:800");
             httpClient.DefaultRequestHeaders.ExpectContinue = true;
-            string s = string.Empty;
-            for(int i = 0; i < 200000; i++)
+            var s = string.Empty;
+            for(var i = 0; i < 200000; i++)
             {
                 s += "C";
             }
+
             using(var sc = new ByteArrayContent(Encoding.UTF8.GetBytes(s)))
             {
                 var response = httpClient.PostAsync("echo", sc).Result;
@@ -262,9 +268,9 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void UploadFileShouldSucceed()
         {
-            byte[] bytes = new byte[120000];
+            var bytes = new byte[120000];
 
-            for(int i = 0; i < bytes.Length; i++)
+            for(var i = 0; i < bytes.Length; i++)
             {
                 bytes[i] = 43;
             }
@@ -291,9 +297,9 @@ namespace MTSC.UnitTests
             query["key1"] = "value1";
             query["key2"] = "value2";
             builder.Query = query.ToString();
-            string url = builder.ToString();
+            var url = builder.ToString();
 
-            HttpClient httpClient = new HttpClient();
+            var httpClient = new HttpClient();
             httpClient.BaseAddress = new Uri(url);
             var result = httpClient.GetAsync("").Result;
             Assert.AreEqual(result.StatusCode, HttpStatusCode.OK);
@@ -305,7 +311,7 @@ namespace MTSC.UnitTests
         public async Task EchoWebsocket(string endpoint)
         {
             var bytes = new byte[100];
-            ClientWebSocket client = new ClientWebSocket();
+            var client = new ClientWebSocket();
             await client.ConnectAsync(new Uri($"ws://localhost:800/{endpoint}"), CancellationToken.None);
             await client.SendAsync(Encoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None);
             await client.ReceiveAsync(bytes, CancellationToken.None);

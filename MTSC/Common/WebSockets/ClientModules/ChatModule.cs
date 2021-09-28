@@ -6,11 +6,11 @@ namespace MTSC.Common.WebSockets.ClientModules
 {
     public sealed class ChatModule : IWebsocketModule
     {
-        static RNGCryptoServiceProvider rng = new RNGCryptoServiceProvider();
+        static RNGCryptoServiceProvider rng = new();
         #region Public Methods
         public void SendMessage(WebsocketHandler websocketHandler, string message)
         {
-            WebsocketMessage websocketMessage = new WebsocketMessage();
+            var websocketMessage = new WebsocketMessage();
             websocketMessage.Data = Encoding.UTF8.GetBytes(message);
             websocketMessage.Opcode = WebsocketMessage.Opcodes.Text;
             websocketMessage.FIN = true;
@@ -22,7 +22,7 @@ namespace MTSC.Common.WebSockets.ClientModules
         #region Interface Implementation
         bool IWebsocketModule.HandleReceivedMessage(Client.Client client, WebsocketHandler handler, WebsocketMessage receivedMessage)
         {
-            string messageString = Encoding.UTF8.GetString(receivedMessage.Data);
+            var messageString = Encoding.UTF8.GetString(receivedMessage.Data);
             client.Log(">" + messageString);
             return false;
         }

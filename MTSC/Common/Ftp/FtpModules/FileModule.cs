@@ -22,13 +22,14 @@ namespace MTSC.Common.Ftp.FtpModules
                     handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.FileStatusOkay, Message = "Opening data connection" });
                     ftpData.OpenDataConnection();
                 }
-                handler.QueueFtpResponse(server, client, StoreFile(request, ftpData));
+
+                handler.QueueFtpResponse(server, client, this.StoreFile(request, ftpData));
                 ftpData.CloseDataConnection();
                 return true;
             }
             else if (request.Command == FtpRequestCommands.DELE)
             {
-                handler.QueueFtpResponse(server, client, RemoveFile(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.RemoveFile(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.RETR)
@@ -38,7 +39,8 @@ namespace MTSC.Common.Ftp.FtpModules
                     handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.FileStatusOkay, Message = "Opening data connection" });
                     ftpData.OpenDataConnection();
                 }
-                handler.QueueFtpResponse(server, client, RetrieveFile(request, ftpData));
+
+                handler.QueueFtpResponse(server, client, this.RetrieveFile(request, ftpData));
                 ftpData.CloseDataConnection();
                 return true;
             }
@@ -62,6 +64,7 @@ namespace MTSC.Common.Ftp.FtpModules
                         fs.Write(bytes, 0, bytes.Length);
                     }
                 }
+
                 return new FtpResponse { StatusCode = FtpResponseCodes.ClosingDataConnection, Message = "Transfer complete" };
             }
             else
@@ -88,6 +91,7 @@ namespace MTSC.Common.Ftp.FtpModules
                     }
                 }
             }
+
             return new FtpResponse { StatusCode = FtpResponseCodes.ClosingDataConnection, Message = "Transfer complete" };
         }
 

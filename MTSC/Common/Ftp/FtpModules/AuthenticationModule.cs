@@ -32,7 +32,7 @@ namespace MTSC.Common.Ftp.FtpModules
                 if (!string.IsNullOrWhiteSpace(authData.Username))
                 {
                     authData.Password = request.Arguments[0];
-                    if (ValidateAuthentication.Invoke(authData))
+                    if (this.ValidateAuthentication.Invoke(authData))
                     {
                         handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.UserLoggedIn, Message = "User logged in!" });
                         authData.Authenticated = true;
@@ -46,6 +46,7 @@ namespace MTSC.Common.Ftp.FtpModules
                 {
                     handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.NotLoggedIn, Message = "Username not present. Please provide username!" });
                 }
+
                 return true;
             }
             else if(!authData.Authenticated)
@@ -53,6 +54,7 @@ namespace MTSC.Common.Ftp.FtpModules
                 handler.QueueFtpResponse(server, client, new FtpResponse { StatusCode = FtpResponseCodes.NotLoggedIn, Message = "Please log in before issuing other commands!" });
                 return true;
             }
+
             return false;
         }
 

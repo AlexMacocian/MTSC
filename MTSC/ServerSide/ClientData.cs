@@ -11,7 +11,7 @@ namespace MTSC.ServerSide
     /// </summary>
     public class ClientData : IDisposable, IActiveClient, IQueueHolder<Message>
     {
-        private readonly ProducerConsumerQueue<Message> messageQueue = new ProducerConsumerQueue<Message>();
+        private readonly ProducerConsumerQueue<Message> messageQueue = new();
 
         public TcpClient TcpClient { get; }
         /// <summary>
@@ -43,7 +43,7 @@ namespace MTSC.ServerSide
         /// </summary>
         public ResourceDictionary Resources { get; set; } = new ResourceDictionary();
 
-        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => messageQueue;
+        IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => this.messageQueue;
         bool IActiveClient.ReadingData { get; set; }
 
         public ClientData(TcpClient client)
@@ -81,28 +81,28 @@ namespace MTSC.ServerSide
         #region IActiveClient Implementation
         void IActiveClient.UpdateLastReceivedMessage()
         {
-            LastActivityTime = LastReceivedMessageTime = DateTime.Now;
+            this.LastActivityTime = this.LastReceivedMessageTime = DateTime.Now;
         }
 
         void IActiveClient.UpdateLastActivity()
         {
-            LastActivityTime = DateTime.Now;
+            this.LastActivityTime = DateTime.Now;
         }
         #endregion
         #region IQueueHolder Imeplementation
         void IQueueHolder<Message>.Enqueue(Message value)
         {
-            (messageQueue as IProducerQueue<Message>).Enqueue(value);
+            (this.messageQueue as IProducerQueue<Message>).Enqueue(value);
         }
 
         Message IQueueHolder<Message>.Dequeue()
         {
-            return (messageQueue as IConsumerQueue<Message>).Dequeue();
+            return (this.messageQueue as IConsumerQueue<Message>).Dequeue();
         }
 
         bool IQueueHolder<Message>.TryDequeue(out Message Value)
         {
-            return (messageQueue as IConsumerQueue<Message>).TryDequeue(out Value);
+            return (this.messageQueue as IConsumerQueue<Message>).TryDequeue(out Value);
         }
         #endregion
         #region IDisposable Support
@@ -110,18 +110,18 @@ namespace MTSC.ServerSide
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!this.disposedValue)
             {
                 if (disposing)
                 {
                     // TODO: dispose managed state (managed objects).
                 }
 
-                TcpClient?.Dispose();
-                SslStream?.Dispose();
-                Resources?.Dispose();
+                this.TcpClient?.Dispose();
+                this.SslStream?.Dispose();
+                this.Resources?.Dispose();
 
-                disposedValue = true;
+                this.disposedValue = true;
             }
         }
 
@@ -136,7 +136,7 @@ namespace MTSC.ServerSide
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-            Dispose(true);
+            this.Dispose(true);
             // TODO: uncomment the following line if the finalizer is overridden above.
             // GC.SuppressFinalize(this);
         }

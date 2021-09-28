@@ -28,7 +28,7 @@ namespace MTSC.Common.Http
         /// <param name="value">Value of cookie.</param>
         public Cookie(string key, string value)
         {
-            Attributes = new Dictionary<string, string>();
+            this.Attributes = new Dictionary<string, string>();
             this.Key = key;
             this.Value = value;
         }
@@ -38,14 +38,14 @@ namespace MTSC.Common.Http
         /// <param name="cookieString">String containing the definition of a cookie</param>
         public Cookie(string cookieString)
         {
-            Attributes = new Dictionary<string, string>();
-            string[] cookieTokens = cookieString.Split(';');
-            Key = cookieTokens[0].Split('=')[0].Trim();
-            Value = cookieTokens[1].Split('=')[1].Trim();
-            for(int i = 1; i < cookieTokens.Length; i++)
+            this.Attributes = new Dictionary<string, string>();
+            var cookieTokens = cookieString.Split(';');
+            this.Key = cookieTokens[0].Split('=')[0].Trim();
+            this.Value = cookieTokens[1].Split('=')[1].Trim();
+            for(var i = 1; i < cookieTokens.Length; i++)
             {
-                string[] attributeTokens = cookieTokens[i].Split('=');
-                Attributes[attributeTokens[0].Trim()] = attributeTokens.Length > 1 ? attributeTokens[1].Trim() : string.Empty;
+                var attributeTokens = cookieTokens[i].Split('=');
+                this.Attributes[attributeTokens[0].Trim()] = attributeTokens.Length > 1 ? attributeTokens[1].Trim() : string.Empty;
             }
         }
         /// <summary>
@@ -54,11 +54,11 @@ namespace MTSC.Common.Http
         /// <returns>String containing the cookie definition.</returns>
         public string BuildCookieString()
         {
-            StringBuilder sb = new StringBuilder();
-            sb.Append(Key).Append('=').Append(Value);
-            if(Attributes.Count > 0)
+            var sb = new StringBuilder();
+            sb.Append(this.Key).Append('=').Append(this.Value);
+            if(this.Attributes.Count > 0)
             {
-                foreach(KeyValuePair<string, string> attribute in Attributes)
+                foreach(var attribute in this.Attributes)
                 {
                     sb.Append(';').Append(attribute.Key);
                     if (!string.IsNullOrWhiteSpace(attribute.Value))
@@ -67,6 +67,7 @@ namespace MTSC.Common.Http
                     }
                 }
             }
+
             return sb.ToString();
         }
         /// <summary>
@@ -75,7 +76,7 @@ namespace MTSC.Common.Http
         /// <returns>Byte array containin the cookie definition.</returns>
         public byte[] BuildCookieBytes()
         {
-            return ASCIIEncoding.ASCII.GetBytes(BuildCookieString());
+            return ASCIIEncoding.ASCII.GetBytes(this.BuildCookieString());
         }
     }
 }

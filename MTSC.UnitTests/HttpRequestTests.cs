@@ -38,7 +38,7 @@ namespace MTSC.UnitTests
         [DataRow(emptyGet)]
         public void ParseShouldPass(string requestString)
         {
-            HttpRequest request = HttpRequest.FromBytes(ASCIIEncoding.ASCII.GetBytes(requestString));
+            var request = HttpRequest.FromBytes(ASCIIEncoding.ASCII.GetBytes(requestString));
         }
 
         [DataTestMethod]
@@ -46,14 +46,14 @@ namespace MTSC.UnitTests
         [DataRow(emptyGet, "")]
         public void UriShouldBeAsExpected(string requestString, string uri)
         {
-            HttpRequest request = HttpRequest.FromBytes(ASCIIEncoding.ASCII.GetBytes(requestString));
+            var request = HttpRequest.FromBytes(ASCIIEncoding.ASCII.GetBytes(requestString));
             Assert.AreEqual(request.RequestURI, uri);
         }
 
         [TestMethod]
         public void HeaderShouldExist()
         {
-            HttpRequest request = HttpRequest.FromBytes(ASCIIEncoding.ASCII.GetBytes(postWithHeader));
+            var request = HttpRequest.FromBytes(ASCIIEncoding.ASCII.GetBytes(postWithHeader));
             Assert.AreEqual(request.Headers[HttpMessage.RequestHeaders.Host], "w3schools.com");
         }
 
@@ -72,7 +72,7 @@ namespace MTSC.UnitTests
         [TestMethod]
         public void BuiltRequestShouldContainFormData()
         {
-            HttpRequest httpRequest = new HttpRequest();
+            var httpRequest = new HttpRequest();
             httpRequest.Method = HttpMessage.HttpMethods.Post;
             httpRequest.Form.SetValue("name", new TextContentType("text/plain", "Some random text here"));
             var requestBytes = httpRequest.GetPackedRequest();

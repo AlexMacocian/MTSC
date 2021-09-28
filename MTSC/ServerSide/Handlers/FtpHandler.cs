@@ -22,7 +22,7 @@ namespace MTSC.ServerSide.Handlers
             Initialized
         }
 
-        private List<IFtpModule> ftpModules = new List<IFtpModule>();
+        private List<IFtpModule> ftpModules = new();
 
         public TimeSpan ReadyDelay { get; set; } = TimeSpan.FromSeconds(1);
 
@@ -34,7 +34,7 @@ namespace MTSC.ServerSide.Handlers
 
         public FtpHandler AddModule(IFtpModule module)
         {
-            ftpModules.Add(module);
+            this.ftpModules.Add(module);
             return this;
         }
         
@@ -52,12 +52,12 @@ namespace MTSC.ServerSide.Handlers
         {
             client.Resources.SetResource(State.Default);
             var issueTime = DateTime.Now;
-            Task.Delay(ReadyDelay).ContinueWith((previousTask) =>
+            Task.Delay(this.ReadyDelay).ContinueWith((previousTask) =>
             {
                 if(client.LastActivityTime < issueTime)
                 {
                     client.Resources.SetResource(State.Initialized);
-                    server.QueueMessage(client, Encoding.ASCII.GetBytes(welcomeMessage));
+                    server.QueueMessage(client, Encoding.ASCII.GetBytes(this.welcomeMessage));
                     client.SetAffinity(this);
                 }
             });
@@ -70,7 +70,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 var request = FtpRequest.FromBytes(message.MessageBytes);
                 var handled = false;
-                foreach(IFtpModule module in ftpModules)
+                foreach(var module in this.ftpModules)
                 {
                     if(module.HandleRequest(request, client, this, server))
                     {
@@ -78,8 +78,10 @@ namespace MTSC.ServerSide.Handlers
                         break;
                     }
                 }
+
                 return handled;
             }
+
             return false;
         }
 

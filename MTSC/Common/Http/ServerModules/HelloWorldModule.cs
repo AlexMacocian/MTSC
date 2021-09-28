@@ -19,6 +19,7 @@ namespace MTSC.Common.Http.ServerModules
                 response.Headers["Server"] = "MTSC";
                 response.Body = this.response;
             }
+
             return true;
         }
 

@@ -14,7 +14,7 @@ namespace MTSC.Common.Http
         /// </summary>
         public List<Cookie> Cookies { get; } = new List<Cookie>();
         public byte[] Body { get; set; } = new byte[0];
-        public string BodyString { get => Encoding.ASCII.GetString(Body); set => Body = Encoding.ASCII.GetBytes(value); }
+        public string BodyString { get => Encoding.ASCII.GetString(this.Body); set => this.Body = Encoding.ASCII.GetBytes(value); }
         public StatusCodes StatusCode { get; set; }
         public string StatusString { get; set; } = string.Empty;
         public HttpResponseHeaderDictionary Headers { get; } = new HttpResponseHeaderDictionary();
@@ -26,7 +26,7 @@ namespace MTSC.Common.Http
 
         public HttpResponse(byte[] responseBytes)
         {
-            ParseResponse(responseBytes);
+            this.ParseResponse(responseBytes);
         }
 
         public static HttpResponse FromBytes(byte[] responseBytes)
@@ -36,7 +36,7 @@ namespace MTSC.Common.Http
 
         public byte[] GetPackedResponse(bool includeContentLengthHeader)
         {
-            return BuildResponse(includeContentLengthHeader);
+            return this.BuildResponse(includeContentLengthHeader);
         }
 
         /// <summary>
@@ -54,28 +54,32 @@ namespace MTSC.Common.Http
                  * If there is a body, include the size of the body. If there is no body,
                  * set the value of the content length to 0.
                  */
-                Headers[EntityHeaders.ContentLength] = Body == null ? "0" : Body.Length.ToString();
+                this.Headers[EntityHeaders.ContentLength] = this.Body == null ? "0" : this.Body.Length.ToString();
             }
-            StringBuilder responseString = new StringBuilder();
+
+            var responseString = new StringBuilder();
             responseString.Append(HttpHeaders.HTTPVER).Append(HttpHeaders.SP)
                 .Append((int)this.StatusCode).Append(HttpHeaders.SP)
                 .Append(this.StatusString != string.Empty ? this.StatusString : this.StatusCode.ToString()).Append(HttpHeaders.CRLF);
-            foreach (KeyValuePair<string, string> header in Headers)
+            foreach (var header in this.Headers)
             {
                 responseString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
             }
-            foreach (Cookie cookie in Cookies)
+
+            foreach (var cookie in this.Cookies)
             {
                 responseString.Append(HttpHeaders.ResponseCookieHeader).Append(':').Append(HttpHeaders.SP).Append(cookie.BuildCookieString()).Append(HttpHeaders.CRLF);
             }
+
             responseString.Append(HttpHeaders.CRLF);
-            byte[] response = new byte[responseString.Length + (Body == null ? 0 : Body.Length)];
-            byte[] responseBytes = Encoding.ASCII.GetBytes(responseString.ToString());
+            var response = new byte[responseString.Length + (this.Body == null ? 0 : this.Body.Length)];
+            var responseBytes = Encoding.ASCII.GetBytes(responseString.ToString());
             Array.Copy(responseBytes, 0, response, 0, responseBytes.Length);
-            if (Body != null)
+            if (this.Body != null)
             {
-                Array.Copy(Body, 0, response, responseBytes.Length, Body.Length);
+                Array.Copy(this.Body, 0, response, responseBytes.Length, this.Body.Length);
             }
+
             return response;
         }
         /// <summary>
@@ -87,15 +91,15 @@ namespace MTSC.Common.Http
             /*
              * Parse the bytes one by one, respecting the reference manual.
              */
-            MemoryStream ms = new MemoryStream(responseBytes);
+            var ms = new MemoryStream(responseBytes);
             /*
              * Keep the index of the byte array, to identify the message body.
              * Step value indicates at what point the parsing algorithm currently is.
              * Step 0 - HTTPVer, 1 - StatusCodeInt, 2 - StatusCodeString, 3 - Header, 4 - Value
              */
-            int step = 0;
-            string headerKey = string.Empty;
-            string headerValue = string.Empty;
+            var step = 0;
+            var headerKey = string.Empty;
+            var headerValue = string.Empty;
             while (ms.Position < ms.Length)
             {
                 if (step == 0)
@@ -115,7 +119,7 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 3)
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
@@ -127,13 +131,13 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerKey = ParseHeaderKey(ms);
+                        headerKey = this.ParseHeaderKey(ms);
                         step++;
                     }
                 }
                 else if (step == 4)
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
@@ -145,19 +149,21 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerValue = ParseHeaderValue(ms);
+                        headerValue = this.ParseHeaderValue(ms);
                         if (headerKey == HttpHeaders.ResponseCookieHeader)
                         {
-                            Cookies.Add(new Cookie(headerValue));
+                            this.Cookies.Add(new Cookie(headerValue));
                         }
                         else
                         {
-                            Headers[headerKey] = headerValue;
+                            this.Headers[headerKey] = headerValue;
                         }
+
                         step--;
                     }
                 }
             }
+
             if (ms.Length - ms.Position > 1)
             {
                 /*
@@ -166,6 +172,7 @@ namespace MTSC.Common.Http
                  */
                 this.Body = ms.ReadRemainingBytes();
             }
+
             return;
         }
         private void ParseHTTPVer(MemoryStream ms)
@@ -175,19 +182,20 @@ namespace MTSC.Common.Http
              * Check if the HTTPVer matches the implementation version.
              * If not, throw an exception.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while(ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[1] || c == HttpHeaders.SP)
                     {
-                        string httpVer = parseBuffer.ToString();
+                        var httpVer = parseBuffer.ToString();
                         if (httpVer != HttpHeaders.HTTPVER)
                         {
                             throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString());
                         }
+
                         return;
                     }
                     else if (c == HttpHeaders.CRLF[0])
@@ -215,10 +223,10 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a ':' character, parse the header key.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while(ms.Position < ms.Length)
             {
-                char c = (char)ms.ReadByte();
+                var c = (char)ms.ReadByte();
                 try
                 {
                     if (c == ':')
@@ -235,6 +243,7 @@ namespace MTSC.Common.Http
                     throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             throw new InvalidHeaderException("Invalid Header key. Buffer: " + parseBuffer.ToString());
         }
 
@@ -243,10 +252,10 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
-                char c = (char)ms.ReadByte();
+                var c = (char)ms.ReadByte();
                 try
                 {
                     if (c == HttpHeaders.CRLF[1])
@@ -270,6 +279,7 @@ namespace MTSC.Common.Http
                     throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             throw new InvalidHeaderException("Invalid header value. Buffer: " + parseBuffer.ToString());
         }
 
@@ -278,10 +288,10 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a SP character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
-                char c = (char)ms.ReadByte();
+                var c = (char)ms.ReadByte();
                 try
                 {
                     if (c == HttpHeaders.SP)
@@ -298,6 +308,7 @@ namespace MTSC.Common.Http
                     throw new InvalidStatusCodeException("Invalid status code. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             throw new InvalidStatusCodeException("Invalid status code. Buffer: " + parseBuffer.ToString());
         }
 
@@ -306,10 +317,10 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
-                char c = (char)ms.ReadByte();
+                var c = (char)ms.ReadByte();
                 try
                 {
                     if (c == HttpHeaders.CRLF[1])
@@ -333,6 +344,7 @@ namespace MTSC.Common.Http
                     throw new InvalidStatusCodeException("Invalid status code. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             throw new InvalidHeaderException("Invalid status code. Buffer: " + parseBuffer.ToString());
         }
     }

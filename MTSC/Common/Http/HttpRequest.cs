@@ -26,19 +26,18 @@ namespace MTSC.Common.Http
         public string RequestURI { get; set; }
         public string RequestQuery { get; set; }
         public byte[] Body { get; set; } = new byte[0];
-        public string BodyString { get => Encoding.ASCII.GetString(Body).Trim('\0'); set => Body = Encoding.ASCII.GetBytes(value); }
+        public string BodyString { get => Encoding.ASCII.GetString(this.Body).Trim('\0'); set => this.Body = Encoding.ASCII.GetBytes(value); }
 
         public HttpRequest()
         {
-
         }
 
         public HttpRequest(byte[] requestBytes)
         {
-            ParseRequest(requestBytes);
+            this.ParseRequest(requestBytes);
             if(this.Method == HttpMethods.Post)
             {
-                ParseBodyForm();
+                this.ParseBodyForm();
             }
         }
 
@@ -49,21 +48,23 @@ namespace MTSC.Common.Http
 
         public byte[] GetPackedRequest()
         {
-            return BuildRequest();
+            return this.BuildRequest();
         }
 
         public void AddToBody(byte[] bytesToBeAdded)
         {
-            var newBody = new byte[Body.Length + bytesToBeAdded.Length];
-            if (Body.Length > 0)
+            var newBody = new byte[this.Body.Length + bytesToBeAdded.Length];
+            if (this.Body.Length > 0)
             {
-                Array.Copy(Body, 0, newBody, 0, Body.Length);
+                Array.Copy(this.Body, 0, newBody, 0, this.Body.Length);
             }
+
             if (bytesToBeAdded.Length > 0)
             {
-                Array.Copy(bytesToBeAdded, 0, newBody, Body.Length, bytesToBeAdded.Length);
+                Array.Copy(bytesToBeAdded, 0, newBody, this.Body.Length, bytesToBeAdded.Length);
             }
-            Body = newBody;
+
+            this.Body = newBody;
         }
 
         private HttpMethods GetMethod(string methodString)
@@ -77,16 +78,16 @@ namespace MTSC.Common.Http
              * Get each character one by one. When meeting a SP character, parse the method, clear the buffer
              * and continue with parsing the next step.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.SP)
                     {
-                        string methodString = parseBuffer.ToString();
-                        return GetMethod(methodString);
+                        var methodString = parseBuffer.ToString();
+                        return this.GetMethod(methodString);
                     }
                     else
                     {
@@ -99,6 +100,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteMethodException("Incomplete request method. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -108,17 +110,18 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a SP character, parse the URI and clear the buffer.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             ms.ReadByte(); //Ignore the first '/'
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.SP)
                     {
                         return parseBuffer.ToString();
                     }
+
                     if (c == '?')
                     {
                         return parseBuffer.ToString();
@@ -134,6 +137,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteRequestURIException("Incomplete request URI. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -143,12 +147,12 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a SP character, parse the URI and clear the buffer.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == (byte)HttpHeaders.SP)
                     {
                         return parseBuffer.ToString();
@@ -164,6 +168,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteRequestQueryException("Incomplete request query. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -175,19 +180,20 @@ namespace MTSC.Common.Http
              * Check if the HTTPVer matches the implementation version.
              * If not, throw an exception.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[1] || c == HttpHeaders.SP)
                     {
-                        string httpVer = parseBuffer.ToString();
+                        var httpVer = parseBuffer.ToString();
                         if (httpVer != HttpHeaders.HTTPVER)
                         {
                             throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString());
                         }
+
                         return;
                     }
                     else if (c == HttpHeaders.CRLF[0])
@@ -218,12 +224,12 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a ':' character, parse the header key.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while(ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == ':')
                     {
                         return parseBuffer.ToString();
@@ -239,6 +245,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteHeaderKeyException("Incomplete Header key. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -248,12 +255,12 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while(ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[1])
                     {
                         return parseBuffer.ToString().Trim();
@@ -276,6 +283,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteHeaderValueException("Incomplete header value. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -288,7 +296,7 @@ namespace MTSC.Common.Http
         {
             if(this.Method == HttpMethods.Post && this.Form.Count > 0)
             {
-                List<byte> formData = new List<byte>();
+                var formData = new List<byte>();
                 string boundary = null;
                 if (this.Headers.ContainsHeader("Content-Type"))
                 {
@@ -299,9 +307,10 @@ namespace MTSC.Common.Http
                     boundary = Guid.NewGuid().ToString();
                     this.Headers["Content-Type"] = "multipart/form-data; boundary=" + boundary;
                 }
+
                 formData.AddRange(Encoding.UTF8.GetBytes("--" + boundary + HttpHeaders.CRLF));
 
-                foreach(var content in Form)
+                foreach(var content in this.Form)
                 {
                     if (content.Value is TextContentType) {
                         formData.AddRange(Encoding.UTF8.GetBytes("Content-Disposition: form-data; name=\"" + content.Key + "\"" + HttpHeaders.CRLF +
@@ -315,47 +324,54 @@ namespace MTSC.Common.Http
                         formData.AddRange(((FileContentType)content.Value).Data);
                         formData.AddRange(Encoding.UTF8.GetBytes(HttpHeaders.CRLF));
                     }
+
                     formData.AddRange(Encoding.UTF8.GetBytes("--" + boundary + HttpHeaders.CRLF));
                 }
-                var prevBytes = Body;
-                Body = new byte[prevBytes.Length + formData.Count];
-                Array.Copy(formData.ToArray(), 0, Body, 0, formData.Count);
-                Array.Copy(prevBytes, 0, Body, formData.Count, prevBytes.Length);
-            }
-            this.Headers[EntityHeaders.ContentLength] = Body.Length.ToString();
 
-            StringBuilder requestString = new StringBuilder();
-            requestString.Append(HttpHeaders.Methods[(int)Method]).Append(HttpHeaders.SP).Append(RequestURI);
-            if(!string.IsNullOrWhiteSpace(RequestQuery))
+                var prevBytes = this.Body;
+                this.Body = new byte[prevBytes.Length + formData.Count];
+                Array.Copy(formData.ToArray(), 0, this.Body, 0, formData.Count);
+                Array.Copy(prevBytes, 0, this.Body, formData.Count, prevBytes.Length);
+            }
+
+            this.Headers[EntityHeaders.ContentLength] = this.Body.Length.ToString();
+
+            var requestString = new StringBuilder();
+            requestString.Append(HttpHeaders.Methods[(int)this.Method]).Append(HttpHeaders.SP).Append(this.RequestURI);
+            if(!string.IsNullOrWhiteSpace(this.RequestQuery))
             {
-                requestString.Append('?').Append(RequestQuery);
+                requestString.Append('?').Append(this.RequestQuery);
             }    
+
             requestString.Append(HttpHeaders.SP).Append(HttpHeaders.HTTPVER).Append(HttpHeaders.CRLF);
-            foreach (KeyValuePair<string, string> header in Headers)
+            foreach (var header in this.Headers)
             {
                 requestString.Append(header.Key).Append(':').Append(HttpHeaders.SP).Append(header.Value).Append(HttpHeaders.CRLF);
             }
+
             requestString.Append(HttpHeaders.CRLF);
-            if (Cookies.Count > 0)
+            if (this.Cookies.Count > 0)
             {
                 requestString.Append(HttpHeaders.RequestCookieHeader).Append(':').Append(HttpHeaders.SP);
-                for (int i = 0; i < Cookies.Count; i++)
+                for (var i = 0; i < this.Cookies.Count; i++)
                 {
-                    Cookie cookie = Cookies[i];
+                    var cookie = this.Cookies[i];
                     requestString.Append(cookie.BuildCookieString());
-                    if (i < Cookies.Count - 1)
+                    if (i < this.Cookies.Count - 1)
                     {
                         requestString.Append(';');
                     }
                 }
             }
-            byte[] request = new byte[requestString.Length + (Body == null ? 0 : Body.Length)];
-            byte[] requestBytes = ASCIIEncoding.ASCII.GetBytes(requestString.ToString());
+
+            var request = new byte[requestString.Length + (this.Body == null ? 0 : this.Body.Length)];
+            var requestBytes = ASCIIEncoding.ASCII.GetBytes(requestString.ToString());
             Array.Copy(requestBytes, 0, request, 0, requestBytes.Length);
-            if (Body != null)
+            if (this.Body != null)
             {
-                Array.Copy(Body, 0, request, requestBytes.Length, Body.Length);
+                Array.Copy(this.Body, 0, request, requestBytes.Length, this.Body.Length);
             }
+
             return request;
         }
         /// <summary>
@@ -367,25 +383,25 @@ namespace MTSC.Common.Http
             /*
              * Parse the bytes one by one, respecting the reference manual.
              */
-            MemoryStream ms = new MemoryStream(requestBytes);
+            var ms = new MemoryStream(requestBytes);
             /*
              * Keep the index of the byte array, to identify the message body.
              * Step value indicates at what point the parsing algorithm currently is.
              * Step 0 - Method, 1 - URI, 2 - Query, 3 - HTTPVer, 4 - Header, 5 - Value
              */
-            int step = 0;
-            string headerKey = string.Empty;
-            string headerValue = string.Empty;
+            var step = 0;
+            var headerKey = string.Empty;
+            var headerValue = string.Empty;
             while(ms.Position < ms.Length)
             {
                 if (step == 0)
                 {
-                    Method = ParseMethod(ms);
+                    this.Method = this.ParseMethod(ms);
                     step++;
                 }
                 else if (step == 1)
                 {
-                    RequestURI = ParseRequestURI(ms);
+                    this.RequestURI = this.ParseRequestURI(ms);
                     ms.Seek(-1, SeekOrigin.Current);
                     if (ms.ReadByte() == '?')
                     {
@@ -398,17 +414,17 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 2)
                 {
-                    RequestQuery = ParseRequestQuery(ms);
+                    this.RequestQuery = this.ParseRequestQuery(ms);
                     step++;
                 }
                 else if (step == 3)
                 {
-                    ParseHTTPVer(ms);
+                    this.ParseHTTPVer(ms);
                     step++;
                 }
                 else if (step == 4)
                 {
-                    char c = Convert.ToChar(ms.ReadByte());
+                    var c = Convert.ToChar(ms.ReadByte());
                     if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
@@ -420,13 +436,13 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerKey = ParseHeaderKey(ms);
+                        headerKey = this.ParseHeaderKey(ms);
                         step++;
                     }
                 }
                 else if (step == 5)
                 {
-                    char c = Convert.ToChar(ms.ReadByte());
+                    var c = Convert.ToChar(ms.ReadByte());
                     if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
@@ -438,27 +454,30 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerValue = ParseHeaderValue(ms);
+                        headerValue = this.ParseHeaderValue(ms);
                         if (headerKey == HttpHeaders.RequestCookieHeader)
                         {
-                            Cookies.Add(new Cookie(headerValue));
+                            this.Cookies.Add(new Cookie(headerValue));
                         }
                         else
                         {
-                            Headers[headerKey] = headerValue;
+                            this.Headers[headerKey] = headerValue;
                         }
+
                         step--;
                     }
                 }
             }
+
             if(step < 4)
             {
                 throw new IncompleteRequestException($"Incomplete request.",
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
             }
-            if (Headers.ContainsHeader(EntityHeaders.ContentLength))
+
+            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength))
             {
-                int remainingBytes = int.Parse(Headers[EntityHeaders.ContentLength]);
+                var remainingBytes = int.Parse(this.Headers[EntityHeaders.ContentLength]);
                 if (remainingBytes <= ms.Length - ms.Position)
                 {
                     this.Body = ms.ReadRemainingBytes();
@@ -492,34 +511,35 @@ namespace MTSC.Common.Http
         /// <returns>Dictionary with posted from.</returns>
         public void ParseBodyForm()
         {
-            if (Headers.ContainsHeader("Content-Type") && Body != null)
+            if (this.Headers.ContainsHeader("Content-Type") && this.Body != null)
             {
-                if (Headers["Content-Type"] == "application/x-www-form-urlencoded")
+                if (this.Headers["Content-Type"] == "application/x-www-form-urlencoded")
                 {
                     /*
                      * Walk through the buffer and get the form contents.
                      * Step 0 - key, 1 - value.
                      */
-                    string formKey = string.Empty;
-                    int step = 0;
-                    for (int i = 0; i < Body.Length; i++)
+                    var formKey = string.Empty;
+                    var step = 0;
+                    for (var i = 0; i < this.Body.Length; i++)
                     {
                         if (step == 0)
                         {
-                            formKey = GetField(Body, ref i);
+                            formKey = this.GetField(this.Body, ref i);
                             step++;
                         }
                         else
                         {
-                            Form.SetValue(formKey, new TextContentType("text/plain", GetValue(Body, ref i)));
+                            this.Form.SetValue(formKey, new TextContentType("text/plain", this.GetValue(this.Body, ref i)));
                             step--;
                         }
                     }
+
                     return;
                 }
-                else if (Headers["Content-Type"].Contains("multipart/form-data"))
+                else if (this.Headers["Content-Type"].Contains("multipart/form-data"))
                 {
-                    GetMultipartForm();
+                    this.GetMultipartForm();
                 }
                 else
                 {
@@ -533,98 +553,107 @@ namespace MTSC.Common.Http
         }
         private Form GetMultipartForm()
         {
-            string boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1).Trim('\"');
+            var boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1).Trim('\"');
 
-            int bodyIndex = 0;
+            var bodyIndex = 0;
             while (true)
             {
-                string contentType = "text/plain";
+                var contentType = "text/plain";
 
-                if (!MatchesTwoHyphens(bodyIndex))
+                if (!this.MatchesTwoHyphens(bodyIndex))
                 {
                     throw new InvalidPostFormException("No boundary where expected");
                 }
+
                 bodyIndex += 2;
 
-                if (!MatchesString(bodyIndex, boundary))
+                if (!this.MatchesString(bodyIndex, boundary))
                 {
                     throw new InvalidPostFormException("No boundary where expected");
                 }
+
                 bodyIndex += boundary.Length;
 
-                if (!MatchesCRLF(bodyIndex))
+                if (!this.MatchesCRLF(bodyIndex))
                 {
-                    if (MatchesTwoHyphens(bodyIndex))
+                    if (this.MatchesTwoHyphens(bodyIndex))
                     {
                         /*
                          * Reached the end of the multipart message
                          */
                         break;
                     }
+
                     throw new InvalidPostFormException("No new line after boundary");
                 }
+
                 bodyIndex += 2;
 
-                if (!MatchesString(bodyIndex, "Content-Disposition: form-data"))
+                if (!this.MatchesString(bodyIndex, "Content-Disposition: form-data"))
                 {
                     throw new InvalidPostFormException("No Content-Disposition header");
                 }
+
                 bodyIndex += 30;
 
-                Dictionary<string, string> keys = new Dictionary<string, string>();
-                while (Body[bodyIndex] == ';')
+                var keys = new Dictionary<string, string>();
+                while (this.Body[bodyIndex] == ';')
                 {
                     bodyIndex += 2;
-                    var keyName = GetMultipartKeyName(bodyIndex);
+                    var keyName = this.GetMultipartKeyName(bodyIndex);
                     bodyIndex += keyName.Length + 1;
-                    var keyNameField = GetMultipartKeyNameField(bodyIndex);
+                    var keyNameField = this.GetMultipartKeyNameField(bodyIndex);
                     bodyIndex += keyNameField.Length;
-                    while(Body[bodyIndex] != ';' && Body[bodyIndex] != '\r')
+                    while(this.Body[bodyIndex] != ';' && this.Body[bodyIndex] != '\r')
                     {
                         bodyIndex++;
                     }
+
                     keys[keyName] = keyNameField;
                 }
 
-                if (!MatchesCRLF(bodyIndex))
+                if (!this.MatchesCRLF(bodyIndex))
                 {
                     throw new InvalidPostFormException("No new line after boundary");
                 }
+
                 bodyIndex += 2;
 
-                if (MatchesString(bodyIndex, "Content-Type: "))
+                if (this.MatchesString(bodyIndex, "Content-Type: "))
                 {
                     bodyIndex += 14;
-                    contentType = GetContentType(bodyIndex);
+                    contentType = this.GetContentType(bodyIndex);
                     bodyIndex += contentType.Length + 2;
                 }
 
-                if (!MatchesCRLF(bodyIndex))
+                if (!this.MatchesCRLF(bodyIndex))
                 {
                     throw new InvalidPostFormException("No new line after boundary");
                 }
+
                 bodyIndex += 2;
 
-                var bytes = GetMultipartValue(bodyIndex, boundary);
+                var bytes = this.GetMultipartValue(bodyIndex, boundary);
                 if (keys.Keys.Contains("filename"))
                 {
-                    Form.SetValue(keys["name"], new FileContentType(contentType, keys["filename"], bytes));
+                    this.Form.SetValue(keys["name"], new FileContentType(contentType, keys["filename"], bytes));
                 }
                 else
                 {
-                    Form.SetValue(keys["name"], new TextContentType(contentType, Encoding.UTF8.GetString(bytes)));
+                    this.Form.SetValue(keys["name"], new TextContentType(contentType, Encoding.UTF8.GetString(bytes)));
                 }
+
                 bodyIndex += bytes.Length + 2;
             }
 
-            return Form;
+            return this.Form;
         }
 
         private bool MatchesCRLF(int index)
         {
-            if (index + 1 < Body.Length)
+            if (index + 1 < this.Body.Length)
             {
-                if (Body[index] == HttpHeaders.CRLF[0] && Body[index + 1] == HttpHeaders.CRLF[1])
+                if (this.Body[index] == HttpHeaders.CRLF[0] && this.Body[index + 1] == HttpHeaders.CRLF[1])
                 {
                     return true;
                 }
@@ -640,9 +669,9 @@ namespace MTSC.Common.Http
         }
         private bool MatchesTwoHyphens(int index)
         {
-            if (index + 1 < Body.Length)
+            if (index + 1 < this.Body.Length)
             {
-                if (Body[index] == '-' && Body[index + 1] == '-')
+                if (this.Body[index] == '-' && this.Body[index + 1] == '-')
                 {
                     return true;
                 }
@@ -658,11 +687,11 @@ namespace MTSC.Common.Http
         }
         private bool MatchesString(int index, string s)
         {
-            for (int i = 0; i < s.Length; i++)
+            for (var i = 0; i < s.Length; i++)
             {
-                if (index + i < Body.Length)
+                if (index + i < this.Body.Length)
                 {
-                    if ((char)Body[index + i] != s[i])
+                    if ((char)this.Body[index + i] != s[i])
                     {
                         return false;
                     }
@@ -672,58 +701,64 @@ namespace MTSC.Common.Http
                     return false;
                 }
             }
+
             return true;
         }
         private string GetMultipartKeyName(int index)
         {
-            StringBuilder sb = new StringBuilder();
-            while (Body[index] != '=')
+            var sb = new StringBuilder();
+            while (this.Body[index] != '=')
             {
-                sb.Append((char)Body[index]);
+                sb.Append((char)this.Body[index]);
                 index++;
             }
+
             return sb.ToString();
         }
         private string GetMultipartKeyNameField(int index)
         {
-            StringBuilder sb = new StringBuilder();
-            while (Body[index] != ';' && Body[index] != '\n' && Body[index] != '\r')
+            var sb = new StringBuilder();
+            while (this.Body[index] != ';' && this.Body[index] != '\n' && this.Body[index] != '\r')
             {
-                sb.Append((char)Body[index]);
+                sb.Append((char)this.Body[index]);
                 index++;
             }
+
             return sb.ToString().Trim('\"');
         }
         private byte[] GetMultipartValue(int bodyIndex, string boundary)
         {
-            int startIndex = bodyIndex;
-            bool gatheringData = true;
+            var startIndex = bodyIndex;
+            var gatheringData = true;
             while (true)
             {
-                if (Body[bodyIndex] == '-')
+                if (this.Body[bodyIndex] == '-')
                 {
                     /*
                      * Possible boundary detected. Try and see if it matches.
                      */
-                    if (Body[bodyIndex + 1] == '-' && MatchesString(bodyIndex + 2, boundary))
+                    if (this.Body[bodyIndex + 1] == '-' && this.MatchesString(bodyIndex + 2, boundary))
                     {
                         break;
                     }
                 }
+
                 bodyIndex++;
             }
-            byte[] newBytes = new byte[bodyIndex - startIndex - 2];
-            Array.Copy(Body, startIndex, newBytes, 0, bodyIndex - startIndex - 2);
+
+            var newBytes = new byte[bodyIndex - startIndex - 2];
+            Array.Copy(this.Body, startIndex, newBytes, 0, bodyIndex - startIndex - 2);
             return newBytes;
         }
         private string GetContentType(int bodyIndex)
         {
-            StringBuilder sb = new StringBuilder();
-            while (!MatchesCRLF(bodyIndex))
+            var sb = new StringBuilder();
+            while (!this.MatchesCRLF(bodyIndex))
             {
-                sb.Append((char)Body[bodyIndex]);
+                sb.Append((char)this.Body[bodyIndex]);
                 bodyIndex++;
             }
+
             return sb.ToString();
         }
         private string GetField(byte[] buffer, ref int index)
@@ -731,7 +766,7 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             for (; index < buffer.Length; index++)
             {
                 try
@@ -750,6 +785,7 @@ namespace MTSC.Common.Http
                     throw new InvalidPostFormException("Invalid form field. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             throw new InvalidHeaderException("Invalid form field. Buffer: " + parseBuffer.ToString());
         }
         private string GetValue(byte[] buffer, ref int index)
@@ -757,7 +793,7 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             for (; index < buffer.Length; index++)
             {
                 try
@@ -776,6 +812,7 @@ namespace MTSC.Common.Http
                     throw new InvalidPostFormException("Invalid form field. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             return parseBuffer.ToString().Trim();
         }
     }

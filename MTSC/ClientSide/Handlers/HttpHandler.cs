@@ -10,7 +10,7 @@ namespace MTSC.Client.Handlers
     public sealed class HttpHandler : IHandler
     {
         #region Fields
-        List<IHttpModule> httpModules = new List<IHttpModule>();
+        List<IHttpModule> httpModules = new();
         #endregion
         #region Constructors
         public HttpHandler()
@@ -34,7 +34,7 @@ namespace MTSC.Client.Handlers
         /// <returns>This handler object.</returns>
         public HttpHandler AddModule(IHttpModule httpModule)
         {
-            httpModules.Add(httpModule);
+            this.httpModules.Add(httpModule);
             return this;
         }
         #endregion
@@ -55,14 +55,15 @@ namespace MTSC.Client.Handlers
         /// <returns>False.</returns>
         bool IHandler.HandleReceivedMessage(Client client, Message message)
         {
-            HttpResponse httpMessage = new HttpResponse(message.MessageBytes);
-            foreach(IHttpModule httpModule in httpModules)
+            var httpMessage = new HttpResponse(message.MessageBytes);
+            foreach(var httpModule in this.httpModules)
             {
                 if (httpModule.HandleResponse(this, httpMessage))
                 {
                     break;
                 }
             }
+
             return false;
         }
         /// <summary>

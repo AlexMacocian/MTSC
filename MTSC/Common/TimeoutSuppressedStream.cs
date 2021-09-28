@@ -31,6 +31,7 @@ namespace MTSC.Common
                     // this is a "Stream.Read() returning 0 means that no data is available"
                     return 0;
                 }
+
                 throw;
             }
         }

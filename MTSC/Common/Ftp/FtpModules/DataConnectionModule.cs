@@ -17,17 +17,17 @@ namespace MTSC.Common.Ftp.FtpModules
 
             if (request.Command == FtpRequestCommands.PASV)
             {
-                handler.QueueFtpResponse(server, client, EnablePassiveMode(request, ftpData, client));
+                handler.QueueFtpResponse(server, client, this.EnablePassiveMode(request, ftpData, client));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.PORT)
             {
-                handler.QueueFtpResponse(server, client, EnableActiveMode(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.EnableActiveMode(request, ftpData));
                 return true;
             }
             else if (request.Command == FtpRequestCommands.TYPE)
             {
-                handler.QueueFtpResponse(server, client, HandleTypeArguments(request, ftpData));
+                handler.QueueFtpResponse(server, client, this.HandleTypeArguments(request, ftpData));
                 return true;
             }
 
@@ -67,8 +67,8 @@ namespace MTSC.Common.Ftp.FtpModules
             ftpData.TransferDetails.Mode = TransferDetails.TransferMode.Passive;
             ftpData.TransferDetails.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             ftpData.TransferDetails.Socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-            byte[] address = ((IPEndPoint)client.TcpClient.Client.LocalEndPoint).Address.GetAddressBytes();
-            byte[] portBytes = BitConverter.GetBytes((short)ftpData.TransferDetails.LocalDataPort);
+            var address = ((IPEndPoint)client.TcpClient.Client.LocalEndPoint).Address.GetAddressBytes();
+            var portBytes = BitConverter.GetBytes((short)ftpData.TransferDetails.LocalDataPort);
 
             if (BitConverter.IsLittleEndian)
             {

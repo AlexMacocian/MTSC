@@ -14,10 +14,10 @@ namespace MTSC.Common.Http.RoutingModules
         
         public override Task<HttpResponse> HandleRequest(HttpRequest request)
         {
-            return Task.FromResult(OK);
+            return Task.FromResult(this.OK);
         }
 
-        private HttpResponse OK => new HttpResponse()
+        private HttpResponse OK => new()
         {
             StatusCode = HttpMessage.StatusCodes.OK
         };

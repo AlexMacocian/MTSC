@@ -21,6 +21,7 @@ namespace MTSC.Common.Ftp
                 this.TransferDetails.Socket.Dispose();
                 this.TransferDetails.Socket = dataConnection;
             }
+
             this.TransferDetails.ConnectionOpen = true;
         }
 

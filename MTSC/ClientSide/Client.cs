@@ -24,10 +24,10 @@ namespace MTSC.Client
         #region Fields
         private TcpClient tcpClient;
         private CancellationTokenSource cancelMonitorToken;
-        private readonly List<IHandler> handlers = new List<IHandler>();
-        private readonly List<ILogger> loggers = new List<ILogger>();
-        private readonly List<IExceptionHandler> exceptionHandlers = new List<IExceptionHandler>();
-        private readonly Queue<byte[]> messageQueue = new Queue<byte[]>();
+        private readonly List<IHandler> handlers = new();
+        private readonly List<ILogger> loggers = new();
+        private readonly List<IExceptionHandler> exceptionHandlers = new();
+        private readonly Queue<byte[]> messageQueue = new();
         private SslStream sslStream = null;
         private TimeoutSuppressedStream safeNetworkStream = null;
         #endregion
@@ -36,10 +36,14 @@ namespace MTSC.Client
         {
             get
             {
-                if (tcpClient != null)
-                    return tcpClient.Connected;
+                if (this.tcpClient != null)
+                {
+                    return this.tcpClient.Connected;
+                }
                 else
+                {
                     return false;
+                }
             }
         }
         public string Address { get; private set; }
@@ -111,7 +115,7 @@ namespace MTSC.Client
         /// <param name="message">Message to be sent.</param>
         public void QueueMessage(byte[] message)
         {
-            messageQueue.Enqueue(message);
+            this.messageQueue.Enqueue(message);
         }
         /// <summary>
         /// Logs the message onto the associated loggers.
@@ -119,7 +123,7 @@ namespace MTSC.Client
         /// <param name="log">Message to be logged.</param>
         public void Log(string log)
         {
-            foreach (ILogger logger in loggers)
+            foreach (var logger in this.loggers)
             {
                 logger.Log(log);
             }
@@ -130,7 +134,7 @@ namespace MTSC.Client
         /// <param name="debugMessage"></param>
         public void LogDebug(string debugMessage)
         {
-            foreach (ILogger logger in loggers)
+            foreach (var logger in this.loggers)
             {
                 logger.LogDebug(debugMessage);
             }
@@ -162,7 +166,7 @@ namespace MTSC.Client
         /// <returns>This client object.</returns>
         public Client AddHandler(IHandler handler)
         {
-            handlers.Add(handler);
+            this.handlers.Add(handler);
             return this;
         }
         /// <summary>
@@ -172,7 +176,7 @@ namespace MTSC.Client
         /// <returns>This client object.</returns>
         public Client AddExceptionHandler(IExceptionHandler handler)
         {
-            exceptionHandlers.Add(handler);
+            this.exceptionHandlers.Add(handler);
             return this;
         }
         /// <summary>
@@ -182,7 +186,7 @@ namespace MTSC.Client
         /// <returns>This client object.</returns>
         public Client AddLogger(ILogger logger)
         {
-            loggers.Add(logger);
+            this.loggers.Add(logger);
             return this;
         }
         /// <summary>
@@ -219,6 +223,7 @@ namespace MTSC.Client
                     {
                         shouldUseSsl = true;
                     }
+
                     this.Address = addressUri.Host;
                 }
 
@@ -232,12 +237,12 @@ namespace MTSC.Client
                     this.sslStream.AuthenticateAsClient(this.Address);
                 }
 
-                foreach(ILogger logger in this.loggers)
+                foreach(var logger in this.loggers)
                 {
                     logger.Log("Connected to: " + this.tcpClient.Client.RemoteEndPoint.ToString());
                 }
 
-                foreach (IHandler handler in this.handlers)
+                foreach (var handler in this.handlers)
                 {
                     if (!handler.InitializeConnection(this))
                     {
@@ -246,17 +251,18 @@ namespace MTSC.Client
                 }
 
                 this.cancelMonitorToken = new CancellationTokenSource();
-                Task.Run(new Action(MonitorConnection), this.cancelMonitorToken.Token);
+                Task.Run(new Action(this.MonitorConnection), this.cancelMonitorToken.Token);
                 return true;
             }
             catch(Exception e)
             {
-                LogDebug("Exception: " + e.Message);
-                LogDebug("Stacktrace: " + e.StackTrace);
-                foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
+                this.LogDebug("Exception: " + e.Message);
+                this.LogDebug("Stacktrace: " + e.StackTrace);
+                foreach (var exceptionHandler in this.exceptionHandlers)
                 {
                     exceptionHandler.HandleException(e);
                 }
+
                 return false;
             }
         }
@@ -266,7 +272,7 @@ namespace MTSC.Client
         /// <returns>True if the connection was successful.</returns>
         public Task<bool> ConnectAsync()
         {
-            return Task.Run(Connect);
+            return Task.Run(this.Connect);
         }
         /// <summary>
         /// Disconnects from the server.
@@ -289,7 +295,9 @@ namespace MTSC.Client
         private static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             if (sslPolicyErrors == SslPolicyErrors.None)
+            {
                 return true;
+            }
 
             return true;
         }
@@ -318,6 +326,7 @@ namespace MTSC.Client
                 {
                     this.HandleException(e);
                 }
+
                 Thread.Sleep(33);
             }
 
@@ -339,13 +348,14 @@ namespace MTSC.Client
         {
             if (this.messageQueue.Count > 0)
             {
-                byte[] messagebytes = this.messageQueue.Dequeue();
-                Message sendMessage = CommunicationPrimitives.BuildMessage(messagebytes);
-                for (int i = handlers.Count - 1; i >= 0; i--)
+                var messagebytes = this.messageQueue.Dequeue();
+                var sendMessage = CommunicationPrimitives.BuildMessage(messagebytes);
+                for (var i = this.handlers.Count - 1; i >= 0; i--)
                 {
-                    IHandler handler = handlers[i];
+                    var handler = this.handlers[i];
                     handler.HandleSendMessage(this, ref sendMessage);
                 }
+
                 CommunicationPrimitives.SendMessage(this.tcpClient, sendMessage, this.sslStream);
             }
         }
@@ -358,7 +368,7 @@ namespace MTSC.Client
                  * When a message has been received, process it.
                  */
                 var message = CommunicationPrimitives.GetMessage(this.safeNetworkStream, this.sslStream);
-                LogDebug("Received a message of size: " + message.MessageLength);
+                this.LogDebug("Received a message of size: " + message.MessageLength);
                 this.PrehandleReceivedMessage(message);
                 this.HandleReceivedMessage(message);
             }
@@ -366,7 +376,7 @@ namespace MTSC.Client
 
         private void PrehandleReceivedMessage(Message message)
         {
-            foreach (IHandler handler in this.handlers)
+            foreach (var handler in this.handlers)
             {
                 if (handler.PreHandleReceivedMessage(this, ref message))
                 {
@@ -377,7 +387,7 @@ namespace MTSC.Client
 
         private void HandleReceivedMessage(Message message)
         {
-            foreach (IHandler handler in this.handlers)
+            foreach (var handler in this.handlers)
             {
                 if (handler.HandleReceivedMessage(this, message))
                 {
@@ -388,7 +398,7 @@ namespace MTSC.Client
 
         private void TickHandlers()
         {
-            foreach (IHandler handler in this.handlers)
+            foreach (var handler in this.handlers)
             {
                 handler.Tick(this);
             }
@@ -396,9 +406,9 @@ namespace MTSC.Client
 
         private void HandleException(Exception exception)
         {
-            LogDebug("Exception: " + exception.Message);
-            LogDebug("Stacktrace: " + exception.StackTrace);
-            foreach (IExceptionHandler exceptionHandler in this.exceptionHandlers)
+            this.LogDebug("Exception: " + exception.Message);
+            this.LogDebug("Stacktrace: " + exception.StackTrace);
+            foreach (var exceptionHandler in this.exceptionHandlers)
             {
                 exceptionHandler.HandleException(exception);
             }

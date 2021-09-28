@@ -72,7 +72,7 @@ namespace MTSC.ServerSide.Handlers
         /// <param name="response">Message containing the response.</param>
         public void QueueResponse(ClientData client, HttpResponse response)
         {
-            messageOutQueue.Enqueue(new Tuple<ClientData, HttpResponse>(client, response));
+            this.messageOutQueue.Enqueue(new Tuple<ClientData, HttpResponse>(client, response));
         }
         #endregion
         #region Interface Implementation
@@ -109,31 +109,34 @@ namespace MTSC.ServerSide.Handlers
                 var trimmedMessageBytes = message.MessageBytes.TrimTrailingNullBytes();
                 if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
                 {
-                    byte[] previousBytes = fragmentedMessage.Message;
-                    if (previousBytes.Length + trimmedMessageBytes.Length > MaximumRequestSize)
+                    var previousBytes = fragmentedMessage.Message;
+                    if (previousBytes.Length + trimmedMessageBytes.Length > this.MaximumRequestSize)
                     {
                         // Discard the message if it is too big
-                        server.LogDebug($"Discarded message. Message size [{previousBytes.Length + trimmedMessageBytes.Length}] > [{MaximumRequestSize}]");
+                        server.LogDebug($"Discarded message. Message size [{previousBytes.Length + trimmedMessageBytes.Length}] > [{this.MaximumRequestSize}]");
                         client.Resources.RemoveResource<FragmentedMessage>();
-                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
+                        this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{this.MaximumRequestSize}] bytes!" });
                         return true;
                     }
-                    byte[] repackagingBuffer = new byte[previousBytes.Length + trimmedMessageBytes.Length];
+
+                    var repackagingBuffer = new byte[previousBytes.Length + trimmedMessageBytes.Length];
                     Array.Copy(previousBytes, 0, repackagingBuffer, 0, previousBytes.Length);
                     Array.Copy(trimmedMessageBytes, 0, repackagingBuffer, previousBytes.Length, trimmedMessageBytes.Length);
                     messageBytes = repackagingBuffer;
                 }
                 else
                 {
-                    if (trimmedMessageBytes.Length > MaximumRequestSize)
+                    if (trimmedMessageBytes.Length > this.MaximumRequestSize)
                     {
                         // Discard the message if it is too big
-                        server.LogDebug($"Discarded message. Message size [{message.MessageBytes.Length}] > [{MaximumRequestSize}]");
-                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{MaximumRequestSize}] bytes!" });
+                        server.LogDebug($"Discarded message. Message size [{message.MessageBytes.Length}] > [{this.MaximumRequestSize}]");
+                        this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request disallowed because it exceeds [{this.MaximumRequestSize}] bytes!" });
                         return true;
                     }
+
                     messageBytes = trimmedMessageBytes;
                 }
+
                 messageBytes = messageBytes.TrimTrailingNullBytes();
                 var partialRequest = PartialHttpRequest.FromBytes(messageBytes);
                 if (partialRequest.Complete)
@@ -144,15 +147,16 @@ namespace MTSC.ServerSide.Handlers
                 else
                 {
                     client.SetAffinity(this);
-                    HandleIncompleteRequest(client, server, messageBytes, partialRequest);
+                    this.HandleIncompleteRequest(client, server, messageBytes, partialRequest);
                     if (partialRequest != null && partialRequest.Headers.ContainsHeader(RequestHeaders.Expect) &&
                         partialRequest.Headers[RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
                     {
                         server.LogDebug("Returning 100-Continue");
                         var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
                         contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
-                        QueueResponse(client, contResponse);
+                        this.QueueResponse(client, contResponse);
                     }
+
                     return true;
                 }
             }
@@ -195,8 +199,13 @@ namespace MTSC.ServerSide.Handlers
             {
                 response.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
             }
-            foreach (var httpLogger in this.httpLoggers) httpLogger.LogRequest(server, this, client, request);
-            foreach (IHttpModule module in httpModules)
+
+            foreach (var httpLogger in this.httpLoggers)
+            {
+                httpLogger.LogRequest(server, this, client, request);
+            }
+
+            foreach (var module in this.httpModules)
             {
                 try
                 {
@@ -217,7 +226,12 @@ namespace MTSC.ServerSide.Handlers
                     throw;
                 }
             }
-            foreach (var httpLogger in this.httpLoggers) httpLogger.LogResponse(server, this, client, response);
+
+            foreach (var httpLogger in this.httpLoggers)
+            {
+                httpLogger.LogResponse(server, this, client, response);
+            }
+
             this.QueueResponse(client, response);
             return true;
         }
@@ -246,24 +260,26 @@ namespace MTSC.ServerSide.Handlers
         /// </summary>
         void IHandler.Tick(Server server)
         {
-            while (messageOutQueue.Count > 0)
+            while (this.messageOutQueue.Count > 0)
             {
-                if (messageOutQueue.TryDequeue(out Tuple<ClientData, HttpResponse> tuple))
+                if (this.messageOutQueue.TryDequeue(out var tuple))
                 {
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetPackedResponse(true));
                 }
             }
-            foreach (IHttpModule module in httpModules)
+
+            foreach (var module in this.httpModules)
             {
                 module.Tick(server, this);
             }
+
             foreach (var client in server.Clients)
             {
                 if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
                 {
-                    if ((DateTime.Now - fragmentedMessage.LastReceived) > FragmentsExpirationTime)
+                    if ((DateTime.Now - fragmentedMessage.LastReceived) > this.FragmentsExpirationTime)
                     {
-                        QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request timed out in [{FragmentsExpirationTime.TotalMilliseconds}] ms!" });
+                        this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request timed out in [{this.FragmentsExpirationTime.TotalMilliseconds}] ms!" });
                         client.Resources.RemoveResource<FragmentedMessage>();
                     }
                 }
@@ -284,9 +300,9 @@ namespace MTSC.ServerSide.Handlers
 
             public void AddToMessage(byte[] bytes)
             {
-                byte[] newMessage = new byte[Message.Length + bytes.Length];
-                Array.Copy(Message, newMessage, Message.Length);
-                Array.Copy(bytes, 0, newMessage, Message.Length, bytes.Length);
+                var newMessage = new byte[this.Message.Length + bytes.Length];
+                Array.Copy(this.Message, newMessage, this.Message.Length);
+                Array.Copy(bytes, 0, newMessage, this.Message.Length, bytes.Length);
             }
         }
     }

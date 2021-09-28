@@ -26,10 +26,11 @@ namespace MTSC.ServerSide.Handlers
         {
             server.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
             server.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
-            foreach(ClientData clientStruct in server.Clients)
+            foreach(var clientStruct in server.Clients)
             {
                 server.QueueMessage(clientStruct, message.MessageBytes);
             }
+
             return false;
         }
 

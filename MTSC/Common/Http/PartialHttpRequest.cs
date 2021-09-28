@@ -8,7 +8,7 @@ using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.Common.Http
 {
-    class PartialHttpRequest
+    internal class PartialHttpRequest
     {
         public HttpRequestHeaderDictionary Headers { get; } = new HttpRequestHeaderDictionary();
 
@@ -23,16 +23,15 @@ namespace MTSC.Common.Http
         public string RequestURI { get; set; }
         public string RequestQuery { get; set; }
         public byte[] Body { get; set; } = new byte[0];
-        public string BodyString { get => ASCIIEncoding.ASCII.GetString(Body).Trim('\0'); set => Body = ASCIIEncoding.ASCII.GetBytes(value); }
+        public string BodyString { get => ASCIIEncoding.ASCII.GetString(this.Body).Trim('\0'); set => this.Body = ASCIIEncoding.ASCII.GetBytes(value); }
 
         public PartialHttpRequest()
         {
-
         }
 
         public PartialHttpRequest(byte[] requestBytes)
         {
-            ParseRequest(requestBytes);
+            this.ParseRequest(requestBytes);
         }
 
         public static PartialHttpRequest FromBytes(byte[] requestBytes)
@@ -42,11 +41,12 @@ namespace MTSC.Common.Http
 
         public HttpRequest ToRequest()
         {
-            HttpRequest httpRequest = new HttpRequest();
+            var httpRequest = new HttpRequest();
             foreach(var header in this.Headers)
             {
                 httpRequest.Headers[header.Key] = header.Value;
             }
+
             httpRequest.Method = this.Method;
             httpRequest.RequestQuery = this.RequestQuery;
             httpRequest.RequestURI = this.RequestURI;
@@ -55,23 +55,26 @@ namespace MTSC.Common.Http
             {
                 httpRequest.Cookies.Add(cookie);
             }
+
             httpRequest.ParseBodyForm();
             return httpRequest;
         }
 
         public void AddToBody(byte[] bytesToBeAdded)
         {
-            var newBody = new byte[Body.Length + bytesToBeAdded.Length];
-            if (Body.Length > 0)
+            var newBody = new byte[this.Body.Length + bytesToBeAdded.Length];
+            if (this.Body.Length > 0)
             {
-                Array.Copy(Body, 0, newBody, 0, Body.Length);
+                Array.Copy(this.Body, 0, newBody, 0, this.Body.Length);
             }
+
             if (bytesToBeAdded.Length > 0)
             {
-                Array.Copy(bytesToBeAdded, 0, newBody, Body.Length, bytesToBeAdded.Length);
+                Array.Copy(bytesToBeAdded, 0, newBody, this.Body.Length, bytesToBeAdded.Length);
             }
-            Body = newBody;
-            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength) && int.Parse(Headers[EntityHeaders.ContentLength]) == Body.Length)
+
+            this.Body = newBody;
+            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength) && int.Parse(this.Headers[EntityHeaders.ContentLength]) == this.Body.Length)
             {
                 this.Complete = true;
             }
@@ -88,16 +91,16 @@ namespace MTSC.Common.Http
              * Get each character one by one. When meeting a SP character, parse the method, clear the buffer
              * and continue with parsing the next step.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.SP)
                     {
-                        string methodString = parseBuffer.ToString();
-                        return GetMethod(methodString);
+                        var methodString = parseBuffer.ToString();
+                        return this.GetMethod(methodString);
                     }
                     else
                     {
@@ -110,6 +113,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteMethodException("Incomplete request method. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -119,17 +123,18 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a SP character, parse the URI and clear the buffer.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             ms.ReadByte(); //Ignore the first '/'
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.SP)
                     {
                         return parseBuffer.ToString();
                     }
+
                     if (c == '?')
                     {
                         return parseBuffer.ToString();
@@ -145,6 +150,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteRequestURIException("Incomplete request URI. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -154,12 +160,12 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a SP character, parse the URI and clear the buffer.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == (byte)HttpHeaders.SP)
                     {
                         return parseBuffer.ToString();
@@ -175,6 +181,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteRequestQueryException("Incomplete request query. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -186,19 +193,20 @@ namespace MTSC.Common.Http
              * Check if the HTTPVer matches the implementation version.
              * If not, throw an exception.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[1] || c == HttpHeaders.SP)
                     {
-                        string httpVer = parseBuffer.ToString();
+                        var httpVer = parseBuffer.ToString();
                         if (httpVer != HttpHeaders.HTTPVER)
                         {
                             throw new InvalidHttpVersionException("Invalid HTTP version. Buffer: " + parseBuffer.ToString());
                         }
+
                         return;
                     }
                     else if (c == HttpHeaders.CRLF[0])
@@ -229,12 +237,12 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a ':' character, parse the header key.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == ':')
                     {
                         return parseBuffer.ToString();
@@ -250,6 +258,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteHeaderKeyException("Incomplete Header key. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -259,12 +268,12 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             while (ms.Position < ms.Length)
             {
                 try
                 {
-                    char c = (char)ms.ReadByte();
+                    var c = (char)ms.ReadByte();
                     if (c == HttpHeaders.CRLF[1])
                     {
                         return parseBuffer.ToString().Trim();
@@ -287,6 +296,7 @@ namespace MTSC.Common.Http
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray()), e));
                 }
             }
+
             throw new IncompleteHeaderValueException("Incomplete header value. Buffer: " + parseBuffer.ToString(),
                 new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
         }
@@ -300,25 +310,25 @@ namespace MTSC.Common.Http
             /*
              * Parse the bytes one by one, respecting the reference manual.
              */
-            MemoryStream ms = new MemoryStream(requestBytes);
+            var ms = new MemoryStream(requestBytes);
             /*
              * Keep the index of the byte array, to identify the message body.
              * Step value indicates at what point the parsing algorithm currently is.
              * Step 0 - Method, 1 - URI, 2 - Query, 3 - HTTPVer, 4 - Header, 5 - Value
              */
-            int step = 0;
-            string headerKey = string.Empty;
-            string headerValue = string.Empty;
+            var step = 0;
+            var headerKey = string.Empty;
+            var headerValue = string.Empty;
             while (ms.Position < ms.Length)
             {
                 if (step == 0)
                 {
-                    Method = ParseMethod(ms);
+                    this.Method = this.ParseMethod(ms);
                     step++;
                 }
                 else if (step == 1)
                 {
-                    RequestURI = ParseRequestURI(ms);
+                    this.RequestURI = this.ParseRequestURI(ms);
                     ms.Seek(-1, SeekOrigin.Current);
                     if (ms.ReadByte() == '?')
                     {
@@ -331,17 +341,17 @@ namespace MTSC.Common.Http
                 }
                 else if (step == 2)
                 {
-                    RequestQuery = ParseRequestQuery(ms);
+                    this.RequestQuery = this.ParseRequestQuery(ms);
                     step++;
                 }
                 else if (step == 3)
                 {
-                    ParseHTTPVer(ms);
+                    this.ParseHTTPVer(ms);
                     step++;
                 }
                 else if (step == 4)
                 {
-                    char c = Convert.ToChar(ms.ReadByte());
+                    var c = Convert.ToChar(ms.ReadByte());
                     if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
@@ -353,13 +363,13 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerKey = ParseHeaderKey(ms);
+                        headerKey = this.ParseHeaderKey(ms);
                         step++;
                     }
                 }
                 else if (step == 5)
                 {
-                    char c = Convert.ToChar(ms.ReadByte());
+                    var c = Convert.ToChar(ms.ReadByte());
                     if (c == HttpHeaders.CRLF[0])
                     {
                         continue;
@@ -371,28 +381,31 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerValue = ParseHeaderValue(ms);
+                        headerValue = this.ParseHeaderValue(ms);
                         if (headerKey == HttpHeaders.RequestCookieHeader)
                         {
-                            Cookies.Add(new Cookie(headerValue));
+                            this.Cookies.Add(new Cookie(headerValue));
                         }
                         else
                         {
-                            Headers[headerKey] = headerValue;
+                            this.Headers[headerKey] = headerValue;
                         }
+
                         step--;
                     }
                 }
             }
+
             if (step < 4)
             {
                 throw new IncompleteRequestException($"Incomplete request.",
                         new HttpRequestParsingException("Exception during parsing of http request. Buffer: " + UTF8Encoding.UTF8.GetString(ms.ToArray())));
             }
+
             this.HeaderByteCount = (int)ms.Position;
-            if (Headers.ContainsHeader(EntityHeaders.ContentLength))
+            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength))
             {
-                int remainingBytes = int.Parse(Headers[EntityHeaders.ContentLength]);
+                var remainingBytes = int.Parse(this.Headers[EntityHeaders.ContentLength]);
                 if (remainingBytes <= ms.Length - ms.Position)
                 {
                     this.Body = ms.ReadRemainingBytes();
@@ -413,7 +426,8 @@ namespace MTSC.Common.Http
                     this.Body = ms.ReadRemainingBytes();
                 }
             }
-            Complete = true;
+
+            this.Complete = true;
             return;
         }
         private string GetField(byte[] buffer, ref int index)
@@ -421,7 +435,7 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             for (; index < buffer.Length; index++)
             {
                 try
@@ -440,6 +454,7 @@ namespace MTSC.Common.Http
                     throw new InvalidPostFormException("Invalid form field. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             throw new InvalidHeaderException("Invalid form field. Buffer: " + parseBuffer.ToString());
         }
         private string GetValue(byte[] buffer, ref int index)
@@ -447,7 +462,7 @@ namespace MTSC.Common.Http
             /*
              * Get each character one by one. When meeting a LF character, parse the value.
              */
-            StringBuilder parseBuffer = new StringBuilder();
+            var parseBuffer = new StringBuilder();
             for (; index < buffer.Length; index++)
             {
                 try
@@ -466,6 +481,7 @@ namespace MTSC.Common.Http
                     throw new InvalidPostFormException("Invalid form field. Buffer: " + parseBuffer.ToString(), e);
                 }
             }
+
             return parseBuffer.ToString().Trim();
         }
     }

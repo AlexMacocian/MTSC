@@ -2,21 +2,27 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml;
 
+[assembly: InternalsVisibleTo("MTSC.UnitTests")]
 namespace MTSC
 {
-    static class HelperFunctions
+    internal static class HelperFunctions
     {
+        private const string Prefix = "<";
+        private const string Suffix = ">k__BackingField";
+
         #region XML
 
         public static void FromXmlString(this RSA rsa, string xmlString)
         {
-            RSAParameters parameters = new RSAParameters();
+            var parameters = new RSAParameters();
 
-            XmlDocument xmlDoc = new XmlDocument();
+            var xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(xmlString);
 
             if (xmlDoc.DocumentElement.Name.Equals("RSAKeyValue"))
@@ -46,7 +52,7 @@ namespace MTSC
 
         public static string ToXmlString(this RSA rsa, bool includePrivateParameters)
         {
-            RSAParameters parameters = rsa.ExportParameters(includePrivateParameters);
+            var parameters = rsa.ExportParameters(includePrivateParameters);
 
             return string.Format("<RSAKeyValue><Modulus>{0}</Modulus><Exponent>{1}</Exponent><P>{2}</P><Q>{3}</Q><DP>{4}</DP><DQ>{5}</DQ><InverseQ>{6}</InverseQ><D>{7}</D></RSAKeyValue>",
                   parameters.Modulus != null ? Convert.ToBase64String(parameters.Modulus) : null,
@@ -67,10 +73,10 @@ namespace MTSC
         /// </summary>
         public static bool IsSubPathOf(this string path, string baseDirPath)
         {
-            string normalizedPath = Path.GetFullPath(path.Replace('/', '\\')
+            var normalizedPath = Path.GetFullPath(path.Replace('/', '\\')
                 .WithEnding("\\"));
 
-            string normalizedBaseDirPath = Path.GetFullPath(baseDirPath.Replace('/', '\\')
+            var normalizedBaseDirPath = Path.GetFullPath(baseDirPath.Replace('/', '\\')
                 .WithEnding("\\"));
 
             return normalizedPath.StartsWith(normalizedBaseDirPath, StringComparison.OrdinalIgnoreCase);
@@ -84,18 +90,22 @@ namespace MTSC
         public static string WithEnding(this string str, string ending)
         {
             if (str == null)
+            {
                 return ending;
+            }
 
-            string result = str;
+            var result = str;
 
             // Right() is 1-indexed, so include these cases
             // * Append no characters
             // * Append up to N characters, where N is ending length
-            for (int i = 0; i <= ending.Length; i++)
+            for (var i = 0; i <= ending.Length; i++)
             {
-                string tmp = result + ending.Right(i);
+                var tmp = result + ending.Right(i);
                 if (tmp.EndsWith(ending))
+                {
                     return tmp;
+                }
             }
 
             return result;
@@ -111,6 +121,7 @@ namespace MTSC
             {
                 throw new ArgumentNullException("value");
             }
+
             if (length < 0)
             {
                 throw new ArgumentOutOfRangeException("length", length, "Length is less than zero");
@@ -121,18 +132,23 @@ namespace MTSC
         
         public static string RelativePath(this string absPath, string relTo)
         {
-            string[] absDirs = absPath.Split('\\');
-            string[] relDirs = relTo.Split('\\');
+            var absDirs = absPath.Split('\\');
+            var relDirs = relTo.Split('\\');
             // Get the shortest of the two paths 
-            int len = absDirs.Length < relDirs.Length ? absDirs.Length : relDirs.Length;
+            var len = absDirs.Length < relDirs.Length ? absDirs.Length : relDirs.Length;
             // Use to determine where in the loop we exited 
-            int lastCommonRoot = -1; int index;
+            var lastCommonRoot = -1; int index;
             // Find common root 
             for (index = 0; index < len; index++)
             {
                 if (absDirs[index] == relDirs[index])
+                {
                     lastCommonRoot = index;
-                else break;
+                }
+                else
+                {
+                    break;
+                }
             }
             // If we didn't find a common prefix then throw 
             if (lastCommonRoot == -1)
@@ -140,32 +156,36 @@ namespace MTSC
                 throw new ArgumentException("Paths do not have a common base");
             }
             // Build up the relative path 
-            StringBuilder relativePath = new StringBuilder();
+            var relativePath = new StringBuilder();
             // Add on the .. 
             for (index = lastCommonRoot + 1; index < absDirs.Length; index++)
             {
-                if (absDirs[index].Length > 0) relativePath.Append("..\\");
+                if (absDirs[index].Length > 0)
+                {
+                    relativePath.Append("..\\");
+                }
             }
             // Add on the folders 
             for (index = lastCommonRoot + 1; index < relDirs.Length - 1; index++)
             {
                 relativePath.Append(relDirs[index] + "\\");
             }
+
             relativePath.Append(relDirs[relDirs.Length - 1]);
             return relativePath.ToString();
         }
 
         public static byte[] ReadRemainingBytes(this MemoryStream ms)
         {
-            byte[] buffer = new byte[ms.Length - ms.Position];
+            var buffer = new byte[ms.Length - ms.Position];
             ms.Read(buffer, 0, buffer.Length);
             return buffer;
         }
 
         public static byte[] TrimTrailingNullBytes(this byte[] bytes)
         {
-            int trimSize = 0;
-            for(int i = bytes.Length - 1; i >= 0; i--)
+            var trimSize = 0;
+            for(var i = bytes.Length - 1; i >= 0; i--)
             {
                 if(bytes[i] == 0)
                 {
@@ -176,9 +196,40 @@ namespace MTSC
                     break;
                 }
             }
-            byte[] newBytes = new byte[bytes.Length - trimSize];
+
+            var newBytes = new byte[bytes.Length - trimSize];
             Array.Copy(bytes, 0, newBytes, 0, newBytes.Length);
             return newBytes;
         }
+
+        /// <summary>
+        /// Returns the backing field of a property.
+        /// Source: https://gist.github.com/NickStrupat/39e659e53a7aa000b737
+        /// </summary>
+        /// <param name="propertyInfo"></param>
+        /// <returns></returns>
+        public static FieldInfo GetBackingField(this PropertyInfo propertyInfo)
+        {
+            if (propertyInfo == null)
+            {
+                throw new ArgumentNullException(nameof(propertyInfo));
+            }
+
+            if (!propertyInfo.CanRead || !propertyInfo.GetGetMethod(nonPublic: true).IsDefined(typeof(CompilerGeneratedAttribute), inherit: true))
+            {
+                return null;
+            }
+
+            var backingFieldName = GetBackingFieldName(propertyInfo.Name);
+            var backingField = propertyInfo.DeclaringType?.GetField(backingFieldName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (backingField == null)
+            {
+                return null;
+            }
+
+            return !backingField.IsDefined(typeof(CompilerGeneratedAttribute), inherit: true) ? null : backingField;
+        }
+
+        private static string GetBackingFieldName(string propertyName) => $"{Prefix}{propertyName}{Suffix}";
     }
 }
