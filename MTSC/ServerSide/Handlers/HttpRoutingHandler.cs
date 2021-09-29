@@ -21,6 +21,7 @@ namespace MTSC.ServerSide.Handlers
         private readonly List<IHttpLogger> httpLoggers = new();
         private readonly Dictionary<HttpMethods, List<(ExtendedUrl, Type,
             Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary = new();
+        private readonly Dictionary<Type, List<(Attribute, PropertyInfo)>> routePropertyCache = new();
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = double.MaxValue;
@@ -244,6 +245,7 @@ namespace MTSC.ServerSide.Handlers
                 foreach ((_, var routeType, _) in routes)
                 {
                     server.ServiceManager.RegisterTransient(routeType, routeType);
+                    this.PrepareRoutePropertyCache(routeType);
                 }
             }
         }
@@ -270,7 +272,7 @@ namespace MTSC.ServerSide.Handlers
             var routeEnablerResponse = routeEnabler.Invoke(server, request, client);
             if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
             {
-                SetModuleProperties(module, request, urlValues);
+                this.SetModuleProperties(module, request, urlValues);
                 try
                 {
                     module.CallHandleRequest(request).ContinueWith((task) => 
@@ -362,6 +364,29 @@ namespace MTSC.ServerSide.Handlers
             this.moduleDictionary[method].Add((new ExtendedUrl(uri), routeType, routeEnabler));
         }
 
+        private void PrepareRoutePropertyCache(Type routeType)
+        {
+            if (this.routePropertyCache.ContainsKey(routeType))
+            {
+                return;
+            }
+
+            var properties = routeType.GetProperties();
+            var propertyAndAttributesList = new List<(Attribute, PropertyInfo)>();
+            foreach (var property in properties)
+            {
+                foreach (var attribute in property.GetCustomAttributes(true))
+                {
+                    if (attribute is FromUrlAttribute or FromBodyAttribute or FromHeadersAttribute)
+                    {
+                        propertyAndAttributesList.Add(((Attribute)attribute, property));
+                    }
+                }
+            }
+
+            this.routePropertyCache[routeType] = propertyAndAttributesList;
+        }
+
         private bool TryMatchUrl(HttpMethods method, string uri, out List<UrlValue> urlValues, out Type type, out Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
         {
             urlValues = null;
@@ -382,32 +407,29 @@ namespace MTSC.ServerSide.Handlers
             return false;
         }
 
-        private static void SetModuleProperties(HttpRouteBase module, HttpRequest httpRequest, List<UrlValue> urlValues)
+        private void SetModuleProperties(HttpRouteBase module, HttpRequest httpRequest, List<UrlValue> urlValues)
         {
-            var properties = module.GetType().GetProperties();
-            foreach (var property in properties)
+            var propertiesAndAttributes = this.routePropertyCache[module.GetType()];
+            foreach ((var attribute, var propertyInfo) in this.routePropertyCache[module.GetType()])
             {
-                foreach (var attribute in property.GetCustomAttributes(true))
+                if (attribute is FromUrlAttribute fromUrlAttribute)
                 {
-                    if (attribute is FromUrlAttribute fromUrlAttribute)
+                    var maybeValue = urlValues.Where(val => val.Placeholder == fromUrlAttribute.Placeholder).FirstOrDefault();
+                    if (maybeValue is not null)
                     {
-                        var maybeValue = urlValues.Where(val => val.Placeholder == fromUrlAttribute.Placeholder).FirstOrDefault();
-                        if (maybeValue is not null)
-                        {
-                            TryAssignValue(property, maybeValue.Value, module);
-                        }
+                        TryAssignValue(propertyInfo, maybeValue.Value, module);
                     }
-                    else if (attribute is FromBodyAttribute)
+                }
+                else if (attribute is FromBodyAttribute)
+                {
+                    TryAssignValue(propertyInfo, httpRequest.BodyString, module);
+                }
+                else if (attribute is FromHeadersAttribute fromHeadersAttribute)
+                {
+                    var maybeValue = httpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
+                    if (maybeValue.Value is not null)
                     {
-                        TryAssignValue(property, httpRequest.BodyString, module);
-                    }
-                    else if (attribute is FromHeadersAttribute fromHeadersAttribute)
-                    {
-                        var maybeValue = httpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
-                        if (maybeValue.Value is not null)
-                        {
-                            TryAssignValue(property, maybeValue.Value, module);
-                        }
+                        TryAssignValue(propertyInfo, maybeValue.Value, module);
                     }
                 }
             }
