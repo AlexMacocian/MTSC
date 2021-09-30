@@ -36,7 +36,6 @@ namespace MTSC.ServerSide
         private readonly List<IExceptionHandler> exceptionHandlers = new();
         private readonly List<IServerUsageMonitor> serverUsageMonitors = new();
         private readonly ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new();
-        private readonly IServiceManager serviceManager = new ServiceManager();
         #endregion
         #region Private Properties
         private IConsumerQueue<ClientData> ConsumerClientQueue { get => this.addQueue; }
@@ -103,7 +102,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// <see cref="IServiceManager"/> for configuring and retrieving services.
         /// </summary>
-        public IServiceManager ServiceManager { get => this.serviceManager; }
+        public IServiceManager ServiceManager { get; } = new ServiceManager();
         #endregion
         #region Constructors
         /// <summary>
@@ -162,7 +161,7 @@ namespace MTSC.ServerSide
             where TService : TInterface
             where TInterface : class
         {
-            this.serviceManager.RegisterTransient<TInterface, TService>();
+            this.ServiceManager.RegisterTransient<TInterface, TService>();
             return this;
         }
         /// <summary>
@@ -172,7 +171,7 @@ namespace MTSC.ServerSide
         public Server AddTransientService<TService>()
             where TService : class
         {
-            this.serviceManager.RegisterTransient<TService>();
+            this.ServiceManager.RegisterTransient<TService>();
             return this;
         }
         /// <summary>
@@ -183,7 +182,7 @@ namespace MTSC.ServerSide
             where TService : TInterface
             where TInterface : class
         {
-            this.serviceManager.RegisterTransient<TInterface, TService>(serviceFactory);
+            this.ServiceManager.RegisterTransient<TInterface, TService>(serviceFactory);
             return this;
         }
         /// <summary>
@@ -193,7 +192,7 @@ namespace MTSC.ServerSide
         public Server AddTransientService<TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
             where TService : class
         {
-            this.serviceManager.RegisterTransient<TService>(serviceFactory);
+            this.ServiceManager.RegisterTransient<TService>(serviceFactory);
             return this;
         }
         /// <summary>
@@ -204,7 +203,7 @@ namespace MTSC.ServerSide
             where TService : TInterface
             where TInterface : class
         {
-            this.serviceManager.RegisterSingleton<TInterface, TService>();
+            this.ServiceManager.RegisterSingleton<TInterface, TService>();
             return this;
         }
         /// <summary>
@@ -214,7 +213,7 @@ namespace MTSC.ServerSide
         public Server AddSingletonService<TService>()
             where TService : class
         {
-            this.serviceManager.RegisterSingleton<TService>();
+            this.ServiceManager.RegisterSingleton<TService>();
             return this;
         }
         /// <summary>
@@ -225,7 +224,7 @@ namespace MTSC.ServerSide
             where TService : TInterface
             where TInterface : class
         {
-            this.serviceManager.RegisterSingleton<TInterface, TService>(serviceFactory);
+            this.ServiceManager.RegisterSingleton<TInterface, TService>(serviceFactory);
             return this;
         }
         /// <summary>
@@ -235,7 +234,7 @@ namespace MTSC.ServerSide
         public Server AddSingletonService<TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
             where TService : class
         {
-            this.serviceManager.RegisterSingleton<TService>(serviceFactory);
+            this.ServiceManager.RegisterSingleton<TService>(serviceFactory);
             return this;
         }
         /// <summary>
@@ -406,7 +405,7 @@ namespace MTSC.ServerSide
         public T GetService<T>()
             where T : class
         {
-            return this.serviceManager.GetService<T>();
+            return this.ServiceManager.GetService<T>();
         }
         /// <summary>
         /// Get handler of provided type
@@ -528,8 +527,8 @@ namespace MTSC.ServerSide
                 toBeRunOnStartup.OnStartup(this);
             }
 
-            this.serviceManager.RegisterServiceManager();
-            this.serviceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.ServiceManager.RegisterServiceManager();
+            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
             DateTime startLoopTime;
             while (this.running)
             {
@@ -666,13 +665,6 @@ namespace MTSC.ServerSide
             while (this.ConsumerMessageOutQueue.TryDequeue(out var tuple))
             {
                 (var client, var bytes) = tuple;
-                if (client.TcpClient.Available > 0)
-                {
-                    /*
-                     * Don't send while client is still sending
-                     */
-                    continue;
-                }
 
                 try 
                 {
@@ -744,19 +736,14 @@ namespace MTSC.ServerSide
                 if (client.TcpClient.Available > 0 && !(client as IActiveClient).ReadingData)
                 {
                     (client as IActiveClient).ReadingData = true;
-                    Task.Run(() =>
+                    Task.Run(async () =>
                     {
                         try
                         {
                             var timeout = this.ReadTimeout;
-                            if (client.TcpClient.Available < 1000)
-                            {
-                                timeout = TimeSpan.FromMilliseconds(50);
-                            }
-
-                            var message = CommunicationPrimitives.GetMessage(client, timeout);
+                            var message = await CommunicationPrimitives.GetMessage(client, timeout);
                             (client as IQueueHolder<Message>).Enqueue(message);
-                            this.LogDebug($"Received message from {(client.TcpClient.Client.RemoteEndPoint as IPEndPoint)} Message length: {message.MessageLength}");
+                            this.LogDebug($"Received message from {client.TcpClient.Client.RemoteEndPoint as IPEndPoint} Message length: {message.MessageLength}");
                             if (this.LogMessageContents)
                             {
                                 this.LogDebug(Encoding.UTF8.GetString(message.MessageBytes));
@@ -852,7 +839,7 @@ namespace MTSC.ServerSide
                         this.EncryptionPolicy);
                     client.SslStream = sslStream;
 
-                    if(sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(this.SslAuthenticationTimeout))
+                    if (sslStream.AuthenticateAsServerAsync(this.certificate, this.RequestClientCertificate, this.SslProtocols, false).Wait(this.SslAuthenticationTimeout))
                     {
                         /*
                          * Client authenticated in the alloted time

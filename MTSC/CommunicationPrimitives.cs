@@ -40,7 +40,7 @@ namespace MTSC
             return new Message((uint)ms.Length, ms.ToArray());
         }
 
-        public static Message GetMessage(ClientData client, TimeSpan ReadTimeout)
+        public static async Task<Message> GetMessage(ClientData client, TimeSpan ReadTimeout)
         {
             Stream stream;
             if (client.SslStream != null)
@@ -58,9 +58,11 @@ namespace MTSC
             int bytesRead;
             do
             {
-                bytesRead = stream.Read(buffer, 0, buffer.Length);
+                using var cts = new CancellationTokenSource();
+                cts.CancelAfter((int)ReadTimeout.TotalMilliseconds);
+                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
                 ms.Write(buffer, 0, bytesRead);
-            } while (bytesRead > 0);
+            } while (bytesRead > 0 && client.TcpClient.Available > 0);
             return new Message((uint)ms.Length, ms.ToArray());
         }
 

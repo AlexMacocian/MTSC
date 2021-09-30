@@ -22,7 +22,7 @@ namespace MTSC.ServerSide.Handlers
             Initialized
         }
 
-        private List<IFtpModule> ftpModules = new();
+        private readonly List<IFtpModule> ftpModules = new();
 
         public TimeSpan ReadyDelay { get; set; } = TimeSpan.FromSeconds(1);
 

@@ -102,11 +102,11 @@ namespace MTSC.ServerSide.Handlers
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
             // Parse the request. If the message is incomplete, return 100 and queue the message to be parsed later.
-            HttpRequest request = null;
-            byte[] messageBytes = null;
+            HttpRequest request;
             try
             {
                 var trimmedMessageBytes = message.MessageBytes.TrimTrailingNullBytes();
+                byte[] messageBytes;
                 if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
                 {
                     var previousBytes = fragmentedMessage.Message;
@@ -147,7 +147,7 @@ namespace MTSC.ServerSide.Handlers
                 else
                 {
                     client.SetAffinity(this);
-                    this.HandleIncompleteRequest(client, server, messageBytes, partialRequest);
+                    this.HandleIncompleteRequest(client, server, messageBytes);
                     if (partialRequest != null && partialRequest.Headers.ContainsHeader(RequestHeaders.Expect) &&
                         partialRequest.Headers[RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
                     {
@@ -287,7 +287,7 @@ namespace MTSC.ServerSide.Handlers
         }
         #endregion
 
-        private void HandleIncompleteRequest(ClientData client, Server server, byte[] messageBytes, PartialHttpRequest partialRequest = null)
+        private void HandleIncompleteRequest(ClientData client, Server server, byte[] messageBytes)
         {
             client.Resources.SetResource(new FragmentedMessage() { Message = messageBytes, LastReceived = DateTime.Now });
             server.LogDebug("Incomplete request received!");

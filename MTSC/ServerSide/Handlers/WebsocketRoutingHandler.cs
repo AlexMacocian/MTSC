@@ -28,7 +28,7 @@ namespace MTSC.ServerSide.Handlers
             Closed
         }
         #region Fields
-        private byte[] emptyData = new byte[0];
+        private readonly byte[] emptyData = new byte[0];
         private DateTime ellapsedTime = DateTime.Now;
         private DateTime previousHeartbeatProc = DateTime.Now;
         private readonly Dictionary<string, (Type, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)> moduleDictionary =
