@@ -1,12 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using MTSC.Common.Ftp;
-using MTSC.Common.Ftp.FtpModules;
 using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
-using MTSC.Common.Http.ServerModules;
-using MTSC.Common.WebSockets;
 using MTSC.Exceptions;
-using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Schedulers;
 using MTSC.UnitTests.RoutingModules;
@@ -18,7 +13,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,8 +53,6 @@ namespace MTSC.UnitTests
                     .AddRoute<SomeRoutingModule>(HttpMessage.HttpMethods.Post, "some-module/{someValue}/test/{intValue}/test")
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(3000))
                     .WithMaximumSize(250000))
-                .AddLogger(new ConsoleLogger())
-                .AddLogger(new DebugConsoleLogger())
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 .SetScheduler(new ParallelScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));

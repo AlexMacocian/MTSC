@@ -1,8 +1,7 @@
-﻿using MTSC.Common;
+﻿using Microsoft.Extensions.Logging;
+using MTSC.Common;
 using MTSC.Exceptions;
-using MTSC.Logging;
 using MTSC.ServerSide.Handlers;
-using MTSC.ServerSide.Resources;
 using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
 using Slim;
@@ -32,10 +31,10 @@ namespace MTSC.ServerSide
         private readonly List<ClientData> clients = new();
         private readonly List<ClientData> toRemove = new();
         private readonly List<IHandler> handlers = new();
-        private readonly List<ILogger> loggers = new();
         private readonly List<IExceptionHandler> exceptionHandlers = new();
         private readonly List<IServerUsageMonitor> serverUsageMonitors = new();
         private readonly ProducerConsumerQueue<(ClientData, byte[])> messageOutQueue = new();
+        private ILogger logger = null;
         #endregion
         #region Private Properties
         private IConsumerQueue<ClientData> ConsumerClientQueue { get => this.addQueue; }
@@ -368,16 +367,6 @@ namespace MTSC.ServerSide
             return this;
         }
         /// <summary>
-        /// Adds a <see cref="ILogger"/> to the server.
-        /// </summary>
-        /// <param name="logger">Logger to be added.</param>
-        /// <returns>This server object.</returns>
-        public Server AddLogger(ILogger logger)
-        {
-            this.loggers.Add(logger);
-            return this;
-        }
-        /// <summary>
         /// Adds an <see cref="IExceptionHandler"/> to the server.
         /// </summary>
         /// <param name="handler">Handler to be added.</param>
@@ -442,23 +431,6 @@ namespace MTSC.ServerSide
             return null;
         }
         /// <summary>
-        /// Get logger of provided type
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public T GetLogger<T>() where T : class
-        {
-            foreach (var logger in this.loggers)
-            {
-                if (logger is T)
-                {
-                    return logger as T;
-                }
-            }
-
-            return null;
-        }
-        /// <summary>
         /// Get server usage monitor of provided type
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -487,30 +459,24 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Adds a message to be logged by the associated loggers.
         /// </summary>
+        /// <remarks>
+        /// This method will not log anything if no <see cref="ILogger"/> or <see cref="ILogger{Server}"/> can be resolved by the <see cref="IServiceManager"/>.
+        /// </remarks>
         /// <param name="log">Message to be logged</param>
         public void Log(string log)
         {
-            foreach (var logger in this.loggers)
-            {
-                if (logger.Log(log))
-                {
-                    break;
-                }
-            }
+            this.logger?.LogInformation(log);
         }
         /// <summary>
         /// Adds a debug message to be logged by the associated loggers.
         /// </summary>
+        /// <remarks>
+        /// This method will not log anything if no <see cref="ILogger"/> or <see cref="ILogger{TCategoryName}"/> can be resolved by the <see cref="IServiceManager"/>.
+        /// </remarks>
         /// <param name="debugMessage">Debug message to be logged</param>
         public void LogDebug(string debugMessage)
         {
-            foreach (var logger in this.loggers)
-            {
-                if (logger.LogDebug(debugMessage))
-                {
-                    break;
-                }
-            }
+            this.logger?.LogDebug(debugMessage);
         }
         /// <summary>
         /// Blocking method. Runs the server on the current thread.
@@ -518,6 +484,25 @@ namespace MTSC.ServerSide
         public void Run()
         {
             this.listener?.Stop();
+            if (this.logger is null)
+            {
+                // Try to get a logger, in case it exists. If not, keep it null.
+                try
+                {
+                    this.logger = this.ServiceManager.GetService<ILogger<Server>>();
+                }
+                catch
+                {
+                    try
+                    {
+                        this.logger = this.ServiceManager.GetService<ILogger>();
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
             this.listener = new TcpListener(this.IPAddress, this.Port);
             this.listener.Start();
             this.running = true;

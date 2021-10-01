@@ -1,10 +1,9 @@
-﻿using MTSC.Client.Handlers;
+﻿using Microsoft.Extensions.Logging;
+using MTSC.Client.Handlers;
 using MTSC.ClientSide;
 using MTSC.Common;
 using MTSC.Exceptions;
-using MTSC.Logging;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
@@ -22,10 +21,10 @@ namespace MTSC.Client
     public sealed class Client
     {
         #region Fields
+        private ILogger logger;
         private TcpClient tcpClient;
         private CancellationTokenSource cancelMonitorToken;
         private readonly List<IHandler> handlers = new();
-        private readonly List<ILogger> loggers = new();
         private readonly List<IExceptionHandler> exceptionHandlers = new();
         private readonly Queue<byte[]> messageQueue = new();
         private SslStream sslStream = null;
@@ -123,10 +122,7 @@ namespace MTSC.Client
         /// <param name="log">Message to be logged.</param>
         public void Log(string log)
         {
-            foreach (var logger in this.loggers)
-            {
-                logger.Log(log);
-            }
+            this.logger?.LogInformation(log);
         }
         /// <summary>
         /// Logs the debug message onto the associated loggers.
@@ -134,10 +130,7 @@ namespace MTSC.Client
         /// <param name="debugMessage"></param>
         public void LogDebug(string debugMessage)
         {
-            foreach (var logger in this.loggers)
-            {
-                logger.LogDebug(debugMessage);
-            }
+            this.logger?.LogDebug(debugMessage);
         }
         /// <summary>
         /// Sets the server address.
@@ -180,13 +173,13 @@ namespace MTSC.Client
             return this;
         }
         /// <summary>
-        /// Adds a logger onto the client.
+        /// Sets logger for the client.
         /// </summary>
         /// <param name="logger">Logger to be added.</param>
         /// <returns>This client object.</returns>
-        public Client AddLogger(ILogger logger)
+        public Client WithLogger(ILogger logger)
         {
-            this.loggers.Add(logger);
+            this.logger = logger;
             return this;
         }
         /// <summary>
@@ -237,10 +230,7 @@ namespace MTSC.Client
                     this.sslStream.AuthenticateAsClient(this.Address);
                 }
 
-                foreach(var logger in this.loggers)
-                {
-                    logger.Log("Connected to: " + this.tcpClient.Client.RemoteEndPoint.ToString());
-                }
+                this.Log("Connected to: " + this.tcpClient.Client.RemoteEndPoint.ToString());
 
                 foreach (var handler in this.handlers)
                 {
