@@ -10,9 +10,9 @@ namespace MTSC.Common
     {
         private readonly NetworkStream innerStream;
 
-        public TimeoutSuppressedStream(TcpClient tcpClient)
+        public TimeoutSuppressedStream(NetworkStream networkStream)
         {
-            this.innerStream = tcpClient.GetStream();
+            this.innerStream = networkStream;
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -35,8 +35,6 @@ namespace MTSC.Common
                 throw;
             }
         }
-
-
         public override bool CanRead => this.innerStream.CanRead;
         public override bool CanSeek => this.innerStream.CanSeek;
         public override bool CanTimeout => this.innerStream.CanTimeout;
@@ -53,18 +51,26 @@ namespace MTSC.Common
         public override void SetLength(long value) => this.innerStream.SetLength(value);
         public override void Write(byte[] buffer, int offset, int count) => this.innerStream.Write(buffer, offset, count);
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.innerStream.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
         public override long Position
         {
             get { return this.innerStream.Position; }
             set { this.innerStream.Position = value; }
         }
-
         public override int ReadTimeout
         {
             get { return this.innerStream.ReadTimeout; }
             set { this.innerStream.ReadTimeout = value; }
         }
-
         public override int WriteTimeout
         {
             get { return this.innerStream.WriteTimeout; }

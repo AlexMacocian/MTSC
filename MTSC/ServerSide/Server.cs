@@ -2,6 +2,7 @@
 using MTSC.Common;
 using MTSC.Exceptions;
 using MTSC.ServerSide.Handlers;
+using MTSC.ServerSide.Listeners;
 using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
 using Slim;
@@ -10,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -26,7 +26,6 @@ namespace MTSC.ServerSide
         #region Fields
         private bool running;
         private X509Certificate2 certificate;
-        private TcpListener listener;
         private readonly ProducerConsumerQueue<ClientData> addQueue = new();
         private readonly List<ClientData> clients = new();
         private readonly List<ClientData> toRemove = new();
@@ -42,6 +41,7 @@ namespace MTSC.ServerSide
         private IConsumerQueue<(ClientData, byte[])> ConsumerMessageOutQueue { get => this.messageOutQueue; }
         #endregion
         #region Public Properties
+        public IListener Listener { get; set; } = new TcpSocketListener();
         /// <summary>
         /// Timeout for socket operations on clients
         /// </summary>
@@ -85,7 +85,7 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Returns the state of the server.
         /// </summary>
-        public bool Running { get => this.listener != null; }
+        public bool Running => this.Listener?.Active is true;
         /// <summary>
         /// If set to true, requests client certificates.
         /// </summary>
@@ -109,6 +109,8 @@ namespace MTSC.ServerSide
         /// </summary>
         public Server()
         {
+            this.ServiceManager.RegisterServiceManager();
+            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -117,6 +119,8 @@ namespace MTSC.ServerSide
         public Server(int port)
         {
             this.Port = port;
+            this.ServiceManager.RegisterServiceManager();
+            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -127,6 +131,8 @@ namespace MTSC.ServerSide
         {
             this.certificate = certificate;
             this.Port = port;
+            this.ServiceManager.RegisterServiceManager();
+            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -137,6 +143,8 @@ namespace MTSC.ServerSide
         {
             this.IPAddress = ipAddress;
             this.Port = port;
+            this.ServiceManager.RegisterServiceManager();
+            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -149,6 +157,8 @@ namespace MTSC.ServerSide
             this.certificate = certificate;
             this.Port = port;
             this.IPAddress = ipAddress;
+            this.ServiceManager.RegisterServiceManager();
+            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
         }
         #endregion
         #region Public Methods
@@ -483,7 +493,7 @@ namespace MTSC.ServerSide
         /// </summary>
         public void Run()
         {
-            this.listener?.Stop();
+            this.Listener?.Stop();
             if (this.logger is null)
             {
                 // Try to get a logger, in case it exists. If not, keep it null.
@@ -503,17 +513,15 @@ namespace MTSC.ServerSide
                 }
             }
 
-            this.listener = new TcpListener(this.IPAddress, this.Port);
-            this.listener.Start();
+            this.Listener.Initialize(this.Port, this.IPAddress);
+            this.Listener.Start();
             this.running = true;
-            this.Log("Server started on: " + this.listener.LocalEndpoint.ToString());
+            this.Log("Server started on: " + this.Listener.LocalEndpoint.ToString());
             foreach(var toBeRunOnStartup in this.handlers.OfType<IRunOnStartup>())
             {
                 toBeRunOnStartup.OnStartup(this);
             }
 
-            this.ServiceManager.RegisterServiceManager();
-            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
             DateTime startLoopTime;
             while (this.running)
             {
@@ -540,10 +548,10 @@ namespace MTSC.ServerSide
                  */
                 try
                 {
-                    while (this.listener.Pending())
+                    while (this.Listener.Pending())
                     {
-                        var tcpClient = this.listener.AcceptTcpClient();
-                        var clientStruct = new ClientData(tcpClient);
+                        var client = this.Listener.AcceptSocket();
+                        var clientStruct = new ClientData(client);
                         Task.Run(() => this.AcceptClient(clientStruct));
                     }
                 }
@@ -556,7 +564,7 @@ namespace MTSC.ServerSide
                  */
                 while(this.ConsumerClientQueue.TryDequeue(out var client)) 
                 {
-                    this.Log("Accepted new connection: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                    this.Log("Accepted new connection: " + client.Socket.RemoteEndPoint.ToString());
                     this.clients.Add(client);
                     foreach (var handler in this.handlers)
                     {
@@ -607,13 +615,12 @@ namespace MTSC.ServerSide
                 }
             }
 
-            this.listener.Stop();
+            this.Listener.Stop();
             foreach (var client in this.Clients)
             {
                 try
                 {
-                    client?.SslStream?.Dispose();
-                    client?.TcpClient?.Dispose();
+                    client?.Dispose();
                 }
                 catch (Exception e)
                 {
@@ -624,7 +631,7 @@ namespace MTSC.ServerSide
                 }
             }
 
-            this.listener = null;
+            this.Listener = null;
         }
         /// <summary>
         /// Runs the server async.
@@ -660,9 +667,9 @@ namespace MTSC.ServerSide
                         handler.HandleSendMessage(this, client, ref sendMessage);
                     }
 
-                    CommunicationPrimitives.SendMessage(client.TcpClient, sendMessage, client.SslStream);
+                    CommunicationPrimitives.SendMessage(sendMessage, client.SafeNetworkStream, client.SslStream);
                     (client as IActiveClient).UpdateLastActivity();
-                    this.LogDebug("Sent message to " + client.TcpClient.Client.RemoteEndPoint.ToString() +
+                    this.LogDebug("Sent message to " + client.Socket.RemoteEndPoint.ToString() +
                         "\nMessage length: " + sendMessage.MessageLength);
                 }
                 catch(Exception e)
@@ -675,7 +682,7 @@ namespace MTSC.ServerSide
         {
             foreach (var client in this.Clients)
             {
-                if (!client.TcpClient.Connected || client.ToBeRemoved)
+                if (!client.Socket.Connected || client.ToBeRemoved)
                 {
                     this.toRemove.Add(client);
                 }
@@ -690,7 +697,7 @@ namespace MTSC.ServerSide
                         handler.ClientRemoved(this, client);
                     }
 
-                    this.LogDebug("Client removed: " + client.TcpClient?.Client?.RemoteEndPoint?.ToString());
+                    this.LogDebug("Client removed: " + client.Socket?.RemoteEndPoint?.ToString());
                     client.Dispose();
                 }
                 catch(Exception e)
@@ -718,7 +725,7 @@ namespace MTSC.ServerSide
         {
             foreach(var client in this.Clients)
             {
-                if (client.TcpClient.Available > 0 && !(client as IActiveClient).ReadingData)
+                if (client.Socket.Available > 0 && !(client as IActiveClient).ReadingData)
                 {
                     (client as IActiveClient).ReadingData = true;
                     Task.Run(async () =>
@@ -728,7 +735,7 @@ namespace MTSC.ServerSide
                             var timeout = this.ReadTimeout;
                             var message = await CommunicationPrimitives.GetMessage(client, timeout);
                             (client as IQueueHolder<Message>).Enqueue(message);
-                            this.LogDebug($"Received message from {client.TcpClient.Client.RemoteEndPoint as IPEndPoint} Message length: {message.MessageLength}");
+                            this.LogDebug($"Received message from {client.Socket.RemoteEndPoint as IPEndPoint} Message length: {message.MessageLength}");
                             if (this.LogMessageContents)
                             {
                                 this.LogDebug(Encoding.UTF8.GetString(message.MessageBytes));

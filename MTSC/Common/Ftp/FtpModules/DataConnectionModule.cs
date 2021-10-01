@@ -67,7 +67,7 @@ namespace MTSC.Common.Ftp.FtpModules
             ftpData.TransferDetails.Mode = TransferDetails.TransferMode.Passive;
             ftpData.TransferDetails.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             ftpData.TransferDetails.Socket.Bind(new IPEndPoint(IPAddress.Any, 0));
-            var address = ((IPEndPoint)client.TcpClient.Client.LocalEndPoint).Address.GetAddressBytes();
+            var address = ((IPEndPoint)client.Socket.LocalEndPoint).Address.GetAddressBytes();
             var portBytes = BitConverter.GetBytes((short)ftpData.TransferDetails.LocalDataPort);
 
             if (BitConverter.IsLittleEndian)

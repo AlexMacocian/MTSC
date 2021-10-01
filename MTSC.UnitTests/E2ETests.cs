@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MTSC.Common.Http;
 using MTSC.Common.Http.RoutingModules;
@@ -7,6 +8,7 @@ using MTSC.ServerSide.Schedulers;
 using MTSC.UnitTests.RoutingModules;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -25,11 +27,11 @@ namespace MTSC.UnitTests
     public class E2ETests
     {
         private volatile byte[] receivedMessage = null;
-        private static int stressIterations = 100000;
+        private static int stressIterations = 100;
         public TestContext TestContext { get; set; }
         static ServerSide.Server Server { get; set; }
 
-        [ClassInitialize]
+        [AssemblyInitialize]
         public static void InitializeServer(TestContext testContext)
         {
             ServicePointManager.ServerCertificateValidationCallback += (s, e, o, p) => true;
@@ -39,7 +41,7 @@ namespace MTSC.UnitTests
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute<EchoWebsocketModule>("echo")
                     .AddRoute<EchoWebsocketModule2>("echo2")
-                    .AddRoute<RoutingModules.HelloWorldModule>("hello-world")
+                    .AddRoute<HelloWorldModule>("hello-world")
                     .WithHeartbeatEnabled(true)
                     .WithHeartbeatFrequency(TimeSpan.FromMilliseconds(100)))
                 .AddHandler(new HttpRoutingHandler()
@@ -56,6 +58,7 @@ namespace MTSC.UnitTests
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 .SetScheduler(new ParallelScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
+            Server.ServiceManager.RegisterSingleton<ILogger, ConsoleLogger>();
             Server.RunAsync();
         }
 
@@ -302,11 +305,13 @@ namespace MTSC.UnitTests
         [DataRow("echo2")]
         public async Task EchoWebsocket(string endpoint)
         {
+            using var cts = new CancellationTokenSource();
+            cts.CancelAfter(15000);
             var bytes = new byte[100];
             var client = new ClientWebSocket();
-            await client.ConnectAsync(new Uri($"ws://localhost:800/{endpoint}"), CancellationToken.None);
-            await client.SendAsync(Encoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, CancellationToken.None);
-            await client.ReceiveAsync(bytes, CancellationToken.None);
+            await client.ConnectAsync(new Uri($"ws://localhost:800/{endpoint}"), cts.Token);
+            await client.SendAsync(Encoding.ASCII.GetBytes("Hello world!"), WebSocketMessageType.Text, true, cts.Token);
+            await client.ReceiveAsync(bytes, cts.Token);
             var resultString = Encoding.ASCII.GetString(bytes, 0, 12);
             Assert.AreEqual(resultString, "Hello world!");
         }
@@ -328,6 +333,40 @@ namespace MTSC.UnitTests
             await client.ReceiveAsync(bytes, CancellationToken.None);
             resultString = Encoding.ASCII.GetString(bytes, 0, 16);
             Assert.AreEqual(resultString, "Not hello world!");
+        }
+
+        [TestMethod]
+        public async Task StressTest()
+        {
+            for (var round = 0; round < 10; round++)
+            {
+                var clients = new List<HttpClient>();
+                for (var i = 0; i < 100; i++)
+                {
+                    clients.Add(new HttpClient { BaseAddress = new Uri("http://localhost:800") });
+                }
+
+                for (var i = 0; i < stressIterations; i++)
+                {
+                    Console.WriteLine($"Memory: {Process.GetCurrentProcess().PrivateMemorySize64}");
+                    var tasks = new List<Task<HttpResponseMessage>>();
+                    foreach (var client in clients)
+                    {
+                        tasks.Add(client.GetAsync(""));
+                    }
+
+                    Task.WaitAll(tasks.ToArray());
+                    foreach (var task in tasks)
+                    {
+                        task.Result.EnsureSuccessStatusCode();
+                    }
+                }
+
+                foreach (var client in clients)
+                {
+                    client.Dispose();
+                }
+            }
         }
 
         [ClassCleanup]

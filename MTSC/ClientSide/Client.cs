@@ -222,7 +222,7 @@ namespace MTSC.Client
 
                 var ipEndpoint = new IPEndPoint(ipAddress, this.Port);
                 this.tcpClient.Connect(ipEndpoint);
-                this.safeNetworkStream = new TimeoutSuppressedStream(this.tcpClient);
+                this.safeNetworkStream = new TimeoutSuppressedStream(this.tcpClient.GetStream());
                 if (shouldUseSsl)
                 {
                     this.CertificateValidationCallback = this.CertificateValidationCallback ?? new RemoteCertificateValidationCallback(ValidateServerCertificate);
@@ -346,7 +346,7 @@ namespace MTSC.Client
                     handler.HandleSendMessage(this, ref sendMessage);
                 }
 
-                CommunicationPrimitives.SendMessage(this.tcpClient, sendMessage, this.sslStream);
+                CommunicationPrimitives.SendMessage(sendMessage, this.safeNetworkStream, this.sslStream);
             }
         }
 

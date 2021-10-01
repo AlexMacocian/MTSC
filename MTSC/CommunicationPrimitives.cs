@@ -62,11 +62,11 @@ namespace MTSC
                 cts.CancelAfter((int)ReadTimeout.TotalMilliseconds);
                 bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
                 ms.Write(buffer, 0, bytesRead);
-            } while (bytesRead > 0 && client.TcpClient.Available > 0);
+            } while (bytesRead > 0 && client.Socket.Available > 0);
             return new Message((uint)ms.Length, ms.ToArray());
         }
 
-        public static void SendMessage(TcpClient client, Message message, SslStream sslStream = null)
+        public static void SendMessage(Message message, Stream clientStream, SslStream sslStream = null)
         {
             Stream stream;
             if (sslStream != null)
@@ -75,7 +75,7 @@ namespace MTSC
             }
             else
             {
-                stream = client.GetStream();
+                stream = clientStream;
             }
 
             stream.Write(message.MessageBytes, 0, (int)message.MessageLength);

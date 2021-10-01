@@ -13,7 +13,7 @@ namespace MTSC.ServerSide
     {
         private readonly ProducerConsumerQueue<Message> messageQueue = new();
 
-        public TcpClient TcpClient { get; }
+        public Socket Socket { get; }
         /// <summary>
         /// Latest datetime when a message has been received from the client
         /// </summary>
@@ -46,10 +46,11 @@ namespace MTSC.ServerSide
         IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => this.messageQueue;
         bool IActiveClient.ReadingData { get; set; }
 
-        public ClientData(TcpClient client)
+        public ClientData(Socket socket)
         {
-            this.TcpClient = client;
-            this.SafeNetworkStream = new TimeoutSuppressedStream(this.TcpClient);
+            this.Socket = socket;
+            var ns = new NetworkStream(this.Socket);
+            this.SafeNetworkStream = new TimeoutSuppressedStream(ns);
         }
         /// <summary>
         /// Sets the affinity of the client.
@@ -117,7 +118,7 @@ namespace MTSC.ServerSide
                     // TODO: dispose managed state (managed objects).
                 }
 
-                this.TcpClient?.Dispose();
+                this.SafeNetworkStream?.Dispose();
                 this.SslStream?.Dispose();
                 this.Resources?.Dispose();
 

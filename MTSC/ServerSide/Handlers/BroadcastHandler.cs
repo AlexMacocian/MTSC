@@ -25,7 +25,7 @@ namespace MTSC.ServerSide.Handlers
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
             server.LogDebug("Broadcast: " + UnicodeEncoding.Unicode.GetString(message.MessageBytes));
-            server.LogDebug("From: " + client.TcpClient.Client.RemoteEndPoint.ToString());
+            server.LogDebug("From: " + client.Socket.RemoteEndPoint.ToString());
             foreach(var clientStruct in server.Clients)
             {
                 server.QueueMessage(clientStruct, message.MessageBytes);

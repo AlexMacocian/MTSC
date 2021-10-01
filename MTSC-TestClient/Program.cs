@@ -2,7 +2,6 @@
 using MTSC.Client.Handlers;
 using MTSC.ClientSide;
 using MTSC.Common.WebSockets.ClientModules;
-using MTSC.Logging;
 using System;
 
 namespace MTSC_TestClient
@@ -21,8 +20,6 @@ namespace MTSC_TestClient
                 .AddHandler(websocketHandler.AddModule(chatModule))
                 //.AddHandler(new EncryptionHandler())
                 //.AddHandler(new BroadcastHandler())
-                .AddLogger(new ConsoleLogger())
-                .AddLogger(new DebugConsoleLogger())
                 .Connect();
             while (true)
             {

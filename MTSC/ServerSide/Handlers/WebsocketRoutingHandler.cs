@@ -185,7 +185,7 @@ namespace MTSC.ServerSide.Handlers
                     response.Headers[WebsocketHeaderAcceptKey] = returnBase64Key;
                     server.QueueMessage(client, response.GetPackedResponse(false));
                     client.Resources.SetResource(SocketState.Established);
-                    server.LogDebug("Websocket initialized " + client.TcpClient.Client.RemoteEndPoint.ToString());
+                    server.LogDebug("Websocket initialized " + client.Socket.RemoteEndPoint.ToString());
                     /*
                      * Create and assign route module to client.
                      */
