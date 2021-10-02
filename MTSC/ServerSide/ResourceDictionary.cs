@@ -58,16 +58,16 @@ namespace MTSC.ServerSide
             {
                 if (disposing)
                 {
-                    // TODO: dispose managed state (managed objects).
+                    foreach (var value in this.Resources.Values)
+                    {
+                        (value as IDisposable)?.Dispose();
+                    }
+
+                    this.Resources.Clear();
+                    this.Resources = null;
+                    
                 }
 
-                foreach(var value in this.Resources.Values)
-                {
-                    (value as IDisposable)?.Dispose();
-                }
-
-                this.Resources.Clear();
-                this.Resources = null;
                 this.disposedValue = true;
             }
         }

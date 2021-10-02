@@ -189,7 +189,8 @@ namespace MTSC.ServerSide.Handlers
                     /*
                      * Create and assign route module to client.
                      */
-                    if (server.ServiceManager.GetService(moduleType) is not WebsocketRouteBase module)
+                    var scopedServiceManager = server.ServiceManager.CreateScope();
+                    if (scopedServiceManager.GetService(moduleType) is not WebsocketRouteBase module)
                     {
                         throw new InvalidOperationException($"Unexpected error during websocket module initialization. {moduleType.FullName} is not of type {typeof(WebsocketRouteBase).FullName}");
                     }
@@ -197,6 +198,7 @@ namespace MTSC.ServerSide.Handlers
                     (module as ISetWebsocketContext).SetClient(client);
                     (module as ISetWebsocketContext).SetHandler(this);
                     (module as ISetWebsocketContext).SetServer(server);
+                    (module as ISetWebsocketContext).SetScopedServiceProvider(scopedServiceManager);
                     client.Resources.SetResource(module);
                     module.CallConnectionInitialized();
                     return true;
@@ -304,7 +306,7 @@ namespace MTSC.ServerSide.Handlers
         {
             foreach((var routeType, _) in this.moduleDictionary.Values)
             {
-                server.ServiceManager.RegisterTransient(routeType, routeType);
+                server.ServiceManager.RegisterScoped(routeType, routeType);
             }
         }
         #endregion

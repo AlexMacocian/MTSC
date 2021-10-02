@@ -6,11 +6,14 @@ using System.Text;
 
 namespace MTSC.Common.WebSockets.RoutingModules
 {
-    public abstract class WebsocketRouteBase : ISetWebsocketContext
+    public abstract class WebsocketRouteBase : ISetWebsocketContext, IDisposable
     {
+        private bool disposedValue;
+
         protected Server Server { get; private set; }
         protected WebsocketRoutingHandler WebsocketRoutingHandler { get; private set; }
         protected ClientData ClientData { get; private set; }
+        protected Slim.IServiceProvider ScopedServiceProvider { get; private set; }
 
         public void CallConnectionInitialized()
         {
@@ -47,6 +50,11 @@ namespace MTSC.Common.WebSockets.RoutingModules
             this.ClientData = clientData;
         }
 
+        void ISetWebsocketContext.SetScopedServiceProvider(Slim.IServiceProvider serviceProvider)
+        {
+            this.ScopedServiceProvider = serviceProvider;
+        }
+
         internal static IWebsocketMessageConverter<T> GetStringAdhocConverter<T>()
         {
             return new AdhocConverter<T>(
@@ -73,6 +81,24 @@ namespace MTSC.Common.WebSockets.RoutingModules
                                 Opcode = WebsocketMessage.Opcodes.Binary
                             };
                         });
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposedValue)
+            {
+                this.disposedValue = true;
+                if (disposing)
+                {
+                    this.ScopedServiceProvider.Dispose();
+                    this.ScopedServiceProvider = null;
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            this.Dispose(disposing: true);
         }
     }
     public abstract class WebsocketRouteBase<TReceive> : WebsocketRouteBase

@@ -5,13 +5,13 @@
     <TargetFrameworks>netcoreapp2.1;net48;netstandard2.0;netcoreapp3.1;net5.0</TargetFrameworks>
     <ApplicationIcon />
     <StartupObject />
-    <Version>4.3.0</Version>
+    <Version>4.4.0</Version>
     <LangVersion>latest</LangVersion>
     <Authors>Alexandru-Victor Macocian</Authors>
     <Product>MTSC</Product>
     <Description>Modular TCP Server and Client</Description>
-    <AssemblyVersion>4.3.0.0</AssemblyVersion>
-    <FileVersion>4.3.0.0</FileVersion>
+    <AssemblyVersion>4.4.0.0</AssemblyVersion>
+    <FileVersion>4.4.0.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Platforms>AnyCPU;x64</Platforms>
     <PackageProjectUrl>https://github.com/AlexMacocian/MTSC</PackageProjectUrl>
@@ -29,7 +29,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="Slim" Version="1.5.2" />
+    <PackageReference Include="Slim" Version="1.5.4" />
   </ItemGroup>
 
   <ItemGroup>

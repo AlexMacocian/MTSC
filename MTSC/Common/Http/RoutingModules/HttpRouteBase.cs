@@ -7,8 +7,10 @@ using System.Threading.Tasks;
 
 namespace MTSC.Common.Http.RoutingModules
 {
-    public abstract class HttpRouteBase : ISetHttpContext
+    public abstract class HttpRouteBase : ISetHttpContext, IDisposable
     {
+        private bool disposedValue;
+
         private static HttpResponse InternalServerError500 { get; } =
             new HttpResponse
             {
@@ -19,6 +21,7 @@ namespace MTSC.Common.Http.RoutingModules
         public ClientData ClientData { get; private set; }
         public HttpRoutingHandler HttpRoutingHandler { get; private set; }
         public Server Server { get; private set; }
+        public Slim.IServiceProvider ScopedServiceProvider { get; private set; }
 
         public async Task<HttpResponse> CallHandleRequest(HttpRequest request)
         {
@@ -38,6 +41,10 @@ namespace MTSC.Common.Http.RoutingModules
         }
         public abstract Task<HttpResponse> HandleRequest(HttpRequest request);
 
+        void ISetHttpContext.SetScopedServiceProvider(Slim.IServiceProvider serviceProvider)
+        {
+            this.ScopedServiceProvider = serviceProvider;
+        }
         void ISetHttpContext.SetClientData(ClientData clientData)
         {
             this.ClientData = clientData;
@@ -49,6 +56,25 @@ namespace MTSC.Common.Http.RoutingModules
         void ISetHttpContext.SetServer(Server server)
         {
             this.Server = server;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!this.disposedValue)
+            {
+                this.disposedValue = true;
+                if (disposing)
+                {
+                    this.ScopedServiceProvider.Dispose();
+                }
+
+                this.ScopedServiceProvider = null;
+            }
+        }
+
+        public void Dispose()
+        {
+            this.Dispose(disposing: true);
         }
     }
     public abstract class HttpRouteBase<T> : HttpRouteBase

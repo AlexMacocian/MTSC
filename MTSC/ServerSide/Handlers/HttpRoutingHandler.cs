@@ -189,7 +189,8 @@ namespace MTSC.ServerSide.Handlers
             {
                 if (this.TryMatchUrl(request.Method, request.RequestURI, out var urlValues, out var routeType, out var routeEnabler))
                 {
-                    var module = this.GetRoute(routeType, client, server);
+                    var scopedServiceProvider = server.ServiceManager.CreateScope();
+                    var module = this.GetRoute(scopedServiceProvider, routeType, client, server);
                     if (request.Complete)
                     {
                         var httpRequest = request.ToRequest();
@@ -282,7 +283,7 @@ namespace MTSC.ServerSide.Handlers
                             httpLogger.LogResponse(server, this, client, task.Result);
                         }
 
-                        this.QueueResponse(client, task.Result); 
+                        this.QueueResponse(client, task.Result);
                     });
                 }
                 catch (Exception e)
@@ -339,17 +340,19 @@ namespace MTSC.ServerSide.Handlers
             public Func<Server, HttpRequest, ClientData, RouteEnablerResponse> RouteEnabler { get; set; }
         }
 
-        private HttpRouteBase GetRoute(Type routeType, ClientData client, Server server)
+        private HttpRouteBase GetRoute(Slim.IServiceProvider serviceProvider, Type routeType, ClientData client, Server server)
         {
             if (!typeof(HttpRouteBase).IsAssignableFrom(routeType))
             {
                 throw new InvalidOperationException($"Cannot create new route of type {routeType.FullName}. Not of type {typeof(HttpRouteBase).FullName}");
             }
 
-            var module = server.ServiceManager.GetService(routeType) as HttpRouteBase;
+            var module = serviceProvider.GetService(routeType) as HttpRouteBase;
             (module as ISetHttpContext).SetClientData(client);
             (module as ISetHttpContext).SetServer(server);
             (module as ISetHttpContext).SetHttpRoutingHandler(this);
+            (module as ISetHttpContext).SetScopedServiceProvider(serviceProvider);
+            client.Resources.SetResource(module);
 
             return module;
         }
