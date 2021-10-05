@@ -190,17 +190,42 @@ namespace MTSC.ServerSide.Handlers
                 if (this.TryMatchUrl(request.Method, request.RequestURI, out var urlValues, out var routeType, out var routeEnabler))
                 {
                     var scopedServiceProvider = server.ServiceManager.CreateScope();
-                    var module = this.GetRoute(scopedServiceProvider, routeType, client, server);
-                    if (request.Complete)
+                    try
                     {
-                        var httpRequest = request.ToRequest();
-                        client.ResetAffinityIfMe(this);
-                        return this.HandleCompleteRequest(client, server, httpRequest, module, urlValues, routeEnabler);
+                        var module = this.GetRoute(scopedServiceProvider, routeType, client, server);
+                        if (request.Complete)
+                        {
+                            var httpRequest = request.ToRequest();
+                            client.ResetAffinityIfMe(this);
+                            return this.HandleCompleteRequest(client, server, httpRequest, module, urlValues, routeEnabler);
+                        }
+                        else
+                        {
+                            client.Resources.SetResource(new RequestMapping { MappedModule = module, RouteEnabler = routeEnabler, UrlValues = urlValues });
+                            return true;
+                        }
                     }
-                    else
+                    catch(Exception e)
                     {
-                        client.Resources.SetResource(new RequestMapping { MappedModule = module, RouteEnabler = routeEnabler, UrlValues = urlValues });
-                        return true;
+                        server.LogDebug("Exception: " + e.Message);
+                        server.LogDebug("Stacktrace: " + e.StackTrace);
+                        client.ResetAffinityIfMe(this);
+                        client.Resources.RemoveResource<FragmentedMessage>();
+                        if (this.Return500OnException)
+                        {
+                            var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
+                            foreach (var httpLogger in this.httpLoggers)
+                            {
+                                httpLogger.LogResponse(server, this, client, response);
+                            }
+
+                            this.QueueResponse(client, response);
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
                 }
                 else
