@@ -5,6 +5,7 @@ using MTSC.Common.Http.RoutingModules;
 using MTSC.Exceptions;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Schedulers;
+using MTSC.ServerSide.UsageMonitors;
 using MTSC.UnitTests.RoutingModules;
 using Newtonsoft.Json;
 using System;
@@ -38,6 +39,8 @@ namespace MTSC.UnitTests
             Server = new ServerSide.Server(800)
                 .WithReadTimeout(TimeSpan.FromMilliseconds(1000))
                 .WithClientCertificate(false)
+                .AddServerUsageMonitor(new InactiveTimeoutMonitor()
+                    .WithTimeout(TimeSpan.FromSeconds(30)))
                 .AddHandler(new WebsocketRoutingHandler()
                     .AddRoute<EchoWebsocketModule>("echo")
                     .AddRoute<EchoWebsocketModule2>("echo2")

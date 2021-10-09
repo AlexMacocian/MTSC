@@ -116,124 +116,26 @@ namespace MTSC.ServerSide.Handlers
 
         bool IHandler.HandleReceivedMessage(Server server, ClientData client, Message message)
         {
-            /*
-             * If a fragmented request exists, add the new messages to the body.
-             * Else, parse the messages into a partial request. If this causes an exception, let it throw out of the handler,
-             * cause the handler needs at least valid headers to work.
-             */
-            PartialHttpRequest request;
-            if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage)) 
+            try
             {
-                var bytesToBeAdded = message.MessageBytes.TrimTrailingNullBytes();
-                if(fragmentedMessage.PartialRequest.HeaderByteCount + 
-                    fragmentedMessage.PartialRequest.Body.Length + 
-                    message.MessageLength > this.MaximumRequestSize)
-                {
-                    this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{this.MaximumRequestSize}] bytes!" });
-                    client.ResetAffinityIfMe(this);
-                    client.Resources.RemoveResource<FragmentedMessage>();
-                    client.Resources.RemoveResourceIfExists<RequestMapping>();
-                }
-
-                fragmentedMessage.AddToMessage(bytesToBeAdded);
-                request = fragmentedMessage.PartialRequest;
+                return this.HandleMessageInternal(client, server, message);
             }
-            else
+            catch(Exception)
             {
-                if (message.MessageLength > this.MaximumRequestSize)
+                client.ResetAffinityIfMe(this);
+                client.Resources.RemoveResource<FragmentedMessage>();
+                if (this.Return500OnException)
                 {
-                    this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{this.MaximumRequestSize}] bytes!" });
-                    return false;
-                }
-
-                request = PartialHttpRequest.FromBytes(message.MessageBytes.TrimTrailingNullBytes());
-                if (!request.Complete)
-                {
-                    client.Resources.SetResource(new FragmentedMessage { LastReceived = DateTime.Now, PartialRequest = request });
-                    client.SetAffinity(this);
-                    if (request.Headers.ContainsHeader(RequestHeaders.Expect) &&
-                        request.Headers[RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
+                    var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
+                    foreach (var httpLogger in this.httpLoggers)
                     {
-                        server.LogDebug("Returning 100-Continue");
-                        var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
-                        contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
-                        this.QueueResponse(client, contResponse);
+                        httpLogger.LogResponse(server, this, client, response);
                     }
-                }
-            }
 
-            /*
-             * Once headers are loaded, check if mapping exists. If mapping exists between request and module,
-             * verify that the request is complete and send it to module.
-             * Otherwise, if the request is complete, send it to the mapped module. If the request is not complete,
-             * handle it and return.
-             */
+                    this.QueueResponse(client, response);
+                }
 
-            if (client.Resources.TryGetResource<RequestMapping>(out var mapping))
-            {
-                if (request.Complete)
-                {
-                    client.Resources.RemoveResource<RequestMapping>();
-                    client.Resources.RemoveResource<FragmentedMessage>();
-                    client.ResetAffinityIfMe(this);
-                    this.HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.UrlValues, mapping.RouteEnabler);
-                    return true;
-                }
-                else
-                {
-                    this.HandleIncompleteRequest(server, client.Resources.GetResource<FragmentedMessage>());
-                    return true;
-                }
-            }
-            else
-            {
-                if (this.TryMatchUrl(request.Method, request.RequestURI, out var urlValues, out var routeType, out var routeEnabler))
-                {
-                    var scopedServiceProvider = server.ServiceManager.CreateScope();
-                    try
-                    {
-                        var module = this.GetRoute(scopedServiceProvider, routeType, client, server);
-                        if (request.Complete)
-                        {
-                            var httpRequest = request.ToRequest();
-                            client.ResetAffinityIfMe(this);
-                            return this.HandleCompleteRequest(client, server, httpRequest, module, urlValues, routeEnabler);
-                        }
-                        else
-                        {
-                            client.Resources.SetResource(new RequestMapping { MappedModule = module, RouteEnabler = routeEnabler, UrlValues = urlValues });
-                            return true;
-                        }
-                    }
-                    catch(Exception e)
-                    {
-                        server.LogDebug("Exception: " + e.Message);
-                        server.LogDebug("Stacktrace: " + e.StackTrace);
-                        client.ResetAffinityIfMe(this);
-                        client.Resources.RemoveResource<FragmentedMessage>();
-                        if (this.Return500OnException)
-                        {
-                            var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
-                            foreach (var httpLogger in this.httpLoggers)
-                            {
-                                httpLogger.LogResponse(server, this, client, response);
-                            }
-
-                            this.QueueResponse(client, response);
-                            return true;
-                        }
-                        else
-                        {
-                            return false;
-                        }
-                    }
-                }
-                else
-                {
-                    client.ResetAffinityIfMe(this);
-                    client.Resources.RemoveResource<FragmentedMessage>();
-                    return false;
-                }
+                throw;
             }
         }
 
@@ -299,30 +201,15 @@ namespace MTSC.ServerSide.Handlers
             if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
             {
                 this.SetModuleProperties(module, request, urlValues);
-                try
+                module.CallHandleRequest(request).ContinueWith((task) =>
                 {
-                    module.CallHandleRequest(request).ContinueWith((task) => 
-                    {
-                        foreach (var httpLogger in this.httpLoggers)
-                        {
-                            httpLogger.LogResponse(server, this, client, task.Result);
-                        }
-
-                        this.QueueResponse(client, task.Result);
-                    });
-                }
-                catch (Exception e)
-                {
-                    server.LogDebug("Exception: " + e.Message);
-                    server.LogDebug("Stacktrace: " + e.StackTrace);
-                    var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
                     foreach (var httpLogger in this.httpLoggers)
                     {
-                        httpLogger.LogResponse(server, this, client, response);
+                        httpLogger.LogResponse(server, this, client, task.Result);
                     }
 
-                    this.QueueResponse(client, response);
-                }
+                    this.QueueResponse(client, task.Result);
+                });
 
                 return true;
             }
@@ -363,6 +250,104 @@ namespace MTSC.ServerSide.Handlers
             public List<UrlValue> UrlValues { get; set; }
             public HttpRouteBase MappedModule { get; set; }
             public Func<Server, HttpRequest, ClientData, RouteEnablerResponse> RouteEnabler { get; set; }
+        }
+
+        private bool HandleMessageInternal(ClientData client, Server server, Message message)
+        {
+            /*
+             * If a fragmented request exists, add the new messages to the body.
+             * Else, parse the messages into a partial request. If this causes an exception, let it throw out of the handler,
+             * cause the handler needs at least valid headers to work.
+             */
+            PartialHttpRequest request;
+            if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
+            {
+                var bytesToBeAdded = message.MessageBytes.TrimTrailingNullBytes();
+                if (fragmentedMessage.PartialRequest.HeaderByteCount +
+                    fragmentedMessage.PartialRequest.Body.Length +
+                    message.MessageLength > this.MaximumRequestSize)
+                {
+                    this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{this.MaximumRequestSize}] bytes!" });
+                    client.ResetAffinityIfMe(this);
+                    client.Resources.RemoveResource<FragmentedMessage>();
+                    client.Resources.RemoveResourceIfExists<RequestMapping>();
+                }
+
+                fragmentedMessage.AddToMessage(bytesToBeAdded);
+                request = fragmentedMessage.PartialRequest;
+            }
+            else
+            {
+                if (message.MessageLength > this.MaximumRequestSize)
+                {
+                    this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{this.MaximumRequestSize}] bytes!" });
+                    return false;
+                }
+
+                request = PartialHttpRequest.FromBytes(message.MessageBytes.TrimTrailingNullBytes());
+                if (!request.Complete)
+                {
+                    client.Resources.SetResource(new FragmentedMessage { LastReceived = DateTime.Now, PartialRequest = request });
+                    client.SetAffinity(this);
+                    if (request.Headers.ContainsHeader(RequestHeaders.Expect) &&
+                        request.Headers[RequestHeaders.Expect].Equals("100-continue", StringComparison.OrdinalIgnoreCase))
+                    {
+                        server.LogDebug("Returning 100-Continue");
+                        var contResponse = new HttpResponse { StatusCode = HttpMessage.StatusCodes.Continue };
+                        contResponse.Headers[HttpMessage.GeneralHeaders.Connection] = "keep-alive";
+                        this.QueueResponse(client, contResponse);
+                    }
+                }
+            }
+
+            /*
+             * Once headers are loaded, check if mapping exists. If mapping exists between request and module,
+             * verify that the request is complete and send it to module.
+             * Otherwise, if the request is complete, send it to the mapped module. If the request is not complete,
+             * handle it and return.
+             */
+
+            if (client.Resources.TryGetResource<RequestMapping>(out var mapping))
+            {
+                if (request.Complete)
+                {
+                    client.Resources.RemoveResource<RequestMapping>();
+                    client.Resources.RemoveResource<FragmentedMessage>();
+                    client.ResetAffinityIfMe(this);
+                    this.HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.UrlValues, mapping.RouteEnabler);
+                    return true;
+                }
+                else
+                {
+                    this.HandleIncompleteRequest(server, client.Resources.GetResource<FragmentedMessage>());
+                    return true;
+                }
+            }
+            else
+            {
+                if (this.TryMatchUrl(request.Method, request.RequestURI, out var urlValues, out var routeType, out var routeEnabler))
+                {
+                    var scopedServiceProvider = server.ServiceManager.CreateScope();
+                    var module = this.GetRoute(scopedServiceProvider, routeType, client, server);
+                    if (request.Complete)
+                    {
+                        var httpRequest = request.ToRequest();
+                        client.ResetAffinityIfMe(this);
+                        return this.HandleCompleteRequest(client, server, httpRequest, module, urlValues, routeEnabler);
+                    }
+                    else
+                    {
+                        client.Resources.SetResource(new RequestMapping { MappedModule = module, RouteEnabler = routeEnabler, UrlValues = urlValues });
+                        return true;
+                    }
+                }
+                else
+                {
+                    client.ResetAffinityIfMe(this);
+                    client.Resources.RemoveResource<FragmentedMessage>();
+                    return false;
+                }
+            }
         }
 
         private HttpRouteBase GetRoute(Slim.IServiceProvider serviceProvider, Type routeType, ClientData client, Server server)
