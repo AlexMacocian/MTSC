@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 namespace MTSC.UnitTests.RoutingModules
 {
+    [NonActioningFilter]
     public class SomeRoutingModule : HttpRouteBase<SomeRoutingRequest, SomeRoutingResponse>
     {
         [FromUrl("someValue")]

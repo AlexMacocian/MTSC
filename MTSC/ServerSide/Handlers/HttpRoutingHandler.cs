@@ -16,12 +16,30 @@ namespace MTSC.ServerSide.Handlers
 {
     public sealed class HttpRoutingHandler : IHandler, IRunOnStartup
     {
-        private static readonly Func<Server, HttpRequest, ClientData, RouteEnablerResponse> alwaysEnabled = (server, request, client) => RouteEnablerResponse.Accept;
+        private class FragmentedMessage
+        {
+            public PartialHttpRequest PartialRequest { get; set; }
+
+            public DateTime LastReceived { get; set; } = DateTime.Now;
+
+            public void AddToMessage(byte[] bytes)
+            {
+                this.PartialRequest.AddToBody(bytes);
+            }
+        }
+
+        private class RequestMapping
+        {
+            public List<UrlValue> UrlValues { get; set; }
+            public HttpRouteBase MappedModule { get; set; }
+            public List<Type> FilterTypes { get; set; }
+        }
+
         private readonly ConcurrentQueue<Tuple<ClientData, HttpResponse>> messageOutQueue = new();
         private readonly List<IHttpLogger> httpLoggers = new();
-        private readonly Dictionary<HttpMethods, List<(ExtendedUrl, Type,
-            Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>> moduleDictionary = new();
         private readonly Dictionary<Type, List<(Attribute, PropertyInfo)>> routePropertyCache = new();
+        // List containing a tuple of url of module, type of module and list of types of filters for the module.
+        private readonly Dictionary<HttpMethods, List<(ExtendedUrl, Type, List<Type>)>> moduleDictionary = new();
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = double.MaxValue;
@@ -31,7 +49,7 @@ namespace MTSC.ServerSide.Handlers
         {
             foreach (var method in (HttpMethods[])Enum.GetValues(typeof(HttpMethods)))
             {
-                this.moduleDictionary[method] = new List<(ExtendedUrl, Type, Func<Server, HttpRequest, ClientData, RouteEnablerResponse>)>();
+                this.moduleDictionary[method] = new List<(ExtendedUrl, Type, List<Type>)>();
             }
         }
 
@@ -50,16 +68,7 @@ namespace MTSC.ServerSide.Handlers
             string uri)
             where T : HttpRouteBase
         {
-            this.RegisterRoute(method, uri, typeof(T), alwaysEnabled);
-            return this;
-        }
-        public HttpRoutingHandler AddRoute<T>(
-            HttpMethods method,
-            string uri,
-            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
-            where T : HttpRouteBase
-        {
-            this.RegisterRoute(method, uri, typeof(T), routeEnabler);
+            this.RegisterRoute(method, uri, typeof(T));
             return this;
         }
         public HttpRoutingHandler AddRoute(
@@ -67,16 +76,7 @@ namespace MTSC.ServerSide.Handlers
             string uri,
             Type routeType)
         {
-            this.RegisterRoute(method, uri, routeType, alwaysEnabled);
-            return this;
-        }
-        public HttpRoutingHandler AddRoute(
-            HttpMethods method,
-            string uri,
-            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler,
-            Type routeType)
-        {
-            this.RegisterRoute(method, uri, routeType, routeEnabler);
+            this.RegisterRoute(method, uri, routeType);
             return this;
         }
         public HttpRoutingHandler RemoveRoute(
@@ -149,6 +149,11 @@ namespace MTSC.ServerSide.Handlers
             {
                 if (this.messageOutQueue.TryDequeue(out var tuple))
                 {
+                    foreach (var httpLogger in this.httpLoggers)
+                    {
+                        httpLogger.LogResponse(server, this, tuple.Item1, tuple.Item2);
+                    }
+
                     server.QueueMessage(tuple.Item1, tuple.Item2.GetPackedResponse(true));
                 }
             }
@@ -170,9 +175,19 @@ namespace MTSC.ServerSide.Handlers
         {
             foreach (var routes in this.moduleDictionary.Values)
             {
-                foreach ((_, var routeType, _) in routes)
+                foreach ((_, var routeType, var filterTypes) in routes)
                 {
                     server.ServiceManager.RegisterTransient(routeType, routeType);
+                    foreach(var routeAttribute in routeType.GetCustomAttributes(true).Cast<Attribute>()
+                        .Where(attr => typeof(RouteFilterAttribute).IsAssignableFrom(attr.GetType())))
+                    {
+                        filterTypes.Add(routeAttribute.GetType());
+                        if (server.ServiceManager.IsRegistered(routeAttribute.GetType()) is false)
+                        {
+                            server.ServiceManager.RegisterScoped(routeAttribute.GetType());
+                        }
+                    }
+
                     this.PrepareRoutePropertyCache(routeType);
                 }
             }
@@ -187,69 +202,52 @@ namespace MTSC.ServerSide.Handlers
         private bool HandleCompleteRequest(
             ClientData client, 
             Server server, 
-            HttpRequest request, 
+            HttpRequest request,
             HttpRouteBase module,
             List<UrlValue> urlValues,
-            Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+            List<Type> filterTypes)
         {
             foreach (var httpLogger in this.httpLoggers)
             {
                 httpLogger.LogRequest(server, this, client, request);
             }
 
-            var routeEnablerResponse = routeEnabler.Invoke(server, request, client);
-            if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
+            foreach(var filterType in filterTypes)
             {
-                this.SetModuleProperties(module, request, urlValues);
-                module.CallHandleRequest(request).ContinueWith((task) =>
+                var filter = server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                var filterResponse = filter.HandleRequest(server, client, request);
+                if (filterResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
                 {
-                    foreach (var httpLogger in this.httpLoggers)
-                    {
-                        httpLogger.LogResponse(server, this, client, task.Result);
-                    }
-
-                    this.QueueResponse(client, task.Result);
-                });
-
-                return true;
-            }
-            else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseIgnore)
-            {
-                return false;
-            }
-            else if (routeEnablerResponse is RouteEnablerResponse.RouteEnablerResponseError)
-            {
-                foreach (var httpLogger in this.httpLoggers)
+                    continue;
+                }
+                else if (filterResponse is RouteEnablerResponse.RouteEnablerResponseIgnore)
                 {
-                    httpLogger.LogResponse(server, this, client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
+                    return false;
+                }
+                else if (filterResponse is RouteEnablerResponse.RouteEnablerResponseError errorResponse)
+                {
+                    this.QueueResponse(client, errorResponse.Response);
+                    return true;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"RouteEnablerResponse should be one of the types {typeof(RouteEnablerResponse.RouteEnablerResponseAccept)}, {typeof(RouteEnablerResponse.RouteEnablerResponseError)} or {typeof(RouteEnablerResponse.RouteEnablerResponseIgnore)}!");
+                }
+            }
+
+            this.SetModuleProperties(module, request, urlValues);
+            module.CallHandleRequest(request).ContinueWith((task) =>
+            {
+                foreach(var filterType in filterTypes)
+                {
+                    var filter = server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                    filter.HandleResponse(server, client, task.Result);
                 }
 
-                this.QueueResponse(client, (routeEnablerResponse as RouteEnablerResponse.RouteEnablerResponseError).Response);
-                return true;
-            }
-            else
-            {
-                throw new InvalidOperationException($"RouteEnablerResponse should be one of the types {typeof(RouteEnablerResponse.RouteEnablerResponseAccept)}, {typeof(RouteEnablerResponse.RouteEnablerResponseError)} or {typeof(RouteEnablerResponse.RouteEnablerResponseIgnore)}!");
-            }
-        }
+                this.QueueResponse(client, task.Result);
+            });
 
-        private class FragmentedMessage
-        {
-            public PartialHttpRequest PartialRequest { get; set; }
-
-            public DateTime LastReceived { get; set; } = DateTime.Now;
-
-            public void AddToMessage(byte[] bytes)
-            {
-                this.PartialRequest.AddToBody(bytes);
-            }
-        }
-
-        private class RequestMapping
-        {
-            public List<UrlValue> UrlValues { get; set; }
-            public HttpRouteBase MappedModule { get; set; }
-            public Func<Server, HttpRequest, ClientData, RouteEnablerResponse> RouteEnabler { get; set; }
+            return true;
         }
 
         private bool HandleMessageInternal(ClientData client, Server server, Message message)
@@ -314,7 +312,7 @@ namespace MTSC.ServerSide.Handlers
                     client.Resources.RemoveResource<RequestMapping>();
                     client.Resources.RemoveResource<FragmentedMessage>();
                     client.ResetAffinityIfMe(this);
-                    this.HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.UrlValues, mapping.RouteEnabler);
+                    this.HandleCompleteRequest(client, server, request.ToRequest(), mapping.MappedModule, mapping.UrlValues, mapping.FilterTypes);
                     return true;
                 }
                 else
@@ -325,7 +323,7 @@ namespace MTSC.ServerSide.Handlers
             }
             else
             {
-                if (this.TryMatchUrl(request.Method, request.RequestURI, out var urlValues, out var routeType, out var routeEnabler))
+                if (this.TryMatchUrl(request.Method, request.RequestURI, out var urlValues, out var routeType, out var filterTypes))
                 {
                     var scopedServiceProvider = server.ServiceManager.CreateScope();
                     var module = this.GetRoute(scopedServiceProvider, routeType, client, server);
@@ -333,11 +331,11 @@ namespace MTSC.ServerSide.Handlers
                     {
                         var httpRequest = request.ToRequest();
                         client.ResetAffinityIfMe(this);
-                        return this.HandleCompleteRequest(client, server, httpRequest, module, urlValues, routeEnabler);
+                        return this.HandleCompleteRequest(client, server, httpRequest, module, urlValues, filterTypes);
                     }
                     else
                     {
-                        client.Resources.SetResource(new RequestMapping { MappedModule = module, RouteEnabler = routeEnabler, UrlValues = urlValues });
+                        client.Resources.SetResource(new RequestMapping { MappedModule = module, UrlValues = urlValues, FilterTypes = filterTypes });
                         return true;
                     }
                 }
@@ -367,14 +365,14 @@ namespace MTSC.ServerSide.Handlers
             return module;
         }
 
-        private void RegisterRoute(HttpMethods method, string uri, Type routeType, Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+        private void RegisterRoute(HttpMethods method, string uri, Type routeType)
         {
             if (!typeof(HttpRouteBase).IsAssignableFrom(routeType))
             {
                 throw new InvalidOperationException($"{routeType.FullName} must be of type {typeof(HttpRouteBase).FullName}");
             }
 
-            this.moduleDictionary[method].Add((new ExtendedUrl(uri), routeType, routeEnabler));
+            this.moduleDictionary[method].Add((new ExtendedUrl(uri), routeType, new List<Type>()));
         }
 
         private void PrepareRoutePropertyCache(Type routeType)
@@ -400,19 +398,19 @@ namespace MTSC.ServerSide.Handlers
             this.routePropertyCache[routeType] = propertyAndAttributesList;
         }
 
-        private bool TryMatchUrl(HttpMethods method, string uri, out List<UrlValue> urlValues, out Type type, out Func<Server, HttpRequest, ClientData, RouteEnablerResponse> routeEnabler)
+        private bool TryMatchUrl(HttpMethods method, string uri, out List<UrlValue> urlValues, out Type type, out List<Type> filters)
         {
             urlValues = null;
             type = null;
-            routeEnabler = null;
+            filters = null;
 
-            foreach((var url, var possibleType, var possibleRouteEnabler) in this.moduleDictionary[method])
+            foreach((var url, var possibleType, var possibleFilterTypes) in this.moduleDictionary[method])
             {
                 if (url.TryMatchUrl(uri, out var matchedValues))
                 {
+                    filters = possibleFilterTypes;
                     urlValues = matchedValues;
                     type = possibleType;
-                    routeEnabler = possibleRouteEnabler;
                     return true;
                 }
             }

@@ -84,6 +84,18 @@ namespace MTSC.UnitTests
         }
 
         [TestMethod]
+        public async Task ServerCallsRequestAndResponseFilter()
+        {
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://localhost:800");
+            var response = await httpClient.PostAsync("some-module/1234asvB9/test/99213/test", new StringContent(JsonConvert.SerializeObject(new HelloWorldMessage { HelloWorld = true })));
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+
+            Assert.IsTrue(NonActioningFilterAttribute.RequestCalled);
+            Assert.IsTrue(NonActioningFilterAttribute.ResponseCalled);
+        }
+
+        [TestMethod]
         public async Task ServerRespondsDuringLongRunningTask()
         {
             var httpClient = new HttpClient();

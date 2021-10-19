@@ -11,18 +11,22 @@
 
         public sealed class RouteEnablerResponseAccept : RouteEnablerResponse
         {
-
+            internal RouteEnablerResponseAccept()
+            {
+            }
         }
 
         public sealed class RouteEnablerResponseIgnore : RouteEnablerResponse
         {
-
+            internal RouteEnablerResponseIgnore()
+            {
+            }
         }
 
         public sealed class RouteEnablerResponseError : RouteEnablerResponse
         {
             public HttpResponse Response { get; }
-            public RouteEnablerResponseError(HttpResponse responseMessage)
+            internal RouteEnablerResponseError(HttpResponse responseMessage)
             {
                 this.Response = responseMessage;
             }
