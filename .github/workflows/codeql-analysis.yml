@@ -24,6 +24,11 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    env:
+      Configuration: Release
+      Solution_Path: MTSC.sln
+      Source_Project_Path: MTSC\MTSC.csproj
+      Actions_Allow_Unsecure_Commands: true
     permissions:
       actions: read
       contents: read
@@ -57,8 +62,8 @@ jobs:
 
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v1
+    # - name: Autobuild
+    #  uses: github/codeql-action/autobuild@v1
 
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 https://git.io/JvXDl
@@ -70,6 +75,9 @@ jobs:
     #- run: |
     #   make bootstrap
     #   make release
+
+    - name: Build MTSC project
+      run: dotnet build MTSC -c $env:Configuration
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
