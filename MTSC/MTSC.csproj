@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netcoreapp2.1;net48;netstandard2.0;netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFrameworks>net48;netstandard2.0;netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
     <ApplicationIcon />
     <StartupObject />
-    <Version>4.6.0</Version>
+    <Version>4.7.0</Version>
     <LangVersion>latest</LangVersion>
     <Authors>Alexandru-Victor Macocian</Authors>
     <Product>MTSC</Product>
@@ -27,9 +27,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="Slim" Version="1.5.5" />
+    <PackageReference Include="Slim" Version="1.6.0" />
   </ItemGroup>
 
   <ItemGroup>

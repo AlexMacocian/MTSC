@@ -14,6 +14,7 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MTSC.ServerSide
@@ -24,6 +25,7 @@ namespace MTSC.ServerSide
     public sealed class Server
     {
         #region Fields
+        private CancellationToken cancellationToken;
         private bool running;
         private X509Certificate2 certificate;
         private readonly ProducerConsumerQueue<ClientData> addQueue = new();
@@ -491,8 +493,14 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Blocking method. Runs the server on the current thread.
         /// </summary>
-        public void Run()
+        /// <param name="cancellationToken">Cancellation token used to cancel the server.</param>
+        public void Run(CancellationToken cancellationToken = default)
         {
+            if (this.running)
+            {
+                return;
+            }
+
             this.Listener?.Stop();
             if (this.logger is null)
             {
@@ -515,6 +523,7 @@ namespace MTSC.ServerSide
 
             this.Listener.Initialize(this.Port, this.IPAddress);
             this.Listener.Start();
+            this.cancellationToken = cancellationToken;
             this.running = true;
             this.Log("Server started on: " + this.Listener.LocalEndpoint.ToString());
             foreach(var toBeRunOnStartup in this.handlers.OfType<IRunOnStartup>())
@@ -526,6 +535,17 @@ namespace MTSC.ServerSide
             while (this.running)
             {
                 startLoopTime = DateTime.Now;
+                
+                /*
+                 * Check cancellationToken. If cancellation has been requested, stop the loop
+                 * and let the cleanup process deal with the server resources.
+                 */
+                if (this.cancellationToken.IsCancellationRequested)
+                {
+                    this.running = false;
+                    break;
+                }
+
                 /*
                  * Check the client states. If a client is disconnected, 
                  * remove it from the list of clients.
@@ -636,9 +656,9 @@ namespace MTSC.ServerSide
         /// <summary>
         /// Runs the server async.
         /// </summary>
-        public Task RunAsync()
+        public Task RunAsync(CancellationToken cancellationToken = default)
         {
-            return Task.Run(this.Run);
+            return Task.Run(() => this.Run(cancellationToken));
         }
         /// <summary>
         /// Stop the server.
