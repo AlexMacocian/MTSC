@@ -27,7 +27,12 @@ namespace MTSC.Common.Http.RoutingModules
         {
             try
             {
-                return await this.HandleRequest(request);
+                var context = new HttpRequestContext(
+                    clientData: this.ClientData,
+                    httpRequest: request,
+                    httpRouteBase: this,
+                    httpRoutingHandler: this.HttpRoutingHandler);
+                return await this.HandleRequest(context);
             }
             catch
             {
@@ -39,7 +44,7 @@ namespace MTSC.Common.Http.RoutingModules
                 throw;
             }
         }
-        public abstract Task<HttpResponse> HandleRequest(HttpRequest request);
+        public abstract Task<HttpResponse> HandleRequest(HttpRequestContext request);
 
         void ISetHttpContext.SetScopedServiceProvider(Slim.IServiceProvider serviceProvider)
         {
@@ -79,7 +84,7 @@ namespace MTSC.Common.Http.RoutingModules
     }
     public abstract class HttpRouteBase<T> : HttpRouteBase
     {
-        public sealed override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public sealed override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
             var typeConverter = TypeDescriptor.GetConverter(typeof(T));
             return this.HandleRequest((T)typeConverter.ConvertFrom(request));
@@ -89,7 +94,7 @@ namespace MTSC.Common.Http.RoutingModules
     }
     public abstract class HttpRouteBase<TReceive, TSend> : HttpRouteBase
     {
-        public sealed async override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public sealed async override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
             var requestTypeConverter = TypeDescriptor.GetConverter(typeof(TReceive));
             var responseTypeConverter = TypeDescriptor.GetConverter(typeof(TSend));

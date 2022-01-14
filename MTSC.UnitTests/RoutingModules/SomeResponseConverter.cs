@@ -2,7 +2,6 @@
 using System.ComponentModel;
 using System.Globalization;
 using MTSC.Common.Http;
-using MTSC.Common.Http.RoutingModules;
 
 namespace MTSC.UnitTests.RoutingModules
 {

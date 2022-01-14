@@ -6,7 +6,7 @@ namespace MTSC.UnitTests.RoutingModules
 {
     public class ExceptionThrowingModule : HttpRouteBase
     {
-        public override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
             throw new System.NotImplementedException();
         }

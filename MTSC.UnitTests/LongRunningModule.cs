@@ -7,7 +7,7 @@ namespace MTSC.UnitTests
 {
     public class LongRunningModule : HttpRouteBase
     {
-        public async override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public async override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
             await Task.Delay(5000);
             return new HttpResponse { StatusCode = HttpMessage.StatusCodes.OK };

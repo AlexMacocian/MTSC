@@ -8,9 +8,9 @@ namespace MTSC.UnitTests
 {
     class TestQueryModule : HttpRouteBase
     {
-        public override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
-            var query = HttpUtility.ParseQueryString(request.RequestQuery);
+            var query = HttpUtility.ParseQueryString(request.Request.RequestQuery);
             if(query.Count == 2 &&
                 query.Keys[0] == "key1" &&
                 query.Keys[1] == "key2")

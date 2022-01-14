@@ -8,9 +8,9 @@ namespace MTSC.UnitTests
 {
     public class MultipartModule : HttpRouteBase
     {
-        public override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
-            if (request.Form.Count > 0)
+            if (request.Request.Form.Count > 0)
             {
                 return Task.FromResult(new HttpResponse { StatusCode = HttpMessage.StatusCodes.OK });
             }
