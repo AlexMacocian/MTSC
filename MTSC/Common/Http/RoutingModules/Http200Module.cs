@@ -12,7 +12,7 @@ namespace MTSC.Common.Http.RoutingModules
             this.server = server;
         }
         
-        public override Task<HttpResponse> HandleRequest(HttpRequest request)
+        public override Task<HttpResponse> HandleRequest(HttpRequestContext request)
         {
             return Task.FromResult(this.OK);
         }

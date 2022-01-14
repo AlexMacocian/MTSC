@@ -9,7 +9,7 @@ namespace MTSC.UnitTests.RoutingModules
     {
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
-            if (sourceType == typeof(HttpRequest))
+            if (sourceType == typeof(HttpRequestContext))
             {
                 return true;
             }
@@ -19,7 +19,7 @@ namespace MTSC.UnitTests.RoutingModules
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            if (value is HttpRequest)
+            if (value is HttpRequestContext)
             {
                 return new SomeRoutingRequest();
             }
