@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MTSC.Common.Http;
@@ -6,6 +7,7 @@ using MTSC.Exceptions;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
+using MTSC.UnitTests.BackgroundServices;
 using MTSC.UnitTests.RoutingModules;
 using Newtonsoft.Json;
 using System;
@@ -56,12 +58,15 @@ namespace MTSC.UnitTests
                     .AddRoute<LongRunningModule>(HttpMessage.HttpMethods.Get, "long-running")
                     .AddRoute<MultipartModule>(HttpMessage.HttpMethods.Post, "multipart")
                     .AddRoute<SomeRoutingModule>(HttpMessage.HttpMethods.Post, "some-module/{someValue}/test/{intValue}/test")
+                    .AddRoute<IterationModule>(HttpMessage.HttpMethods.Get, "iteration")
                     .WithFragmentsExpirationTime(TimeSpan.FromMilliseconds(3000))
                     .WithMaximumSize(250000))
+                .AddBackgroundService<IteratingBackgroundService>(interval: TimeSpan.FromSeconds(5))
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 .SetScheduler(new ParallelScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
             Server.ServiceManager.RegisterSingleton<ILogger, ConsoleLogger>();
+            Server.ServiceManager.RegisterSingleton<IteratingService>();
             Server.RunAsync();
         }
 
@@ -382,6 +387,24 @@ namespace MTSC.UnitTests
                     client.Dispose();
                 }
             }
+        }
+
+        [TestMethod]
+        public async Task BackgroundService_GetsPeriodicallyCalled()
+        {
+            var httpClient = new HttpClient();
+            httpClient.BaseAddress = new Uri("http://localhost:800");
+            var result = await httpClient.GetAsync("iteration");
+            result.StatusCode.Should().Be(HttpStatusCode.OK);
+            var iteration = int.Parse(await result.Content.ReadAsStringAsync());
+
+            await Task.Delay(5000);
+
+            var result2 = await httpClient.GetAsync("iteration");
+            result2.StatusCode.Should().Be(HttpStatusCode.OK);
+            var iteration2 = int.Parse(await result2.Content.ReadAsStringAsync());
+
+            Assert.IsTrue(iteration == iteration2 - 1);
         }
 
         [ClassCleanup]

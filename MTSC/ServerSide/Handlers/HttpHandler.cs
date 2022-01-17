@@ -176,10 +176,10 @@ namespace MTSC.ServerSide.Handlers
                 client.ResetAffinityIfMe(this);
                 return false;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 client.ResetAffinityIfMe(this);
-                throw e;
+                throw;
             }
 
             // The message has been parsed. If there was a cache for the current message, remove it.

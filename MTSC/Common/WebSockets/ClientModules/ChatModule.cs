@@ -6,7 +6,7 @@ namespace MTSC.Common.WebSockets.ClientModules
 {
     public sealed class ChatModule : IWebsocketModule
     {
-        static RNGCryptoServiceProvider rng = new();
+        static readonly RandomNumberGenerator rng = RandomNumberGenerator.Create();
         #region Public Methods
         public void SendMessage(WebsocketHandler websocketHandler, string message)
         {

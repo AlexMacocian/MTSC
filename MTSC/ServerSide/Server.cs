@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using MTSC.Common;
 using MTSC.Exceptions;
+using MTSC.ServerSide.BackgroundServices;
 using MTSC.ServerSide.Handlers;
 using MTSC.ServerSide.Listeners;
 using MTSC.ServerSide.Schedulers;
@@ -17,10 +18,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+// TODO: Setup basic background services
 namespace MTSC.ServerSide
 {
     /// <summary>
-    /// Basic server class to handle TCP connections.
+    /// Main server class.
     /// </summary>
     public sealed class Server
     {
@@ -28,6 +30,7 @@ namespace MTSC.ServerSide
         private CancellationToken cancellationToken;
         private bool running;
         private X509Certificate2 certificate;
+        private readonly BackgroundServicesHolder backgroundServicesHolder;
         private readonly ProducerConsumerQueue<ClientData> addQueue = new();
         private readonly List<ClientData> clients = new();
         private readonly List<ClientData> toRemove = new();
@@ -113,6 +116,7 @@ namespace MTSC.ServerSide
         {
             this.ServiceManager.RegisterServiceManager();
             this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.backgroundServicesHolder = new(this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -123,6 +127,7 @@ namespace MTSC.ServerSide
             this.Port = port;
             this.ServiceManager.RegisterServiceManager();
             this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.backgroundServicesHolder = new(this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -135,6 +140,7 @@ namespace MTSC.ServerSide
             this.Port = port;
             this.ServiceManager.RegisterServiceManager();
             this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.backgroundServicesHolder = new(this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -147,6 +153,7 @@ namespace MTSC.ServerSide
             this.Port = port;
             this.ServiceManager.RegisterServiceManager();
             this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.backgroundServicesHolder = new(this);
         }
         /// <summary>
         /// Creates an instance of server.
@@ -161,6 +168,7 @@ namespace MTSC.ServerSide
             this.IPAddress = ipAddress;
             this.ServiceManager.RegisterServiceManager();
             this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.backgroundServicesHolder = new(this);
         }
         #endregion
         #region Public Methods
@@ -246,6 +254,18 @@ namespace MTSC.ServerSide
             where TService : class
         {
             this.ServiceManager.RegisterSingleton<TService>(serviceFactory);
+            return this;
+        }
+        /// <summary>
+        /// Adds a <see cref="BackgroundServiceBase"/> to the server.
+        /// </summary>
+        /// <param name="interval">Interval between ticks.</param>
+        /// <typeparam name="TBackgroundService">Type of the background service.</typeparam>
+        /// <returns>This <see cref="Server"/> object.</returns>
+        public Server AddBackgroundService<TBackgroundService>(TimeSpan interval)
+            where TBackgroundService : BackgroundServiceBase
+        {
+            this.backgroundServicesHolder.RegisterBackgroundService<TBackgroundService>(interval);
             return this;
         }
         /// <summary>
@@ -531,6 +551,11 @@ namespace MTSC.ServerSide
                 toBeRunOnStartup.OnStartup(this);
             }
 
+            /*
+             * Initialize background services.
+             */
+            this.backgroundServicesHolder.Initialize();
+
             DateTime startLoopTime;
             while (this.running)
             {
@@ -615,6 +640,18 @@ namespace MTSC.ServerSide
                 }
 
                 /*
+                 * Tick background services
+                 */
+                try
+                {
+                    this.backgroundServicesHolder.Tick();
+                }
+                catch(Exception e)
+                {
+                    this.HandleException(e);
+                }
+
+                /*
                  * Check if there are messages queued to be sent.
                  */
                 this.SendQueuedMessages();
@@ -644,10 +681,7 @@ namespace MTSC.ServerSide
                 }
                 catch (Exception e)
                 {
-                    foreach (var handler in this.exceptionHandlers)
-                    {
-                        handler.HandleException(e);
-                    }
+                    this.HandleException(e);
                 }
             }
 
@@ -876,6 +910,8 @@ namespace MTSC.ServerSide
         }
         private void HandleException(Exception exception)
         {
+            this.Log($"Encountered {exception.GetType().Name}");
+            this.LogDebug(exception.ToString());
             foreach (var exceptionHandler in this.exceptionHandlers)
             {
                 if (exceptionHandler.HandleException(exception))
