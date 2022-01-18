@@ -36,7 +36,7 @@ namespace MTSC.Common.Http.RoutingModules
             }
             catch
             {
-                if (this.HttpRoutingHandler.Return500OnException is true)
+                if (this.HttpRoutingHandler.Return500OnUnhandledException is true)
                 {
                     return InternalServerError500;
                 }

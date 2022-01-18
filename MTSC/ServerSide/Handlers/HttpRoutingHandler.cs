@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.ServerSide.Handlers
@@ -43,7 +44,8 @@ namespace MTSC.ServerSide.Handlers
 
         public TimeSpan FragmentsExpirationTime { get; set; } = TimeSpan.FromSeconds(15);
         public double MaximumRequestSize { get; set; } = double.MaxValue;
-        public bool Return500OnException { get; set; } = true;
+        public bool Return500OnUnhandledException { get; set; } = true;
+        public bool Return404OnNotFound { get; set; } = false;
 
         public HttpRoutingHandler()
         {
@@ -53,9 +55,14 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        public HttpRoutingHandler WithReturn500OnException(bool return500OnException)
+        public HttpRoutingHandler WithReturn404OnNotFound(bool return404OnNotFound)
         {
-            this.Return500OnException = return500OnException;
+            this.Return404OnNotFound = return404OnNotFound;
+            return this;
+        }
+        public HttpRoutingHandler WithReturn500OnUnhandledException(bool return500OnException)
+        {
+            this.Return500OnUnhandledException = return500OnException;
             return this;
         }
         public HttpRoutingHandler AddHttpLogger(IHttpLogger logger)
@@ -124,9 +131,9 @@ namespace MTSC.ServerSide.Handlers
             {
                 client.ResetAffinityIfMe(this);
                 client.Resources.RemoveResource<FragmentedMessage>();
-                if (this.Return500OnException)
+                if (this.Return500OnUnhandledException)
                 {
-                    var response = new HttpResponse() { StatusCode = StatusCodes.InternalServerError };
+                    var response = InternalServerError500;
                     foreach (var httpLogger in this.httpLoggers)
                     {
                         httpLogger.LogResponse(server, this, client, response);
@@ -212,10 +219,11 @@ namespace MTSC.ServerSide.Handlers
                 httpLogger.LogRequest(server, this, client, request);
             }
 
+            var routeContext = new RouteContext(server, request, client);
             foreach(var filterType in filterTypes)
             {
                 var filter = server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
-                var filterResponse = filter.HandleRequest(server, client, request);
+                var filterResponse = filter.HandleRequest(routeContext);
                 if (filterResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
                 {
                     continue;
@@ -236,14 +244,8 @@ namespace MTSC.ServerSide.Handlers
             }
 
             this.SetModuleProperties(module, request, urlValues);
-            module.CallHandleRequest(request).ContinueWith((task) =>
+            this.RouteHandleRequest(module, routeContext, filterTypes).ContinueWith(task =>
             {
-                foreach(var filterType in filterTypes)
-                {
-                    var filter = server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
-                    filter.HandleResponse(server, client, task.Result);
-                }
-
                 this.QueueResponse(client, task.Result);
             });
 
@@ -343,8 +345,43 @@ namespace MTSC.ServerSide.Handlers
                 {
                     client.ResetAffinityIfMe(this);
                     client.Resources.RemoveResource<FragmentedMessage>();
+                    if (this.Return404OnNotFound)
+                    {
+                        this.QueueResponse(client, NotFound404);
+                    }
+
                     return false;
                 }
+            }
+        }
+
+        private async Task<HttpResponse> RouteHandleRequest(HttpRouteBase httpRouteBase, RouteContext routeContext, List<Type> filterTypes)
+        {
+            try
+            {
+                var response = await httpRouteBase.CallHandleRequest(routeContext.HttpRequest);
+                routeContext.HttpResponse = response;
+                foreach (var filterType in filterTypes)
+                {
+                    var filter = routeContext.Server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                    filter.HandleResponse(routeContext);
+                }
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                foreach (var filterType in filterTypes)
+                {
+                    var filter = routeContext.Server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                    if (filter.HandleException(routeContext, ex) is RouteFilterExceptionHandlingResponse.HandledResponse handledExceptionResponse)
+                    {
+                        routeContext.HttpResponse = handledExceptionResponse.HttpResponse;
+                        return handledExceptionResponse.HttpResponse;
+                    }
+                }
+
+                throw;
             }
         }
 
@@ -511,5 +548,14 @@ namespace MTSC.ServerSide.Handlers
             convertedValue = null;
             return false;
         }
+
+        private static HttpResponse NotFound404 => new()
+        {
+            StatusCode = StatusCodes.NotFound
+        };
+        private static HttpResponse InternalServerError500 => new()
+        {
+            StatusCode = StatusCodes.InternalServerError
+        };
     }
 }
