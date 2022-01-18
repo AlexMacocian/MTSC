@@ -3,6 +3,7 @@ using MTSC.ServerSide.Handlers;
 using System;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace MTSC.ServerSide
 {
@@ -13,6 +14,9 @@ namespace MTSC.ServerSide
     {
         private readonly ProducerConsumerQueue<Message> messageQueue = new();
 
+        private CancellationTokenSource cancellationTokenSource = new();
+
+        public CancellationToken CancellationToken => this.cancellationTokenSource.Token;
         public Socket Socket { get; }
         /// <summary>
         /// Latest datetime when a message has been received from the client
@@ -115,6 +119,8 @@ namespace MTSC.ServerSide
             {
                 if (disposing)
                 {
+                    this.cancellationTokenSource.Cancel();
+                    this.cancellationTokenSource = null;
                     this.SafeNetworkStream?.Dispose();
                     this.SslStream?.Dispose();
                     this.Resources?.Dispose();

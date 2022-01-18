@@ -50,7 +50,7 @@ namespace MTSC.UnitTests
                     .WithHeartbeatEnabled(true)
                     .WithHeartbeatFrequency(TimeSpan.FromMilliseconds(100)))
                 .AddHandler(new HttpRoutingHandler()
-                    .WithReturn500OnException(true)
+                    .WithReturn500OnUnhandledException(true)
                     .AddRoute<ExceptionThrowingModule>(HttpMessage.HttpMethods.Get, "throw")
                     .AddRoute<Http200Module>(HttpMessage.HttpMethods.Get, "")
                     .AddRoute<TestQueryModule>(HttpMessage.HttpMethods.Get, "query")
