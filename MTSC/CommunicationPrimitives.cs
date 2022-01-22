@@ -2,6 +2,7 @@
 using MTSC.ServerSide;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
@@ -40,7 +41,7 @@ namespace MTSC
             return new Message((uint)ms.Length, ms.ToArray());
         }
 
-        public static async Task<Message> GetMessage(ClientData client, TimeSpan ReadTimeout)
+        public static async void LoopRead(ClientData client, Action<ClientData, Message> readMessageCallback)
         {
             Stream stream;
             if (client.SslStream != null)
@@ -53,17 +54,28 @@ namespace MTSC
             }
 
             var buffer = new byte[1024];
-            var ms = new MemoryStream();
-            stream.ReadTimeout = (int)ReadTimeout.TotalMilliseconds;
-            int bytesRead;
-            do
+            while (true)
             {
-                using var cts = new CancellationTokenSource();
-                cts.CancelAfter((int)ReadTimeout.TotalMilliseconds);
-                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
-                ms.Write(buffer, 0, bytesRead);
-            } while (bytesRead > 0 && client.Socket.Available > 0);
-            return new Message((uint)ms.Length, ms.ToArray());
+                try
+                {
+                    var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, client.CancellationToken);
+                    var bytes = new byte[bytesRead];
+                    if (bytesRead == 0)
+                    {
+                        client.ToBeRemoved = true;
+                        return;
+                    }
+
+                    Array.Copy(buffer, 0, bytes, 0, bytesRead);
+                    readMessageCallback(client, new Message((uint)bytes.Length, bytes));
+                    (client as IActiveClient).UpdateLastReceivedMessage();
+                }
+                catch
+                {
+                    client.ToBeRemoved = true;
+                    return;
+                }
+            }
         }
 
         public static void SendMessage(Message message, Stream clientStream, SslStream sslStream = null)

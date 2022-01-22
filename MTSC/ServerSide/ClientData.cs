@@ -48,7 +48,6 @@ namespace MTSC.ServerSide
         public ResourceDictionary Resources { get; set; } = new ResourceDictionary();
 
         IConsumerQueue<Message> IQueueHolder<Message>.ConsumerQueue => this.messageQueue;
-        bool IActiveClient.ReadingData { get; set; }
 
         public ClientData(Socket socket)
         {
