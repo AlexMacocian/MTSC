@@ -10,8 +10,8 @@
     <Authors>Alexandru-Victor Macocian</Authors>
     <Product>MTSC</Product>
     <Description>Modular TCP Server and Client</Description>
-    <AssemblyVersion>5.1.1.0</AssemblyVersion>
-    <FileVersion>5.1.1.0</FileVersion>
+    <AssemblyVersion>5.1.2.0</AssemblyVersion>
+    <FileVersion>5.1.2.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Platforms>AnyCPU;x64</Platforms>
     <PackageProjectUrl>https://github.com/AlexMacocian/MTSC</PackageProjectUrl>

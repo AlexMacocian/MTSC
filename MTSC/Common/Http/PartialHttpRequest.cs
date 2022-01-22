@@ -403,31 +403,20 @@ namespace MTSC.Common.Http
             }
 
             this.HeaderByteCount = (int)ms.Position;
-            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength))
+            this.Body = ms.ReadRemainingBytes();
+            if (this.Headers.ContainsHeader(EntityHeaders.ContentLength) is false)
             {
-                var remainingBytes = int.Parse(this.Headers[EntityHeaders.ContentLength]);
-                if (remainingBytes <= ms.Length - ms.Position)
-                {
-                    this.Body = ms.ReadRemainingBytes();
-                }
-                else
-                {
-                    return;
-                }
-            }
-            else
-            {
-                if (ms.Length - ms.Position > 1)
-                {
-                    /*
-                     * If the message contains a body, copy it into a different array
-                     * and save it into the HTTP message;
-                     */
-                    this.Body = ms.ReadRemainingBytes();
-                }
+
+                this.Complete = true;
+                return;
             }
 
-            this.Complete = true;
+            var contentLength = int.Parse(this.Headers[EntityHeaders.ContentLength]);
+            if (this.Body.Length >= contentLength)
+            {
+                this.Complete = true;
+            }
+
             return;
         }
         private string GetField(byte[] buffer, ref int index)
