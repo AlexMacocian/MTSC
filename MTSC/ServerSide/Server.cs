@@ -584,10 +584,6 @@ namespace MTSC.ServerSide
                     this.HandleException(e);
                 }
                 /*
-                 * Check and gather messages from clients and place them in their queues.
-                 */
-                this.CheckAndGatherMessages();
-                /*
                  * Check if the server has any pending connections.
                  * If it has a new connection, process it.
                  */
@@ -607,7 +603,7 @@ namespace MTSC.ServerSide
                 /*
                  * Add all accepted clients to the list
                  */
-                while(this.ConsumerClientQueue.TryDequeue(out var client)) 
+                while (this.ConsumerClientQueue.TryDequeue(out var client))
                 {
                     this.Log("Accepted new connection: " + client.Socket.RemoteEndPoint.ToString());
                     this.clients.Add(client);
@@ -617,6 +613,15 @@ namespace MTSC.ServerSide
                         {
                             break;
                         }
+                    }
+
+                    try
+                    {
+                        CommunicationPrimitives.LoopRead(client, this.MessageReceived);
+                    }
+                    catch (Exception e)
+                    {
+                        this.HandleException(e);
                     }
                 }
 
@@ -775,34 +780,13 @@ namespace MTSC.ServerSide
                 this.HandleException(e);
             }
         }
-        private void CheckAndGatherMessages()
+        private void MessageReceived(ClientData client, Message message)
         {
-            foreach(var client in this.Clients)
+            (client as IQueueHolder<Message>).Enqueue(message);
+            this.LogDebug($"Received message from {client.Socket.RemoteEndPoint as IPEndPoint} Message length: {message.MessageLength}");
+            if (this.LogMessageContents)
             {
-                if (client.Socket.Available > 0 && !(client as IActiveClient).ReadingData)
-                {
-                    (client as IActiveClient).ReadingData = true;
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var timeout = this.ReadTimeout;
-                            var message = await CommunicationPrimitives.GetMessage(client, timeout);
-                            (client as IQueueHolder<Message>).Enqueue(message);
-                            this.LogDebug($"Received message from {client.Socket.RemoteEndPoint as IPEndPoint} Message length: {message.MessageLength}");
-                            if (this.LogMessageContents)
-                            {
-                                this.LogDebug(Encoding.UTF8.GetString(message.MessageBytes));
-                            }
-
-                            (client as IActiveClient).ReadingData = false;
-                        }
-                        catch (Exception)
-                        {
-                            client.ToBeRemoved = true;
-                        }
-                    });
-                }
+                this.LogDebug(Encoding.UTF8.GetString(message.MessageBytes));
             }
         }
         private void HandleClientMessages(ClientData client, IConsumerQueue<Message> messages)
