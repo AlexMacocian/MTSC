@@ -48,6 +48,7 @@ namespace MTSC.Common.Http
             UnsupportedMediaType = 415,
             RequestRangeNotSatisfiable = 416,
             ExpectationFailed = 417,
+            RequestCancelled = 499,
             InternalServerError = 500,
             NotImplemented = 501,
             BadGateway = 502,

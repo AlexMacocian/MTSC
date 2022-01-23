@@ -20,11 +20,7 @@ namespace MTSC.UnitTests.RoutingModules
         {
             var iteration = this.iteratingService.Iteration;
 
-            return Task.FromResult(new HttpResponse
-            {
-                StatusCode = HttpMessage.StatusCodes.OK,
-                BodyString = iteration.ToString()
-            });
+            return Task.FromResult(this.Ok200WithPayload(iteration.ToString()));
         }
     }
 }
