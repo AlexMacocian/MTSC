@@ -1,8 +1,8 @@
 ﻿using MTSC.ServerSide;
 using MTSC.ServerSide.Handlers;
+using Newtonsoft.Json;
 using System;
 using System.ComponentModel;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace MTSC.Common.Http.RoutingModules
@@ -10,13 +10,6 @@ namespace MTSC.Common.Http.RoutingModules
     public abstract class HttpRouteBase : ISetHttpContext, IDisposable
     {
         private bool disposedValue;
-
-        private static HttpResponse InternalServerError500 { get; } =
-            new HttpResponse
-            {
-                StatusCode = HttpMessage.StatusCodes.InternalServerError,
-                BodyString = "An exception ocurred while processing the request"
-            };
 
         public ClientData ClientData { get; private set; }
         public HttpRoutingHandler HttpRoutingHandler { get; private set; }
@@ -38,13 +31,32 @@ namespace MTSC.Common.Http.RoutingModules
             {
                 if (this.HttpRoutingHandler.Return500OnUnhandledException is true)
                 {
-                    return InternalServerError500;
+                    return this.InternalServerError500;
                 }
 
                 throw;
             }
         }
         public abstract Task<HttpResponse> HandleRequest(HttpRequestContext request);
+
+        protected HttpResponse Ok200 => CreateResponse(HttpMessage.StatusCodes.OK);
+        protected HttpResponse Ok200WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.OK, payload);
+        protected HttpResponse Created201 => CreateResponse(HttpMessage.StatusCodes.Created);
+        protected HttpResponse Created201WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.Created, payload);
+        protected HttpResponse Accepted202 => CreateResponse(HttpMessage.StatusCodes.Accepted);
+        protected HttpResponse Accepted202WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.Accepted, payload);
+        protected HttpResponse BadRequest400 => CreateResponse(HttpMessage.StatusCodes.BadRequest);
+        protected HttpResponse BadRequest400WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.BadRequest, payload);
+        protected HttpResponse Unauthorized401 => CreateResponse(HttpMessage.StatusCodes.Unauthorized);
+        protected HttpResponse Unauthorized401WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.Unauthorized, payload);
+        protected HttpResponse Forbidden403 => CreateResponse(HttpMessage.StatusCodes.Forbidden);
+        protected HttpResponse Forbidden403WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.Forbidden, payload);
+        protected HttpResponse NotFound404 => CreateResponse(HttpMessage.StatusCodes.NotFound);
+        protected HttpResponse NotFound404WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.NotFound, payload);
+        protected HttpResponse Gone410 => CreateResponse(HttpMessage.StatusCodes.Gone);
+        protected HttpResponse Gone410WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.Gone, payload);
+        protected HttpResponse InternalServerError500 => CreateResponse(HttpMessage.StatusCodes.InternalServerError);
+        protected HttpResponse InternalServerError500WithPayload(object payload) => CreateResponse(HttpMessage.StatusCodes.InternalServerError, payload);
 
         void ISetHttpContext.SetScopedServiceProvider(Slim.IServiceProvider serviceProvider)
         {
@@ -76,11 +88,18 @@ namespace MTSC.Common.Http.RoutingModules
                 this.ScopedServiceProvider = null;
             }
         }
-
         public void Dispose()
         {
             this.Dispose(disposing: true);
         }
+
+        private static HttpResponse CreateResponse(HttpMessage.StatusCodes statusCode, object payload = null) => new()
+        {
+            StatusCode = statusCode,
+            BodyString = payload is null ? string.Empty :
+                payload is string stringPayload ? stringPayload :    
+                    JsonConvert.SerializeObject(payload)
+        };
     }
     public abstract class HttpRouteBase<T> : HttpRouteBase
     {
