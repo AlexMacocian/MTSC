@@ -3,6 +3,7 @@ using MTSC.Common.Http;
 using MTSC.Common.Http.Attributes;
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.Telemetry;
+using MTSC.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -46,6 +47,10 @@ namespace MTSC.ServerSide.Handlers
         public double MaximumRequestSize { get; set; } = double.MaxValue;
         public bool Return500OnUnhandledException { get; set; } = true;
         public bool Return404OnNotFound { get; set; } = false;
+        /// <summary>
+        /// Throw when exceptions happen during request model bindings.
+        /// </summary>
+        public bool ThrowOnBindingErrors { get; set; } = false;
 
         public HttpRoutingHandler()
         {
@@ -55,6 +60,11 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
+        public HttpRoutingHandler WithThrowOnBindingErrors(bool throwOnBindingErrors)
+        {
+            this.ThrowOnBindingErrors = throwOnBindingErrors;
+            return this;
+        }
         public HttpRoutingHandler WithReturn404OnNotFound(bool return404OnNotFound)
         {
             this.Return404OnNotFound = return404OnNotFound;
@@ -243,8 +253,8 @@ namespace MTSC.ServerSide.Handlers
                 }
             }
 
-            this.SetModuleProperties(module, request, urlValues);
-            this.RouteHandleRequest(module, routeContext, filterTypes).ContinueWith(task =>
+            
+            this.RouteHandleRequest(module, routeContext, filterTypes, urlValues).ContinueWith(task =>
             {
                 this.QueueResponse(client, task.Result);
             });
@@ -355,10 +365,15 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        private async Task<HttpResponse> RouteHandleRequest(HttpRouteBase httpRouteBase, RouteContext routeContext, List<Type> filterTypes)
+        private async Task<HttpResponse> RouteHandleRequest(
+            HttpRouteBase httpRouteBase,
+            RouteContext routeContext,
+            List<Type> filterTypes,
+            List<UrlValue> urlValues)
         {
             try
             {
+                this.SetModuleProperties(httpRouteBase, routeContext.HttpRequest, urlValues);
                 var response = await httpRouteBase.CallHandleRequest(routeContext.HttpRequest);
                 routeContext.HttpResponse = response;
                 foreach (var filterType in filterTypes)
@@ -465,19 +480,49 @@ namespace MTSC.ServerSide.Handlers
                     var maybeValue = urlValues.Where(val => val.Placeholder == fromUrlAttribute.Placeholder).FirstOrDefault();
                     if (maybeValue is not null)
                     {
-                        TryAssignValue(propertyInfo, maybeValue.Value, module);
+                        try
+                        {
+                            TryAssignValue(propertyInfo, maybeValue.Value, module);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (this.ThrowOnBindingErrors)
+                            {
+                                throw new FromUrlDataBindingException(ex, propertyInfo.PropertyType, maybeValue.Placeholder, maybeValue.Value);
+                            }
+                        }
                     }
                 }
                 else if (attribute is FromBodyAttribute)
                 {
-                    TryAssignValue(propertyInfo, httpRequest.BodyString, module);
+                    try
+                    {
+                        TryAssignValue(propertyInfo, httpRequest.BodyString, module);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.ThrowOnBindingErrors)
+                        {
+                            throw new FromBodyDataBindingException(ex, propertyInfo.PropertyType, httpRequest.BodyString);
+                        }
+                    }
                 }
                 else if (attribute is FromHeadersAttribute fromHeadersAttribute)
                 {
                     var maybeValue = httpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
                     if (maybeValue.Value is not null)
                     {
-                        TryAssignValue(propertyInfo, maybeValue.Value, module);
+                        try
+                        {
+                            TryAssignValue(propertyInfo, maybeValue.Value, module);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (this.ThrowOnBindingErrors)
+                            {
+                                throw new FromHeadersDataBindingException(ex, propertyInfo.PropertyType, fromHeadersAttribute.HeaderName, maybeValue.Value);
+                            }
+                        }
                     }
                 }
             }
