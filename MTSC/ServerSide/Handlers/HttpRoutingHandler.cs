@@ -482,7 +482,7 @@ namespace MTSC.ServerSide.Handlers
                     {
                         try
                         {
-                            TryAssignValue(propertyInfo, maybeValue.Value, module);
+                            this.TryAssignValue(propertyInfo, maybeValue.Value, module);
                         }
                         catch (Exception ex)
                         {
@@ -497,7 +497,7 @@ namespace MTSC.ServerSide.Handlers
                 {
                     try
                     {
-                        TryAssignValue(propertyInfo, httpRequest.BodyString, module);
+                        this.TryAssignValue(propertyInfo, httpRequest.BodyString, module);
                     }
                     catch (Exception ex)
                     {
@@ -514,7 +514,7 @@ namespace MTSC.ServerSide.Handlers
                     {
                         try
                         {
-                            TryAssignValue(propertyInfo, maybeValue.Value, module);
+                            this.TryAssignValue(propertyInfo, maybeValue.Value, module);
                         }
                         catch (Exception ex)
                         {
@@ -528,18 +528,18 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        private static void TryAssignValue(PropertyInfo propertyInfo, string value, HttpRouteBase module)
+        private void TryAssignValue(PropertyInfo propertyInfo, string value, HttpRouteBase module)
         {
             object finalValue = null;
             if (propertyInfo.PropertyType == typeof(string))
             {
                 finalValue = value;
             }
-            else if (TryConvertWithTypeConverter(propertyInfo, value, out var typeConvertedValue))
+            else if (this.TryConvertWithTypeConverter(propertyInfo, value, out var typeConvertedValue))
             {
                 finalValue = typeConvertedValue;
             }
-            else if (TryConvertWithJsonConvert(propertyInfo, value, out var jsonConvertedValue))
+            else if (this.TryConvertWithJsonConvert(propertyInfo, value, out var jsonConvertedValue))
             {
                 finalValue = jsonConvertedValue;
             }
@@ -560,7 +560,7 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        private static bool TryConvertWithTypeConverter(PropertyInfo propertyInfo, string value, out object convertedValue)
+        private bool TryConvertWithTypeConverter(PropertyInfo propertyInfo, string value, out object convertedValue)
         {
             try
             {
@@ -573,13 +573,17 @@ namespace MTSC.ServerSide.Handlers
             }
             catch
             {
+                if (this.ThrowOnBindingErrors is true)
+                {
+                    throw;
+                }
             }
 
             convertedValue = null;
             return false;
         }
         
-        private static bool TryConvertWithJsonConvert(PropertyInfo propertyInfo, string value, out object convertedValue)
+        private bool TryConvertWithJsonConvert(PropertyInfo propertyInfo, string value, out object convertedValue)
         {
             try
             {
@@ -588,6 +592,10 @@ namespace MTSC.ServerSide.Handlers
             }
             catch
             {
+                if (this.ThrowOnBindingErrors is true)
+                {
+                    throw;
+                }
             }
 
             convertedValue = null;
