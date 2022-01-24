@@ -3,6 +3,7 @@ using MTSC.Common.Http;
 using MTSC.Common.Http.Attributes;
 using MTSC.Common.Http.RoutingModules;
 using MTSC.Common.Http.Telemetry;
+using MTSC.Exceptions;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -474,34 +475,54 @@ namespace MTSC.ServerSide.Handlers
             var propertiesAndAttributes = this.routePropertyCache[module.GetType()];
             foreach ((var attribute, var propertyInfo) in this.routePropertyCache[module.GetType()])
             {
-                try
+                if (attribute is FromUrlAttribute fromUrlAttribute)
                 {
-                    if (attribute is FromUrlAttribute fromUrlAttribute)
+                    var maybeValue = urlValues.Where(val => val.Placeholder == fromUrlAttribute.Placeholder).FirstOrDefault();
+                    if (maybeValue is not null)
                     {
-                        var maybeValue = urlValues.Where(val => val.Placeholder == fromUrlAttribute.Placeholder).FirstOrDefault();
-                        if (maybeValue is not null)
+                        try
                         {
                             TryAssignValue(propertyInfo, maybeValue.Value, module);
                         }
-                    }
-                    else if (attribute is FromBodyAttribute)
-                    {
-                        TryAssignValue(propertyInfo, httpRequest.BodyString, module);
-                    }
-                    else if (attribute is FromHeadersAttribute fromHeadersAttribute)
-                    {
-                        var maybeValue = httpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
-                        if (maybeValue.Value is not null)
+                        catch (Exception ex)
                         {
-                            TryAssignValue(propertyInfo, maybeValue.Value, module);
+                            if (this.ThrowOnBindingErrors)
+                            {
+                                throw new FromUrlDataBindingException(ex, propertyInfo.PropertyType, maybeValue.Placeholder, maybeValue.Value);
+                            }
                         }
                     }
                 }
-                catch (Exception)
+                else if (attribute is FromBodyAttribute)
                 {
-                    if (this.ThrowOnBindingErrors)
+                    try
                     {
-                        throw;
+                        TryAssignValue(propertyInfo, httpRequest.BodyString, module);
+                    }
+                    catch (Exception ex)
+                    {
+                        if (this.ThrowOnBindingErrors)
+                        {
+                            throw new FromBodyDataBindingException(ex, propertyInfo.PropertyType, httpRequest.BodyString);
+                        }
+                    }
+                }
+                else if (attribute is FromHeadersAttribute fromHeadersAttribute)
+                {
+                    var maybeValue = httpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
+                    if (maybeValue.Value is not null)
+                    {
+                        try
+                        {
+                            TryAssignValue(propertyInfo, maybeValue.Value, module);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (this.ThrowOnBindingErrors)
+                            {
+                                throw new FromHeadersDataBindingException(ex, propertyInfo.PropertyType, fromHeadersAttribute.HeaderName, maybeValue.Value);
+                            }
+                        }
                     }
                 }
             }
