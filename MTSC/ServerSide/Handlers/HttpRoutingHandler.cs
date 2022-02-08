@@ -373,7 +373,7 @@ namespace MTSC.ServerSide.Handlers
         {
             try
             {
-                this.SetModuleProperties(httpRouteBase, routeContext.HttpRequest, urlValues);
+                this.SetModuleProperties(httpRouteBase, routeContext, urlValues);
                 var response = await httpRouteBase.CallHandleRequest(routeContext.HttpRequest);
                 routeContext.HttpResponse = response;
                 foreach (var filterType in filterTypes)
@@ -470,7 +470,7 @@ namespace MTSC.ServerSide.Handlers
             return false;
         }
 
-        private void SetModuleProperties(HttpRouteBase module, HttpRequest httpRequest, List<UrlValue> urlValues)
+        private void SetModuleProperties(HttpRouteBase module, RouteContext routeContext, List<UrlValue> urlValues)
         {
             var propertiesAndAttributes = this.routePropertyCache[module.GetType()];
             foreach ((var attribute, var propertyInfo) in this.routePropertyCache[module.GetType()])
@@ -497,19 +497,19 @@ namespace MTSC.ServerSide.Handlers
                 {
                     try
                     {
-                        this.TryAssignValue(propertyInfo, httpRequest.BodyString, module);
+                        this.TryAssignValue(propertyInfo, routeContext.HttpRequest.BodyString, module);
                     }
                     catch (Exception ex)
                     {
                         if (this.ThrowOnBindingErrors)
                         {
-                            throw new FromBodyDataBindingException(ex, propertyInfo.PropertyType, httpRequest.BodyString);
+                            throw new FromBodyDataBindingException(ex, propertyInfo.PropertyType, routeContext.HttpRequest.BodyString);
                         }
                     }
                 }
                 else if (attribute is FromHeadersAttribute fromHeadersAttribute)
                 {
-                    var maybeValue = httpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
+                    var maybeValue = routeContext.HttpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
                     if (maybeValue.Value is not null)
                     {
                         try
@@ -521,6 +521,23 @@ namespace MTSC.ServerSide.Handlers
                             if (this.ThrowOnBindingErrors)
                             {
                                 throw new FromHeadersDataBindingException(ex, propertyInfo.PropertyType, fromHeadersAttribute.HeaderName, maybeValue.Value);
+                            }
+                        }
+                    }
+                }
+                else if (attribute is FromRouteContextResourcesAttribute fromRouteContextResourcesAttribute)
+                {
+                    if (routeContext.Resources.TryGetValue(fromRouteContextResourcesAttribute.ResourceKey, out var value))
+                    {
+                        try
+                        {
+                            SetPropertyValue(propertyInfo, value, module);
+                        }
+                        catch (Exception ex)
+                        {
+                            if (this.ThrowOnBindingErrors)
+                            {
+                                throw new FromRouteContextResourcesDataBindingException(ex, propertyInfo.PropertyType, fromRouteContextResourcesAttribute.ResourceKey, routeContext);
                             }
                         }
                     }
