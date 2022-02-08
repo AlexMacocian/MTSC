@@ -1,4 +1,5 @@
 ﻿using MTSC.ServerSide;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace MTSC.Common.Http
@@ -10,6 +11,7 @@ namespace MTSC.Common.Http
         public ClientData Client { get; }
         public HttpResponse HttpResponse { get; set; }
         public CancellationToken CancelRequest => this.Client.CancellationToken;
+        public Dictionary<string, object> Resources { get; set; } = new();
 
         public RouteContext(
             Server server,
