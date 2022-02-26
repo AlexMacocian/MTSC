@@ -1,24 +1,31 @@
-﻿using System;
+﻿using MTSC.Common.Http;
+using MTSC.Common.Http.Attributes;
+using MTSC.Common.Http.RoutingModules;
+using System;
+using System.Reflection;
 using System.Runtime.Serialization;
 
 namespace MTSC.Exceptions
 {
-    public abstract class DataBindingException : Exception
+    public sealed class DataBindingException : Exception
     {
-        protected DataBindingException()
-        {
-        }
+        public HttpRouteBase Route { get; }
+        public RouteContext RouteContext { get; }
+        public RouteDataBindingBaseAttribute RouteDataBindingBaseAttribute { get; }
+        public PropertyInfo PropertyInfo { get; }
 
-        protected DataBindingException(string message) : base(message)
+        public DataBindingException(
+            Exception innerException,
+            HttpRouteBase route,
+            RouteContext routeContext,
+            RouteDataBindingBaseAttribute routeDataBindingBaseAttribute,
+            PropertyInfo propertyInfo)
+            : base("Exception occurred during data binding. Check inner exception for details", innerException)
         {
-        }
-
-        protected DataBindingException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected DataBindingException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
+            this.Route = route;
+            this.RouteContext = routeContext;
+            this.RouteDataBindingBaseAttribute = routeDataBindingBaseAttribute;
+            this.PropertyInfo = propertyInfo;
         }
     }
 }

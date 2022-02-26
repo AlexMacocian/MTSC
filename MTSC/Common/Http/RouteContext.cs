@@ -9,18 +9,22 @@ namespace MTSC.Common.Http
         public Server Server { get; }
         public HttpRequest HttpRequest { get; }
         public ClientData Client { get; }
+        public Dictionary<string, string> UrlValues { get; }
         public HttpResponse HttpResponse { get; set; }
         public CancellationToken CancelRequest => this.Client.CancellationToken;
         public Dictionary<string, object> Resources { get; set; } = new();
+        
 
         public RouteContext(
             Server server,
             HttpRequest httpRequest,
-            ClientData clientData)
+            ClientData clientData,
+            Dictionary<string, string> urlValues)
         {
             this.Server = server;
             this.HttpRequest = httpRequest;
             this.Client = clientData;
+            this.UrlValues = urlValues;
         }
     }
 }
