@@ -229,7 +229,11 @@ namespace MTSC.ServerSide.Handlers
                 httpLogger.LogRequest(server, this, client, request);
             }
 
-            var routeContext = new RouteContext(server, request, client);
+            var routeContext = new RouteContext(
+                server,
+                request,
+                client,
+                urlValues.ToDictionary(u => u.Placeholder, u => u.Value));
             foreach(var filterType in filterTypes)
             {
                 var filter = server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
@@ -254,7 +258,7 @@ namespace MTSC.ServerSide.Handlers
             }
 
             
-            this.RouteHandleRequest(module, routeContext, filterTypes, urlValues).ContinueWith(task =>
+            this.RouteHandleRequest(module, routeContext, filterTypes).ContinueWith(task =>
             {
                 this.QueueResponse(client, task.Result);
             });
@@ -368,12 +372,11 @@ namespace MTSC.ServerSide.Handlers
         private async Task<HttpResponse> RouteHandleRequest(
             HttpRouteBase httpRouteBase,
             RouteContext routeContext,
-            List<Type> filterTypes,
-            List<UrlValue> urlValues)
+            List<Type> filterTypes)
         {
             try
             {
-                this.SetModuleProperties(httpRouteBase, routeContext, urlValues);
+                this.SetModuleProperties(httpRouteBase, routeContext);
                 var response = await httpRouteBase.CallHandleRequest(routeContext.HttpRequest);
                 routeContext.HttpResponse = response;
                 foreach (var filterType in filterTypes)
@@ -440,7 +443,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 foreach (var attribute in property.GetCustomAttributes(true))
                 {
-                    if (attribute is FromUrlAttribute or FromBodyAttribute or FromHeadersAttribute)
+                    if (attribute is RouteDataBindingBaseAttribute)
                     {
                         propertyAndAttributesList.Add(((Attribute)attribute, property));
                     }
@@ -470,99 +473,29 @@ namespace MTSC.ServerSide.Handlers
             return false;
         }
 
-        private void SetModuleProperties(HttpRouteBase module, RouteContext routeContext, List<UrlValue> urlValues)
+        private void SetModuleProperties(HttpRouteBase module, RouteContext routeContext)
         {
-            var propertiesAndAttributes = this.routePropertyCache[module.GetType()];
             foreach ((var attribute, var propertyInfo) in this.routePropertyCache[module.GetType()])
             {
-                if (attribute is FromUrlAttribute fromUrlAttribute)
-                {
-                    var maybeValue = urlValues.Where(val => val.Placeholder == fromUrlAttribute.Placeholder).FirstOrDefault();
-                    if (maybeValue is not null)
-                    {
-                        try
-                        {
-                            this.TryAssignValue(propertyInfo, maybeValue.Value, module);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (this.ThrowOnBindingErrors)
-                            {
-                                throw new FromUrlDataBindingException(ex, propertyInfo.PropertyType, maybeValue.Placeholder, maybeValue.Value);
-                            }
-                        }
-                    }
-                }
-                else if (attribute is FromBodyAttribute)
+                if (attribute is RouteDataBindingBaseAttribute routeDataBindingBaseAttribute)
                 {
                     try
                     {
-                        this.TryAssignValue(propertyInfo, routeContext.HttpRequest.BodyString, module);
+                        var value = routeDataBindingBaseAttribute.DataBind(module, routeContext, propertyInfo.PropertyType);
+                        SetPropertyValue(propertyInfo, value, module);
                     }
                     catch (Exception ex)
                     {
                         if (this.ThrowOnBindingErrors)
                         {
-                            throw new FromBodyDataBindingException(ex, propertyInfo.PropertyType, routeContext.HttpRequest.BodyString);
-                        }
-                    }
-                }
-                else if (attribute is FromHeadersAttribute fromHeadersAttribute)
-                {
-                    var maybeValue = routeContext.HttpRequest.Headers.Where(kvp => kvp.Key == fromHeadersAttribute.HeaderName).FirstOrDefault();
-                    if (maybeValue.Value is not null)
-                    {
-                        try
-                        {
-                            this.TryAssignValue(propertyInfo, maybeValue.Value, module);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (this.ThrowOnBindingErrors)
-                            {
-                                throw new FromHeadersDataBindingException(ex, propertyInfo.PropertyType, fromHeadersAttribute.HeaderName, maybeValue.Value);
-                            }
-                        }
-                    }
-                }
-                else if (attribute is FromRouteContextResourcesAttribute fromRouteContextResourcesAttribute)
-                {
-                    if (routeContext.Resources.TryGetValue(fromRouteContextResourcesAttribute.ResourceKey, out var value))
-                    {
-                        try
-                        {
-                            SetPropertyValue(propertyInfo, value, module);
-                        }
-                        catch (Exception ex)
-                        {
-                            if (this.ThrowOnBindingErrors)
-                            {
-                                throw new FromRouteContextResourcesDataBindingException(ex, propertyInfo.PropertyType, fromRouteContextResourcesAttribute.ResourceKey, routeContext);
-                            }
+                            throw new DataBindingException(ex, module, routeContext, routeDataBindingBaseAttribute, propertyInfo);
                         }
                     }
                 }
             }
         }
 
-        private void TryAssignValue(PropertyInfo propertyInfo, string value, HttpRouteBase module)
-        {
-            object finalValue = null;
-            if (propertyInfo.PropertyType == typeof(string))
-            {
-                finalValue = value;
-            }
-            else if (this.TryConvertWithTypeConverter(propertyInfo, value, out var typeConvertedValue))
-            {
-                finalValue = typeConvertedValue;
-            }
-            else if (this.TryConvertWithJsonConvert(propertyInfo, value, out var jsonConvertedValue))
-            {
-                finalValue = jsonConvertedValue;
-            }
-
-            SetPropertyValue(propertyInfo, finalValue, module);
-        }
+        
 
         private static void SetPropertyValue(PropertyInfo propertyInfo, object value, HttpRouteBase module)
         {
@@ -577,47 +510,7 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        private bool TryConvertWithTypeConverter(PropertyInfo propertyInfo, string value, out object convertedValue)
-        {
-            try
-            {
-                var typeConverter = TypeDescriptor.GetConverter(propertyInfo.PropertyType);
-                if (typeConverter.CanConvertFrom(typeof(string)))
-                {
-                    convertedValue = typeConverter.ConvertFrom(value);
-                    return true;
-                }
-            }
-            catch
-            {
-                if (this.ThrowOnBindingErrors is true)
-                {
-                    throw;
-                }
-            }
-
-            convertedValue = null;
-            return false;
-        }
         
-        private bool TryConvertWithJsonConvert(PropertyInfo propertyInfo, string value, out object convertedValue)
-        {
-            try
-            {
-                convertedValue = JsonConvert.DeserializeObject(value, propertyInfo.PropertyType);
-                return true;
-            }
-            catch
-            {
-                if (this.ThrowOnBindingErrors is true)
-                {
-                    throw;
-                }
-            }
-
-            convertedValue = null;
-            return false;
-        }
 
         private static HttpResponse NotFound404 => new()
         {
