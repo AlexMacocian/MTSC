@@ -28,20 +28,14 @@ namespace MTSC.Client.Handlers
         {
             
         }
-        #endregion
-        #region Public Methods
 
         #endregion
         #region Private Methods
-        private string GetUniqueKey(int size)
-        {
-            return Convert.ToBase64String(this.GetUniqueByteKey(size));
-        }
 
         private byte[] GetUniqueByteKey(int size)
         {
             var data = new byte[size];
-            using (var crypto = new RNGCryptoServiceProvider())
+            using (var crypto = RandomNumberGenerator.Create())
             {
                 crypto.GetBytes(data);
             }
@@ -59,23 +53,21 @@ namespace MTSC.Client.Handlers
 
             using (var ms = new MemoryStream())
             {
-                using (var AES = new RijndaelManaged())
+                using var AES = Aes.Create();
+                AES.KeySize = 256;
+                AES.BlockSize = 128;
+                AES.Mode = CipherMode.CBC;
+                var key = new Rfc2898DeriveBytes(this.aesKey, saltBytes, 1000);
+                AES.Key = key.GetBytes(AES.KeySize / 8);
+                AES.IV = key.GetBytes(AES.BlockSize / 8);
+
+                using (var cs = new CryptoStream(ms, AES.CreateEncryptor(), CryptoStreamMode.Write))
                 {
-                    AES.KeySize = 256;
-                    AES.BlockSize = 128;
-                    AES.Mode = CipherMode.CBC;
-                    var key = new Rfc2898DeriveBytes(this.aesKey, saltBytes, 1000);
-                    AES.Key = key.GetBytes(AES.KeySize / 8);
-                    AES.IV = key.GetBytes(AES.BlockSize / 8);
-
-                    using (var cs = new CryptoStream(ms, AES.CreateEncryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(bytesToBeEncrypted, 0, bytesToBeEncrypted.Length);
-                        cs.Close();
-                    }
-
-                    encryptedBytes = ms.ToArray();
+                    cs.Write(bytesToBeEncrypted, 0, bytesToBeEncrypted.Length);
+                    cs.Close();
                 }
+
+                encryptedBytes = ms.ToArray();
             }
 
             return encryptedBytes;
@@ -91,54 +83,28 @@ namespace MTSC.Client.Handlers
 
             using (var ms = new MemoryStream())
             {
-                using (var AES = new RijndaelManaged())
+                using var AES = Aes.Create();
+                AES.KeySize = 256;
+                AES.BlockSize = 128;
+
+                AES.Mode = CipherMode.CBC;
+
+                var key = new Rfc2898DeriveBytes(this.aesKey, saltBytes, 1000);
+                AES.Key = key.GetBytes(AES.KeySize / 8);
+                AES.IV = key.GetBytes(AES.BlockSize / 8);
+
+
+
+                using (var cs = new CryptoStream(ms, AES.CreateDecryptor(), CryptoStreamMode.Write))
                 {
-                    AES.KeySize = 256;
-                    AES.BlockSize = 128;
-
-                    AES.Mode = CipherMode.CBC;
-
-                    var key = new Rfc2898DeriveBytes(this.aesKey, saltBytes, 1000);
-                    AES.Key = key.GetBytes(AES.KeySize / 8);
-                    AES.IV = key.GetBytes(AES.BlockSize / 8);
-
-
-
-                    using (var cs = new CryptoStream(ms, AES.CreateDecryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
-                        cs.Close();
-                    }
-
-                    decryptedBytes = ms.ToArray();
+                    cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
+                    cs.Close();
                 }
+
+                decryptedBytes = ms.ToArray();
             }
 
             return decryptedBytes;
-        }
-
-        private string EncryptText(string input)
-        {
-            // Get the bytes of the string
-            var bytesToBeEncrypted = Encoding.UTF8.GetBytes(input);
-
-            var bytesEncrypted = this.EncryptBytes(bytesToBeEncrypted);
-
-            var result = Encoding.UTF8.GetString(bytesEncrypted);
-
-            return result;
-        }
-
-        private string DecryptText(string input)
-        {
-            // Get the bytes of the string
-            var bytesToBeDecrypted = Encoding.UTF8.GetBytes(input);
-
-            var bytesDecrypted = this.DecryptBytes(bytesToBeDecrypted);
-
-            var result = Encoding.UTF8.GetString(bytesDecrypted);
-
-            return result;
         }
         #endregion
         #region Interface Implementation
@@ -222,14 +188,14 @@ namespace MTSC.Client.Handlers
                         {
                             switch (node.Name)
                             {
-                                case "Modulus": parameters.Modulus = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "Exponent": parameters.Exponent = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "P": parameters.P = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "Q": parameters.Q = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "DP": parameters.DP = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "DQ": parameters.DQ = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "InverseQ": parameters.InverseQ = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
-                                case "D": parameters.D = (string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText)); break;
+                                case "Modulus": parameters.Modulus = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "Exponent": parameters.Exponent = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "P": parameters.P = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "Q": parameters.Q = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "DP": parameters.DP = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "DQ": parameters.DQ = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "InverseQ": parameters.InverseQ = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
+                                case "D": parameters.D = string.IsNullOrEmpty(node.InnerText) ? null : Convert.FromBase64String(node.InnerText); break;
                             }
                         }
                     }

@@ -272,12 +272,10 @@ namespace MTSC.UnitTests
                 s += "C";
             }
 
-            using(var sc = new ByteArrayContent(Encoding.UTF8.GetBytes(s)))
-            {
-                var response = httpClient.PostAsync("echo", sc).Result;
-                Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-                Assert.AreEqual(response.Content.ReadAsStringAsync().Result, s);
-            }
+            using var sc = new ByteArrayContent(Encoding.UTF8.GetBytes(s));
+            var response = httpClient.PostAsync("echo", sc).Result;
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            Assert.AreEqual(response.Content.ReadAsStringAsync().Result, s);
         }
         
         [TestMethod]
@@ -290,18 +288,11 @@ namespace MTSC.UnitTests
                 bytes[i] = 43;
             }
 
-            using (var client = new HttpClient())
-            {
-                using (var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString()))
-                {
-                    content.Add(new StreamContent(new MemoryStream(bytes)), "file", "upload.zip");
+            using var client = new HttpClient();
+            using var content = new MultipartFormDataContent("Upload----" + DateTime.Now.ToString());
+            content.Add(new StreamContent(new MemoryStream(bytes)), "file", "upload.zip");
 
-                    using (var message = client.PostAsync("http://localhost:800/multipart", content).GetAwaiter().GetResult())
-                    {
-
-                    }
-                }
-            }
+            using var message = client.PostAsync("http://localhost:800/multipart", content).GetAwaiter().GetResult();
         }
 
         [TestMethod]

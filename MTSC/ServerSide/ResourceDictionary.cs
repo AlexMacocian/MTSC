@@ -11,7 +11,7 @@ namespace MTSC.ServerSide
         {
             if (this.Resources.ContainsKey(typeof(TValue)))
             {
-                this.Resources.Remove((typeof(TValue)));
+                this.Resources.Remove(typeof(TValue));
             }
         }
 

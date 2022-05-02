@@ -55,27 +55,25 @@ namespace MTSC.ServerSide.Handlers
 
             using (var ms = new MemoryStream())
             {
-                using (var AES = new RijndaelManaged())
+                using var AES = Aes.Create();
+                AES.KeySize = 256;
+                AES.BlockSize = 128;
+
+                AES.Mode = CipherMode.CBC;
+
+                var key = new Rfc2898DeriveBytes(clientKey, saltBytes, 1000);
+                AES.Key = key.GetBytes(AES.KeySize / 8);
+                AES.IV = key.GetBytes(AES.BlockSize / 8);
+
+
+
+                using (var cs = new CryptoStream(ms, AES.CreateEncryptor(), CryptoStreamMode.Write))
                 {
-                    AES.KeySize = 256;
-                    AES.BlockSize = 128;
-
-                    AES.Mode = CipherMode.CBC;
-
-                    var key = new Rfc2898DeriveBytes(clientKey, saltBytes, 1000);
-                    AES.Key = key.GetBytes(AES.KeySize / 8);
-                    AES.IV = key.GetBytes(AES.BlockSize / 8);
-
-
-
-                    using (var cs = new CryptoStream(ms, AES.CreateEncryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(bytesToBeEncrypted, 0, bytesToBeEncrypted.Length);
-                        cs.Close();
-                    }
-
-                    encryptedBytes = ms.ToArray();
+                    cs.Write(bytesToBeEncrypted, 0, bytesToBeEncrypted.Length);
+                    cs.Close();
                 }
+
+                encryptedBytes = ms.ToArray();
             }
 
             return encryptedBytes;
@@ -91,27 +89,25 @@ namespace MTSC.ServerSide.Handlers
 
             using (var ms = new MemoryStream())
             {
-                using (var AES = new RijndaelManaged())
+                using var AES = Aes.Create();
+                AES.KeySize = 256;
+                AES.BlockSize = 128;
+
+                AES.Mode = CipherMode.CBC;
+
+                var key = new Rfc2898DeriveBytes(clientKey, saltBytes, 1000);
+                AES.Key = key.GetBytes(AES.KeySize / 8);
+                AES.IV = key.GetBytes(AES.BlockSize / 8);
+
+
+
+                using (var cs = new CryptoStream(ms, AES.CreateDecryptor(), CryptoStreamMode.Write))
                 {
-                    AES.KeySize = 256;
-                    AES.BlockSize = 128;
-
-                    AES.Mode = CipherMode.CBC;
-
-                    var key = new Rfc2898DeriveBytes(clientKey, saltBytes, 1000);
-                    AES.Key = key.GetBytes(AES.KeySize / 8);
-                    AES.IV = key.GetBytes(AES.BlockSize / 8);
-
-
-
-                    using (var cs = new CryptoStream(ms, AES.CreateDecryptor(), CryptoStreamMode.Write))
-                    {
-                        cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
-                        cs.Close();
-                    }
-
-                    decryptedBytes = ms.ToArray();
+                    cs.Write(bytesToBeDecrypted, 0, bytesToBeDecrypted.Length);
+                    cs.Close();
                 }
+
+                decryptedBytes = ms.ToArray();
             }
 
             return decryptedBytes;

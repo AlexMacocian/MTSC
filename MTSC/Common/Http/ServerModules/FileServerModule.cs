@@ -81,8 +81,7 @@ namespace MTSC.Common.Http.ServerModules
 
             foreach(var fileName in this.toRemoveCache)
             {
-                Tuple<byte[], DateTime> tp;
-                while(!this.fileCache.TryRemove(fileName, out tp)) { };
+                while (!this.fileCache.TryRemove(fileName, out _)) { };
                 server.LogDebug("Removed " + fileName + " from cache.");
             }
 

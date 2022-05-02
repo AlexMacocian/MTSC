@@ -135,8 +135,8 @@ namespace MTSC.Common.WebSockets
         {
             this.controlByte = messageBytes[0];
             this.Mask = new byte[4];
-            ulong dataLength = 0;
-            var dataIndex = 0;
+            ulong dataLength;
+            int dataIndex;
             if ((messageBytes[1] & 0x7F) <= 125)
             {
                 this.lengthBytes = new byte[1];

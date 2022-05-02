@@ -99,7 +99,6 @@ namespace MTSC.Common.Http
              */
             var step = 0;
             var headerKey = string.Empty;
-            var headerValue = string.Empty;
             while (ms.Position < ms.Length)
             {
                 if (step == 0)
@@ -149,7 +148,7 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerValue = this.ParseHeaderValue(ms);
+                        string headerValue = this.ParseHeaderValue(ms);
                         if (headerKey == HttpHeaders.ResponseCookieHeader)
                         {
                             this.Cookies.Add(new Cookie(headerValue));
