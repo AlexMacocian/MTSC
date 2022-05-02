@@ -26,7 +26,7 @@ namespace MTSC.ServerSide.Handlers
 
             public void AddToMessage(byte[] bytes)
             {
-                this.PartialRequest.AddToBody(bytes);
+                this.PartialRequest.AppendBytes(bytes);
             }
         }
 
@@ -233,10 +233,11 @@ namespace MTSC.ServerSide.Handlers
                 server,
                 request,
                 client,
+                module.ScopedServiceProvider,
                 urlValues.ToDictionary(u => u.Placeholder, u => u.Value));
             foreach(var filterType in filterTypes)
             {
-                var filter = server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                var filter = module.ScopedServiceProvider.GetService(filterType) as RouteFilterAttribute;
                 var filterResponse = filter.HandleRequest(routeContext);
                 if (filterResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
                 {
@@ -277,8 +278,7 @@ namespace MTSC.ServerSide.Handlers
             if (client.Resources.TryGetResource<FragmentedMessage>(out var fragmentedMessage))
             {
                 var bytesToBeAdded = message.MessageBytes.TrimTrailingNullBytes();
-                if (fragmentedMessage.PartialRequest.HeaderByteCount +
-                    fragmentedMessage.PartialRequest.Body.Length +
+                if (fragmentedMessage.PartialRequest.BufferLength +
                     message.MessageLength > this.MaximumRequestSize)
                 {
                     this.QueueResponse(client, new HttpResponse { StatusCode = StatusCodes.BadRequest, BodyString = $"Request exceeded [{this.MaximumRequestSize}] bytes!" });
@@ -381,7 +381,7 @@ namespace MTSC.ServerSide.Handlers
                 routeContext.HttpResponse = response;
                 foreach (var filterType in filterTypes)
                 {
-                    var filter = routeContext.Server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                    var filter = httpRouteBase.ScopedServiceProvider.GetService(filterType) as RouteFilterAttribute;
                     filter.HandleResponse(routeContext);
                 }
 
@@ -391,7 +391,7 @@ namespace MTSC.ServerSide.Handlers
             {
                 foreach (var filterType in filterTypes)
                 {
-                    var filter = routeContext.Server.ServiceManager.GetService(filterType) as RouteFilterAttribute;
+                    var filter = httpRouteBase.ScopedServiceProvider.GetService(filterType) as RouteFilterAttribute;
                     if (filter.HandleException(routeContext, ex) is RouteFilterExceptionHandlingResponse.HandledResponse handledExceptionResponse)
                     {
                         routeContext.HttpResponse = handledExceptionResponse.HttpResponse;

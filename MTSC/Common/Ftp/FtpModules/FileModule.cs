@@ -81,14 +81,12 @@ namespace MTSC.Common.Ftp.FtpModules
 
             if (path != null)
             {
-                using (var fs = File.OpenRead(path))
+                using var fs = File.OpenRead(path);
+                var buffer = new byte[256];
+                int bytesRead;
+                while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
                 {
-                    var buffer = new byte[256];
-                    int bytesRead;
-                    while ((bytesRead = fs.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        ftpData.SendData(buffer, bytesRead);
-                    }
+                    ftpData.SendData(buffer, bytesRead);
                 }
             }
 

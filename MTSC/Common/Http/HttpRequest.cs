@@ -297,7 +297,7 @@ namespace MTSC.Common.Http
             if(this.Method == HttpMethods.Post && this.Form.Count > 0)
             {
                 var formData = new List<byte>();
-                string boundary = null;
+                string boundary;
                 if (this.Headers.ContainsHeader("Content-Type"))
                 {
                     boundary = this.Headers["Content-Type"].Substring(this.Headers["Content-Type"].IndexOf("=") + 1);
@@ -391,8 +391,7 @@ namespace MTSC.Common.Http
              */
             var step = 0;
             var headerKey = string.Empty;
-            var headerValue = string.Empty;
-            while(ms.Position < ms.Length)
+            while (ms.Position < ms.Length)
             {
                 if (step == 0)
                 {
@@ -454,7 +453,7 @@ namespace MTSC.Common.Http
                     else
                     {
                         ms.Seek(-1, SeekOrigin.Current);
-                        headerValue = this.ParseHeaderValue(ms);
+                        string headerValue = this.ParseHeaderValue(ms);
                         if (headerKey == HttpHeaders.RequestCookieHeader)
                         {
                             this.Cookies.Add(new Cookie(headerValue));
@@ -729,7 +728,6 @@ namespace MTSC.Common.Http
         private byte[] GetMultipartValue(int bodyIndex, string boundary)
         {
             var startIndex = bodyIndex;
-            var gatheringData = true;
             while (true)
             {
                 if (this.Body[bodyIndex] == '-')
