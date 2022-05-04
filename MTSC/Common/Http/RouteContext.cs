@@ -1,4 +1,5 @@
-﻿using MTSC.ServerSide;
+﻿using MTSC.Common.Http.Attributes;
+using MTSC.ServerSide;
 using Slim;
 using System.Collections.Generic;
 using System.Threading;
@@ -12,6 +13,7 @@ namespace MTSC.Common.Http
         public ClientData Client { get; }
         public Dictionary<string, string> UrlValues { get; }
         public IServiceProvider ScopedServiceProvider { get; }
+        public List<RouteFilterAttribute> RouteFilters { get; } = new List<RouteFilterAttribute>();
         public HttpResponse HttpResponse { get; set; }
         public CancellationToken CancelRequest => this.Client.CancellationToken;
         public Dictionary<string, object> Resources { get; set; } = new();
