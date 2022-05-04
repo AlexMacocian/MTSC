@@ -235,9 +235,9 @@ namespace MTSC.ServerSide.Handlers
                 client,
                 module.ScopedServiceProvider,
                 urlValues.ToDictionary(u => u.Placeholder, u => u.Value));
-            foreach(var filterType in filterTypes)
+            routeContext.RouteFilters.AddRange(filterTypes.Select(filterType => module.ScopedServiceProvider.GetService(filterType) as RouteFilterAttribute));
+            foreach(var filter in routeContext.RouteFilters)
             {
-                var filter = module.ScopedServiceProvider.GetService(filterType) as RouteFilterAttribute;
                 var filterResponse = filter.HandleRequest(routeContext);
                 if (filterResponse is RouteEnablerResponse.RouteEnablerResponseAccept)
                 {
@@ -258,11 +258,23 @@ namespace MTSC.ServerSide.Handlers
                 }
             }
 
-            
-            this.RouteHandleRequest(module, routeContext, filterTypes).ContinueWith(task =>
-            {
-                this.QueueResponse(client, task.Result);
-            });
+            this.FiltersHandleRequestAsync(routeContext)
+                .ContinueWith(task =>
+                {
+                    var routeEnablerAsyncResponse = task.Result;
+                    if (routeEnablerAsyncResponse is RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError)
+                    {
+                        return;
+                    }
+
+                    this.RouteHandleRequest(module, routeContext, filterTypes)
+                    .ContinueWith(async task =>
+                    {
+                        await FiltersHandleResponseAsync(routeContext);
+                        this.QueueResponse(client, task.Result);
+                        return Task.CompletedTask;
+                    });
+                });
 
             return true;
         }
@@ -369,6 +381,37 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
+        private async Task<RouteEnablerAsyncResponse> FiltersHandleRequestAsync(RouteContext routeContext)
+        {
+            foreach (var filter in routeContext.RouteFilters)
+            {
+                var filterResponse = await filter.HandleRequestAsync(routeContext);
+                if (filterResponse is RouteEnablerAsyncResponse.RouteEnablerAsyncResponseAccept)
+                {
+                    continue;
+                }
+                else if (filterResponse is RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError errorResponse)
+                {
+                    this.QueueResponse(routeContext.Client, errorResponse.Response);
+                    return errorResponse;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"RouteEnablerAsyncResponse should be one of the types {typeof(RouteEnablerAsyncResponse.RouteEnablerAsyncResponseAccept)} or {typeof(RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError)}!");
+                }
+            }
+
+            return RouteEnablerAsyncResponse.Accept;
+        }
+        
+        private async Task FiltersHandleResponseAsync(RouteContext routeContext)
+        {
+            foreach(var filter in routeContext.RouteFilters)
+            {
+                await filter.HandleResponseAsync(routeContext);
+            }
+        }
+
         private async Task<HttpResponse> RouteHandleRequest(
             HttpRouteBase httpRouteBase,
             RouteContext routeContext,
@@ -419,7 +462,6 @@ namespace MTSC.ServerSide.Handlers
 
             return module;
         }
-
         private void RegisterRoute(HttpMethods method, string uri, Type routeType)
         {
             if (!typeof(HttpRouteBase).IsAssignableFrom(routeType))
@@ -429,7 +471,6 @@ namespace MTSC.ServerSide.Handlers
 
             this.moduleDictionary[method].Add((new ExtendedUrl(uri), routeType, new List<Type>()));
         }
-
         private void PrepareRoutePropertyCache(Type routeType)
         {
             if (this.routePropertyCache.ContainsKey(routeType))
@@ -452,7 +493,6 @@ namespace MTSC.ServerSide.Handlers
 
             this.routePropertyCache[routeType] = propertyAndAttributesList;
         }
-
         private bool TryMatchUrl(HttpMethods method, string uri, out List<UrlValue> urlValues, out Type type, out List<Type> filters)
         {
             urlValues = null;
@@ -472,7 +512,6 @@ namespace MTSC.ServerSide.Handlers
 
             return false;
         }
-
         private void SetModuleProperties(HttpRouteBase module, RouteContext routeContext)
         {
             foreach ((var attribute, var propertyInfo) in this.routePropertyCache[module.GetType()])
@@ -495,8 +534,6 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        
-
         private static void SetPropertyValue(PropertyInfo propertyInfo, object value, HttpRouteBase module)
         {
             if (propertyInfo.CanWrite is false)
@@ -509,8 +546,6 @@ namespace MTSC.ServerSide.Handlers
                 propertyInfo.SetValue(module, value);
             }
         }
-
-        
 
         private static HttpResponse NotFound404 => new()
         {

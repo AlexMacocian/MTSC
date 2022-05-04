@@ -98,6 +98,8 @@ namespace MTSC.UnitTests
 
             Assert.IsTrue(NonActioningFilterAttribute.RequestCalled);
             Assert.IsTrue(NonActioningFilterAttribute.ResponseCalled);
+            Assert.IsTrue(NonActioningFilterAttribute.RequestAsyncCalled);
+            Assert.IsTrue(NonActioningFilterAttribute.ResponseAsyncCalled);
         }
 
         [TestMethod]
