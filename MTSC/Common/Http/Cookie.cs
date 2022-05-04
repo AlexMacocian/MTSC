@@ -41,7 +41,7 @@ namespace MTSC.Common.Http
             this.Attributes = new Dictionary<string, string>();
             var cookieTokens = cookieString.Split(';');
             this.Key = cookieTokens[0].Split('=')[0].Trim();
-            this.Value = cookieTokens[1].Split('=')[1].Trim();
+            this.Value = cookieTokens[0].Split('=')[1].Trim();
             for(var i = 1; i < cookieTokens.Length; i++)
             {
                 var attributeTokens = cookieTokens[i].Split('=');
