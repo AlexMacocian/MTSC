@@ -17,5 +17,6 @@ namespace MTSC.OAuth2.Tests.UnitTests
         {
             this.authorizeAttribute = new AuthorizeAttribute(this.authorizationProviderMock.Object, this.loggerMock.Object);
         }
+
     }
 }
