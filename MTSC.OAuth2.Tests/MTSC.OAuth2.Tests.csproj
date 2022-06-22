@@ -27,4 +27,8 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\MTSC.OAuth2\MTSC.OAuth2.csproj" />
+  </ItemGroup>
+
 </Project>
