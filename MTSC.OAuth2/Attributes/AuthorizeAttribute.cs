@@ -30,6 +30,10 @@ namespace MTSC.OAuth2.Attributes
         private readonly IAuthorizationProvider authorizationProvider;
 
         [DoNotInject]
+        ///<summary>
+        /// Public parameterless constructor to be used for decorating endpoints. Do not use to instantiate new <see cref="AuthorizeAttribute"/>.
+        /// Use instead any of the other constructors.
+        ///</summary>
         public AuthorizeAttribute()
         {
         }
