@@ -20,6 +20,7 @@ jobs:
       Solution_Path: MTSC.sln
       Test_Project_Path: MTSC.UnitTests\MTSC.UnitTests.csproj
       Source_Project_Path: MTSC\MTSC.csproj
+      Oauth_Project_Path: MTSC.OAuth2\MTSC.OAuth2.csproj
       Actions_Allow_Unsecure_Commands: true
 
     steps:
@@ -44,8 +45,11 @@ jobs:
     - name: Build MTSC project
       run: dotnet build MTSC -c $env:Configuration
 
-    - name: Package
+    - name: Package MTSC
       run: dotnet pack -c Release -o . $env:Source_Project_Path
+
+    - name: Package MTSC.OAuth2
+      run: dotnet pack -c Release -o . $env:Oauth_Project_Path
 
     - name: Publish
       run: dotnet nuget push *.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
