@@ -22,6 +22,8 @@ jobs:
       Solution_Path: MTSC.sln
       Test_Project_Path: MTSC.UnitTests\MTSC.UnitTests.csproj
       Source_Project_Path: MTSC\MTSC.csproj
+      OAuth2Source_Project_Path: MTSC.OAuth2\MTSC.OAuth2.csproj
+      OAuth2Test_Project_Path: MTSC.OAuth2.Tests\MTSC.OAuth2.Tests.csproj
       Actions_Allow_Unsecure_Commands: true
 
     steps:
@@ -33,13 +35,16 @@ jobs:
     - name: Install .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: '6.0.x'
+        dotnet-version: '6.x.x'
 
     - name: Setup MSBuild.exe
       uses: microsoft/setup-msbuild@v1.0.1
 
     - name: Execute Unit Tests
       run: dotnet test $env:Test_Project_Path -v n --filter "TestCategory!=ServerTests"
+
+    - name: Execute OAuth2 Tests
+      run: dotnet test $env:OAuth2Test_Project_Path -v n
 
     - name: Restore Project
       run: msbuild $env:Solution_Path /t:Restore /p:Configuration=$env:Configuration /p:RuntimeIdentifier=$env:RuntimeIdentifier
