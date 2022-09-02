@@ -8,15 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="IntegrationTests\**" />
-    <Compile Remove="Models\**" />
-    <EmbeddedResource Remove="IntegrationTests\**" />
-    <EmbeddedResource Remove="Models\**" />
-    <None Remove="IntegrationTests\**" />
-    <None Remove="Models\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="6.7.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
     <PackageReference Include="Moq" Version="4.18.1" />

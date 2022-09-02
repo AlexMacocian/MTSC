@@ -1,4 +1,6 @@
-﻿namespace MTSC.OAuth2.Models
+﻿using System.Security.Cryptography.X509Certificates;
+
+namespace MTSC.OAuth2.Models
 {
     public sealed class AuthorizationOptions
     {
@@ -38,9 +40,9 @@
         /// </summary>
         public string ClientId { get; set; }
         /// <summary>
-        /// Thumbprint of your client certificate that is whitelisted as your Application on your OAuth provider.
+        /// Certificate that is whitelisted as your Application on your OAuth provider.
         /// </summary>
-        public string ClientCertificateThumbprint { get; set; }
+        public X509Certificate2 ClientCertificate { get; set; }
         /// <summary>
         /// Value provided by your OAuth provider to authenticate your service as your Application.
         /// </summary>

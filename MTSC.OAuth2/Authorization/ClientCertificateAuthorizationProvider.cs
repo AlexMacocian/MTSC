@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.JsonWebTokens;
+﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using MTSC.OAuth2.Attributes;
 using MTSC.OAuth2.Models;
 using Slim.Attributes;
 using System;
@@ -15,7 +13,6 @@ namespace MTSC.OAuth2.Authorization
 {
     internal sealed class ClientCertificateAuthorizationProvider : FormAuthorizationProvider<ClientCertificateAuthorizationProvider>
     {
-        private readonly X509Certificate2 clientCertificate;
         private readonly AuthorizationOptions authorizationOptions;
 
         [PreferredConstructor(Priority = 0)]
@@ -25,7 +22,7 @@ namespace MTSC.OAuth2.Authorization
             : base(httpClient, authorizationOptions)
         {
             this.authorizationOptions = authorizationOptions.ThrowIfNull(nameof(authorizationOptions));
-            this.clientCertificate = GetClientCertificate(this.authorizationOptions.ClientCertificateThumbprint);
+            this.authorizationOptions.ClientCertificate.ThrowIfNull(nameof(this.authorizationOptions.ClientCertificate));
         }
 
         [PreferredConstructor(Priority = 1)]
@@ -35,7 +32,7 @@ namespace MTSC.OAuth2.Authorization
             : base(httpClient, authorizationOptions)
         {
             this.authorizationOptions = authorizationOptions.ThrowIfNull(nameof(authorizationOptions));
-            this.clientCertificate = GetClientCertificate(this.authorizationOptions.ClientCertificateThumbprint);
+            this.authorizationOptions.ClientCertificate.ThrowIfNull(nameof(this.authorizationOptions.ClientCertificate));
         }
 
         [PreferredConstructor(Priority = 2)]
@@ -44,7 +41,7 @@ namespace MTSC.OAuth2.Authorization
             : base(new HttpClient(), authorizationOptions)
         {
             this.authorizationOptions = authorizationOptions.ThrowIfNull(nameof(authorizationOptions));
-            this.clientCertificate = GetClientCertificate(this.authorizationOptions.ClientCertificateThumbprint);
+            this.authorizationOptions.ClientCertificate.ThrowIfNull(nameof(this.authorizationOptions.ClientCertificate));
         }
 
         protected override IEnumerable<KeyValuePair<string, string>> GetAdditionalFormFields()
@@ -53,8 +50,9 @@ namespace MTSC.OAuth2.Authorization
             var securityTokenDescriptor = new SecurityTokenDescriptor
             {
                 Claims = claims,
-                SigningCredentials = new X509SigningCredentials(this.clientCertificate)
+                SigningCredentials = new X509SigningCredentials(this.authorizationOptions.ClientCertificate)
             };
+
             var handler = new JsonWebTokenHandler();
             var signedClientAssertion = handler.CreateToken(securityTokenDescriptor);
 
@@ -76,16 +74,6 @@ namespace MTSC.OAuth2.Authorization
                 { "nbf", DateTimeOffset.UtcNow.ToUnixTimeSeconds() },
                 { "sub", this.authorizationOptions.ClientId }
             };
-        }
-
-        private static X509Certificate2 GetClientCertificate(string thumbprint)
-        {
-            using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-            store.Open(OpenFlags.ReadOnly);
-            var results = store.Certificates.Find(X509FindType.FindByThumbprint, thumbprint, true);
-            return results.Count > 0 ?
-                results[0] :
-                null;
         }
     }
 }

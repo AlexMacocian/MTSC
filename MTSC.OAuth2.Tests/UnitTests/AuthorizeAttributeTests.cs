@@ -6,6 +6,7 @@ using Moq;
 using MTSC.Common.Http;
 using MTSC.OAuth2.Attributes;
 using MTSC.OAuth2.Authorization;
+using MTSC.OAuth2.Models;
 using MTSC.ServerSide;
 using Slim;
 using Slim.Exceptions;
@@ -28,7 +29,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
         private const string MaxAgeAttribute = "Max-Age";
         private const string RedirectUri = "RedirectUri";
         private const string OAuthUri = "OAuthUri";
-        private const string AccessTokenKey = "AccessToken";
+        private const string AccessTokenKey = "JsonWebTokenString";
         private const string AccessTokenValue = "SomeValueHere";
         
         private readonly Mock<ILogger<AuthorizeAttribute>> loggerMock = new();
@@ -114,7 +115,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
             this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(true);
+                .ReturnsAsync(new TokenValidationResponse { IsValid = true });
 
             await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -133,7 +134,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
             this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(true);
+                .ReturnsAsync(new TokenValidationResponse { IsValid = true });
 
             var response = await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -152,7 +153,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
             this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(true);
+                .ReturnsAsync(new TokenValidationResponse { IsValid = true });
 
             _ = await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -171,7 +172,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
             this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(false);
+                .ReturnsAsync(new TokenValidationResponse { IsValid = false });
 
             var response = await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -190,7 +191,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
             this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(false);
+                .ReturnsAsync(new TokenValidationResponse { IsValid = false });
             this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
                 .ReturnsAsync(RedirectUri);
 
@@ -213,7 +214,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
             this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(false);
+                .ReturnsAsync(new TokenValidationResponse { IsValid = false });
             this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
                 .ReturnsAsync(RedirectUri);
 

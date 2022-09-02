@@ -22,7 +22,8 @@ namespace MTSC.OAuth2.Attributes
         private const string MaxAgeAttribute = "Max-Age";
         private const string AccessTokenObject = "AccessTokenObject";
         
-        public const string AccessTokenKey = "AccessToken";
+        public const string AccessTokenKey = "JsonWebTokenString";
+        public const string AccessTokenObjectKey = "JsonWebToken";
 
         private static readonly RandomNumberGenerator RandomNumberGenerator = RandomNumberGenerator.Create();
 
@@ -62,7 +63,8 @@ namespace MTSC.OAuth2.Attributes
             if (TryGetCookieValue(routeContext.HttpRequest, AccessTokenKey, out var accessToken))
             {
                 this.logger.LogInformation("Found authorization token. Validating");
-                if(await this.authorizationProvider.VerifyAccessToken(accessToken) is false)
+                var validationResponse = await this.authorizationProvider.VerifyAccessToken(accessToken);
+                if (validationResponse.IsValid is false)
                 {
                     this.logger.LogInformation("Validation failed");
                     return await this.ExpireAccessTokenAndRedirect(accessToken);
@@ -70,6 +72,7 @@ namespace MTSC.OAuth2.Attributes
 
                 this.logger.LogInformation("Validation succeeded");
                 routeContext.Resources[AccessTokenKey] = accessToken;
+                routeContext.Resources[AccessTokenObjectKey] = validationResponse.JsonWebToken;
                 return RouteEnablerAsyncResponse.Accept;
             }
 

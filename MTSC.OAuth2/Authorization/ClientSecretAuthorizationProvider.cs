@@ -19,7 +19,7 @@ namespace MTSC.OAuth2.Authorization
         [PreferredConstructor(Priority = 1)]
         public ClientSecretAuthorizationProvider(
             AuthorizationOptions options,
-            HttpClient<ClientSecretAuthorizationProvider> httpClient)
+            HttpClient httpClient)
             : base(httpClient, options)
         {
         }

@@ -1,9 +1,7 @@
 ﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 using MTSC.OAuth2.Exceptions;
-using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Extensions;
 using System.Linq;
 using System.Threading.Tasks;
@@ -26,19 +24,19 @@ namespace MTSC.OAuth2.Models
             this.openIdConfigurationCache = OpenIdConfigurationCache.GetForConfigurationUri(openIdConfigurationUri);
         }
 
-        public async Task<Result<bool, TokenValidationException>> ValidateAccessToken(string accessToken)
+        public async Task<Result<TokenValidationResponse, TokenValidationException>> ValidateAccessToken(string accessToken)
         {
             var openIdConfiguration = await this.openIdConfigurationCache.GetOpenIdConfiguration(this.authorizationHttpClientWrapper);
 
             try
             {
-                var validationResult = await this.ValidateTokenInternal(accessToken, openIdConfiguration);
+                (var validationResult, var jsonWebToken) = await this.ValidateTokenInternal(accessToken, openIdConfiguration);
                 if (validationResult.Exception is Exception validationException)
                 {
                     return new TokenValidationException(validationException);
                 }
 
-                return validationResult.IsValid;
+                return new TokenValidationResponse { JsonWebToken = jsonWebToken, IsValid = validationResult.IsValid };
             }
             catch(Exception ex)
             {
@@ -46,7 +44,7 @@ namespace MTSC.OAuth2.Models
             }
         }
 
-        private async Task<TokenValidationResult> ValidateTokenInternal(string accessToken, OpenIdConfiguration openIdConfiguration)
+        private async Task<(TokenValidationResult, JsonWebToken)> ValidateTokenInternal(string accessToken, OpenIdConfiguration openIdConfiguration)
         {
             var jsonWebTokenHandler = new JsonWebTokenHandler();
             var token = new JsonWebToken(accessToken);
@@ -83,7 +81,7 @@ namespace MTSC.OAuth2.Models
             }
 
             var validation = await jsonWebTokenHandler.ValidateTokenAsync(accessToken, validationParameters);
-            return validation;
+            return (validation, token);
         }
     }
 }

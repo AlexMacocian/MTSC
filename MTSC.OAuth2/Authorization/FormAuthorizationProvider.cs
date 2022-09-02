@@ -45,14 +45,14 @@ namespace MTSC.OAuth2.Authorization
             this.accessTokenValidator = new AccessTokenValidator<T>(this.AuthorizationClientWrapper, this.Options.ClientId, this.Options.OpenIdConfigurationUri);
         }
 
-        public async Task<bool> VerifyAccessToken(string accessToken)
+        public async Task<TokenValidationResponse> VerifyAccessToken(string accessToken)
         {
             var validationResult = await this.accessTokenValidator.ValidateAccessToken(accessToken);
-            return validationResult.Switch<bool>(
-                onSuccess: isValid => isValid,
+            return validationResult.Switch<TokenValidationResponse>(
+                onSuccess: result => result,
                 onFailure: exception =>
                 {
-                    return false;
+                    return new TokenValidationResponse { IsValid = false };
                 });
         }
 
