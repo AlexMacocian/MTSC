@@ -4,7 +4,7 @@
 	  <OutputType>Library</OutputType>
 	  <TargetFrameworks>netstandard2.0</TargetFrameworks>
 	  <PackageLicenseFile>LICENSE</PackageLicenseFile>
-	  <Version>1.0.1</Version>
+	  <Version>1.0.2</Version>
 	  <LangVersion>latest</LangVersion>
 	  <Authors>Alexandru-Victor Macocian</Authors>
 	  <Product>MTSC.OAuth2</Product>
@@ -25,7 +25,7 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="6.23.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.23.1" />
-    <PackageReference Include="MTSC" Version="5.5.0" />
+    <PackageReference Include="MTSC" Version="5.5.1" />
     <PackageReference Include="SystemExtensions.NetStandard" Version="1.5.0" />
   </ItemGroup>
 
