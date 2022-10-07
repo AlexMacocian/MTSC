@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MTSC.Common;
 using MTSC.Exceptions;
 using MTSC.ServerSide.BackgroundServices;
@@ -7,6 +8,7 @@ using MTSC.ServerSide.Listeners;
 using MTSC.ServerSide.Schedulers;
 using MTSC.ServerSide.UsageMonitors;
 using Slim;
+using Slim.Integration.ServiceCollection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -104,9 +106,13 @@ namespace MTSC.ServerSide
         /// </summary>
         public IReadOnlyCollection<ClientData> Clients { get => this.clients.AsReadOnly(); }
         /// <summary>
-        /// <see cref="IServiceManager"/> for configuring and retrieving services.
+        /// <see cref="IServiceManager"/> for configuring and retrieving services. Will be initialized at server startup from the <see cref="ServiceCollection"/>.
         /// </summary>
-        public IServiceManager ServiceManager { get; } = new ServiceManager();
+        public IServiceManager ServiceManager { get; private set; }
+        /// <summary>
+        /// <see cref="IServiceCollection"/> used to create the <see cref="IServiceManager"/> at server startup.
+        /// </summary>
+        public IServiceCollection ServiceCollection { get; } = new ServiceCollection();
         #endregion
         #region Constructors
         /// <summary>
@@ -114,8 +120,7 @@ namespace MTSC.ServerSide
         /// </summary>
         public Server()
         {
-            this.ServiceManager.RegisterServiceManager();
-            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.ServiceCollection.AddSingleton(this);
             this.backgroundServicesHolder = new(this);
         }
         /// <summary>
@@ -125,8 +130,7 @@ namespace MTSC.ServerSide
         public Server(int port)
         {
             this.Port = port;
-            this.ServiceManager.RegisterServiceManager();
-            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.ServiceCollection.AddSingleton(this);
             this.backgroundServicesHolder = new(this);
         }
         /// <summary>
@@ -138,8 +142,7 @@ namespace MTSC.ServerSide
         {
             this.certificate = certificate;
             this.Port = port;
-            this.ServiceManager.RegisterServiceManager();
-            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.ServiceCollection.AddSingleton(this);
             this.backgroundServicesHolder = new(this);
         }
         /// <summary>
@@ -151,8 +154,7 @@ namespace MTSC.ServerSide
         {
             this.IPAddress = ipAddress;
             this.Port = port;
-            this.ServiceManager.RegisterServiceManager();
-            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.ServiceCollection.AddSingleton(this);
             this.backgroundServicesHolder = new(this);
         }
         /// <summary>
@@ -166,96 +168,11 @@ namespace MTSC.ServerSide
             this.certificate = certificate;
             this.Port = port;
             this.IPAddress = ipAddress;
-            this.ServiceManager.RegisterServiceManager();
-            this.ServiceManager.RegisterSingleton<Server, Server>(sp => this);
+            this.ServiceCollection.AddSingleton(this);
             this.backgroundServicesHolder = new(this);
         }
         #endregion
         #region Public Methods
-        /// <summary>
-        /// Adds a service with transient lifetime.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddTransientService<TInterface, TService>()
-            where TService : TInterface
-            where TInterface : class
-        {
-            this.ServiceManager.RegisterTransient<TInterface, TService>();
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with transient lifetime. Registers the service for all the interfaces it implements.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddTransientService<TService>()
-            where TService : class
-        {
-            this.ServiceManager.RegisterTransient<TService>();
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with transient lifetime.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddTransientService<TInterface, TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
-            where TService : TInterface
-            where TInterface : class
-        {
-            this.ServiceManager.RegisterTransient<TInterface, TService>(serviceFactory);
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with transient lifetime. Registers the service for all the interfaces it implements.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddTransientService<TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
-            where TService : class
-        {
-            this.ServiceManager.RegisterTransient<TService>(serviceFactory);
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with singleton lifetime.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddSingletonService<TInterface, TService>()
-            where TService : TInterface
-            where TInterface : class
-        {
-            this.ServiceManager.RegisterSingleton<TInterface, TService>();
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with singleton lifetime. Registers the service for all the interfaces it implements.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddSingletonService<TService>()
-            where TService : class
-        {
-            this.ServiceManager.RegisterSingleton<TService>();
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with singleton lifetime.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddSingletonService<TInterface, TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
-            where TService : TInterface
-            where TInterface : class
-        {
-            this.ServiceManager.RegisterSingleton<TInterface, TService>(serviceFactory);
-            return this;
-        }
-        /// <summary>
-        /// Adds a service with singleton lifetime. Registers the service for all the interfaces it implements.
-        /// </summary>
-        /// <returns>This server object.</returns>
-        public Server AddSingletonService<TService>(Func<Slim.IServiceProvider, TService> serviceFactory)
-            where TService : class
-        {
-            this.ServiceManager.RegisterSingleton<TService>(serviceFactory);
-            return this;
-        }
         /// <summary>
         /// Adds a <see cref="BackgroundServiceBase"/> to the server.
         /// </summary>
@@ -419,16 +336,6 @@ namespace MTSC.ServerSide
             return this;
         }
         /// <summary>
-        /// Gets a required service.
-        /// </summary>
-        /// <typeparam name="T">Type of the service used during registration.</typeparam>
-        /// <returns></returns>
-        public T GetService<T>()
-            where T : class
-        {
-            return this.ServiceManager.GetService<T>();
-        }
-        /// <summary>
         /// Get handler of provided type
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -521,6 +428,8 @@ namespace MTSC.ServerSide
                 return;
             }
 
+            this.ServiceManager?.Dispose();
+            this.ServiceManager = this.ServiceCollection.BuildSlimServiceProvider() as IServiceManager;
             this.Listener?.Stop();
             if (this.logger is null)
             {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Collections.Generic;
 
 namespace MTSC.ServerSide.BackgroundServices
@@ -16,7 +17,7 @@ namespace MTSC.ServerSide.BackgroundServices
         public void RegisterBackgroundService<T>(TimeSpan activationInterval)
             where T : BackgroundServiceBase
         {
-            this.server.ServiceManager.RegisterSingleton<T>();
+            this.server.ServiceCollection.AddSingleton<T>();
             this.backgroundServices.Add(new BackgroundServiceMetadata { ActivationInterval = activationInterval, RegisteredType = typeof(T) });
         }
 
