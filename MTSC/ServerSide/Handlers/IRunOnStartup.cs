@@ -1,10 +1,9 @@
-﻿namespace MTSC.ServerSide.Handlers
+﻿namespace MTSC.ServerSide.Handlers;
+
+/// <summary>
+/// Implement this interface in handlers that need to run a procedure on server startup.
+/// </summary>
+public interface IRunOnStartup
 {
-    /// <summary>
-    /// Implement this interface in handlers that need to run a procedure on server startup.
-    /// </summary>
-    public interface IRunOnStartup
-    {
-        void OnStartup(Server server);
-    }
+    void OnStartup(Server server);
 }

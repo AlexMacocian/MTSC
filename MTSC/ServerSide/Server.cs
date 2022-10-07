@@ -30,7 +30,7 @@ namespace MTSC.ServerSide
     {
         #region Fields
         private CancellationToken cancellationToken;
-        private bool running;
+        private bool initialized;
         private X509Certificate2 certificate;
         private readonly BackgroundServicesHolder backgroundServicesHolder;
         private readonly ProducerConsumerQueue<ClientData> addQueue = new();
@@ -106,11 +106,11 @@ namespace MTSC.ServerSide
         /// </summary>
         public IReadOnlyCollection<ClientData> Clients { get => this.clients.AsReadOnly(); }
         /// <summary>
-        /// <see cref="IServiceManager"/> for configuring and retrieving services. Will be initialized at server startup from the <see cref="ServiceCollection"/>.
+        /// <see cref="IServiceManager"/> for configuring and retrieving services. Will be populated at server startup from the <see cref="ServiceCollection"/>.
         /// </summary>
-        public IServiceManager ServiceManager { get; private set; }
+        public IServiceManager ServiceManager { get; private set; } = new ServiceManager();
         /// <summary>
-        /// <see cref="IServiceCollection"/> used to create the <see cref="IServiceManager"/> at server startup.
+        /// <see cref="IServiceCollection"/> used to populate the <see cref="IServiceManager"/> at server startup.
         /// </summary>
         public IServiceCollection ServiceCollection { get; } = new ServiceCollection();
         #endregion
@@ -423,50 +423,62 @@ namespace MTSC.ServerSide
         /// <param name="cancellationToken">Cancellation token used to cancel the server.</param>
         public void Run(CancellationToken cancellationToken = default)
         {
-            if (this.running)
+            lock (this)
             {
-                return;
-            }
-
-            this.ServiceManager?.Dispose();
-            this.ServiceManager = this.ServiceCollection.BuildSlimServiceProvider() as IServiceManager;
-            this.Listener?.Stop();
-            if (this.logger is null)
-            {
-                // Try to get a logger, in case it exists. If not, keep it null.
-                try
+                if (this.Running)
                 {
-                    this.logger = this.ServiceManager.GetService<ILogger<Server>>();
+                    return;
                 }
-                catch
+
+                /*
+                 * Run only once when the server is first initializing.
+                 * This gives the handlers an opportunity to schedule tasks, register services, etc.
+                 */
+                if (this.initialized is false)
                 {
+                    this.initialized = true;
+                    this.ServiceManager = this.ServiceCollection.BuildSlimServiceProvider(this.ServiceManager) as IServiceManager;
+
+                    foreach (var toBeRunOnInitialization in this.handlers.OfType<IRunOnInitialization>())
+                    {
+                        toBeRunOnInitialization.OnInitialization(this);
+                    }
+
+                    // Try to get a logger, in case it exists. If not, keep it null.
                     try
                     {
-                        this.logger = this.ServiceManager.GetService<ILogger>();
+                        this.logger = this.ServiceManager.GetService<ILogger<Server>>();
                     }
                     catch
                     {
+                        try
+                        {
+                            this.logger = this.ServiceManager.GetService<ILogger>();
+                        }
+                        catch
+                        {
+                        }
                     }
                 }
-            }
 
-            this.Listener.Initialize(this.Port, this.IPAddress);
-            this.Listener.Start();
-            this.cancellationToken = cancellationToken;
-            this.running = true;
-            this.Log("Server started on: " + this.Listener.LocalEndpoint.ToString());
-            foreach(var toBeRunOnStartup in this.handlers.OfType<IRunOnStartup>())
-            {
-                toBeRunOnStartup.OnStartup(this);
-            }
+                this.Listener?.Stop();
+                this.Listener.Initialize(this.Port, this.IPAddress);
+                this.Listener.Start();
+                this.cancellationToken = cancellationToken;
+                this.Log("Server starting on: " + this.Listener.LocalEndpoint.ToString());
+                foreach (var toBeRunOnStartup in this.handlers.OfType<IRunOnStartup>())
+                {
+                    toBeRunOnStartup.OnStartup(this);
+                }
 
-            /*
-             * Initialize background services.
-             */
-            this.backgroundServicesHolder.Initialize();
+                /*
+                 * Initialize background services.
+                 */
+                this.backgroundServicesHolder.Initialize();
+            }
 
             DateTime startLoopTime;
-            while (this.running)
+            while (this.Listener?.Active is true)
             {
                 startLoopTime = DateTime.Now;
                 
@@ -476,7 +488,6 @@ namespace MTSC.ServerSide
                  */
                 if (this.cancellationToken.IsCancellationRequested)
                 {
-                    this.running = false;
                     break;
                 }
 
@@ -586,7 +597,7 @@ namespace MTSC.ServerSide
                 }
             }
 
-            this.Listener.Stop();
+            this.Listener?.Stop();
             foreach (var client in this.Clients)
             {
                 try
@@ -598,8 +609,6 @@ namespace MTSC.ServerSide
                     this.HandleException(e);
                 }
             }
-
-            this.Listener = null;
         }
         /// <summary>
         /// Runs the server async.
@@ -613,10 +622,7 @@ namespace MTSC.ServerSide
         /// </summary>
         public void Stop()
         {
-            if (this.running)
-            {
-                this.running = false;
-            }
+            this.Listener?.Stop();
         }
         #endregion
         #region Private Methods

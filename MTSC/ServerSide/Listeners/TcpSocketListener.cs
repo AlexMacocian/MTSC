@@ -10,17 +10,20 @@ namespace MTSC.ServerSide.Listeners
     {
         private readonly ConcurrentQueue<Socket> acceptedSockets = new();
 
-        private Socket socket;
+        private volatile Socket socket;
 
         public bool Active => this.socket is not null;
         public EndPoint LocalEndpoint { get => this.socket?.LocalEndPoint; }
 
         public void Initialize(int port, IPAddress ipAddress)
         {
-            this.socket?.Close();
-            this.socket?.Dispose();
-            this.socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            this.socket.Bind(new IPEndPoint(ipAddress, port));
+            lock (this)
+            {
+                this.socket?.Close();
+                this.socket?.Dispose();
+                this.socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                this.socket.Bind(new IPEndPoint(ipAddress, port));
+            }
         }
 
         public Socket AcceptSocket()
@@ -40,24 +43,32 @@ namespace MTSC.ServerSide.Listeners
 
         public void Start()
         {
-            this.socket.Listen(50);
-            var socket = this.socket;
-            Task.Run(async() =>
+            lock (this)
             {
-                while(socket is not null)
+                while(this.socket is not Socket)
                 {
-                    var clientSocket = await this.socket.AcceptAsync();
-                    this.acceptedSockets.Enqueue(clientSocket);
                 }
-            });
-            
+
+                this.socket.Listen(50);
+                Task.Run(async () =>
+                {
+                    while (this.socket is not null)
+                    {
+                        var clientSocket = await this.socket.AcceptAsync();
+                        this.acceptedSockets.Enqueue(clientSocket);
+                    }
+                });
+            }
         }
 
         public void Stop()
         {
-            this.socket?.Close();
-            this.socket?.Dispose();
-            this.socket = null;
+            lock (this)
+            {
+                this.socket?.Close();
+                this.socket?.Dispose();
+                this.socket = null;
+            }
         }
     }
 }
