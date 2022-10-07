@@ -35,7 +35,7 @@ namespace MTSC.UnitTests
         public TestContext TestContext { get; set; }
         static ServerSide.Server Server { get; set; }
 
-        [AssemblyInitialize]
+        [ClassInitialize]
         public static void InitializeServer(TestContext testContext)
         {
             ServicePointManager.ServerCertificateValidationCallback += (s, e, o, p) => true;

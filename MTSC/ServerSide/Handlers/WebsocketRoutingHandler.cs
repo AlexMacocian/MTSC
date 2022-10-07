@@ -10,7 +10,7 @@ using System.Text;
 
 namespace MTSC.ServerSide.Handlers
 {
-    public class WebsocketRoutingHandler : IHandler, IRunOnStartup
+    public class WebsocketRoutingHandler : IHandler, IRunOnInitialization
     {
         private const string WebsocketHeaderAcceptKey = "Sec-WebSocket-Accept";
         private const string WebsocketHeaderKey = "Sec-WebSocket-Key";
@@ -302,7 +302,7 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        void IRunOnStartup.OnStartup(Server server)
+        void IRunOnInitialization.OnInitialization(Server server)
         {
             foreach((var routeType, _) in this.moduleDictionary.Values)
             {

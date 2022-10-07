@@ -16,7 +16,7 @@ using static MTSC.Common.Http.HttpMessage;
 
 namespace MTSC.ServerSide.Handlers
 {
-    public sealed class HttpRoutingHandler : IHandler, IRunOnStartup
+    public sealed class HttpRoutingHandler : IHandler, IRunOnInitialization
     {
         private class FragmentedMessage
         {
@@ -188,7 +188,7 @@ namespace MTSC.ServerSide.Handlers
             }
         }
 
-        void IRunOnStartup.OnStartup(Server server)
+        void IRunOnInitialization.OnInitialization(Server server)
         {
             foreach (var routes in this.moduleDictionary.Values)
             {
