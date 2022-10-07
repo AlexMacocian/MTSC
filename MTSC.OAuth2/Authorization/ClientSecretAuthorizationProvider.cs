@@ -1,7 +1,6 @@
 ﻿using MTSC.OAuth2.Models;
 using Slim.Attributes;
 using System.Collections.Generic;
-using System.Http;
 using System.Net.Http;
 
 namespace MTSC.OAuth2.Authorization

@@ -5,9 +5,7 @@ using Slim.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Extensions;
-using System.Http;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
 
 namespace MTSC.OAuth2.Authorization
 {

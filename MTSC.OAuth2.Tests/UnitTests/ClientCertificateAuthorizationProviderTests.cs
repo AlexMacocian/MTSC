@@ -4,7 +4,6 @@ using MTSC.OAuth2.Authorization;
 using MTSC.OAuth2.Models;
 using MTSC.OAuth2.Tests.Models;
 using Slim;
-using System.Http;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
