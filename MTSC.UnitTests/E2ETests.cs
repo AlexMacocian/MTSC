@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MTSC.Common.Http;
@@ -65,8 +66,8 @@ namespace MTSC.UnitTests
                 .AddExceptionHandler(new ExceptionConsoleLogger())
                 .SetScheduler(new ParallelScheduler())
                 .WithSslAuthenticationTimeout(TimeSpan.FromMilliseconds(100));
-            Server.ServiceManager.RegisterSingleton<ILogger, ConsoleLogger>();
-            Server.ServiceManager.RegisterSingleton<IteratingService>();
+            Server.ServiceCollection.AddSingleton<ILogger, ConsoleLogger>();
+            Server.ServiceCollection.AddSingleton<IteratingService>();
             Server.RunAsync();
         }
 
