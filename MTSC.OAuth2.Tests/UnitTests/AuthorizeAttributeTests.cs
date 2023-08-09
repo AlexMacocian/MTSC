@@ -2,12 +2,12 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Moq;
 using MTSC.Common.Http;
 using MTSC.OAuth2.Attributes;
 using MTSC.OAuth2.Authorization;
 using MTSC.OAuth2.Models;
 using MTSC.ServerSide;
+using NSubstitute;
 using Slim;
 using Slim.Exceptions;
 using System;
@@ -32,13 +32,13 @@ namespace MTSC.OAuth2.Tests.UnitTests
         private const string AccessTokenKey = "JsonWebTokenString";
         private const string AccessTokenValue = "SomeValueHere";
         
-        private readonly Mock<ILogger<AuthorizeAttribute>> loggerMock = new();
-        private readonly Mock<IAuthorizationProvider> authorizationProviderMock = new();
+        private readonly ILogger<AuthorizeAttribute> loggerMock = Substitute.For<ILogger<AuthorizeAttribute>>();
+        private readonly IAuthorizationProvider authorizationProviderMock = Substitute.For<IAuthorizationProvider>();
         private readonly AuthorizeAttribute authorizeAttribute;
 
         public AuthorizeAttributeTests()
         {
-            this.authorizeAttribute = new AuthorizeAttribute(this.authorizationProviderMock.Object, this.loggerMock.Object);
+            this.authorizeAttribute = new AuthorizeAttribute(this.authorizationProviderMock, this.loggerMock);
         }
 
         [TestMethod]
@@ -58,11 +58,11 @@ namespace MTSC.OAuth2.Tests.UnitTests
             var calledExpectedConstructor = false;
             var container = new ServiceManager();
             container.RegisterSingleton<AuthorizeAttribute>();
-            container.RegisterSingleton(sp => this.authorizationProviderMock.Object);
+            container.RegisterSingleton(sp => this.authorizationProviderMock);
             container.RegisterSingleton(sp =>
             {
                 calledExpectedConstructor = true;
-                return this.loggerMock.Object;
+                return this.loggerMock;
             });
             container.RegisterSingleton(sp => new Server());
 
@@ -74,7 +74,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
         [TestMethod]
         public void Constructor1_AuthorizationProviderIsNull_ThrowsArgumentNullException()
         {
-            var action = () => new AuthorizeAttribute(null, this.loggerMock.Object);
+            var action = () => new AuthorizeAttribute(null, this.loggerMock);
 
             action.Should().Throw<ArgumentNullException>();
         }
@@ -82,7 +82,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
         [TestMethod]
         public void Constructor1_ILoggerIsNull_ThrowsArgumentNullException()
         {
-            var action = () => new AuthorizeAttribute(this.authorizationProviderMock.Object, null as ILogger<AuthorizeAttribute>);
+            var action = () => new AuthorizeAttribute(this.authorizationProviderMock, null as ILogger<AuthorizeAttribute>);
 
             action.Should().Throw<ArgumentNullException>();
         }
@@ -98,7 +98,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
         [TestMethod]
         public void Constructor2_ServerIsNull_ThrowsArgumentNullException()
         {
-            var action = () => new AuthorizeAttribute(this.authorizationProviderMock.Object, null as Server);
+            var action = () => new AuthorizeAttribute(this.authorizationProviderMock, null as Server);
 
             action.Should().Throw<ArgumentNullException>();
         }
@@ -114,12 +114,11 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
-            this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(new TokenValidationResponse { IsValid = true });
+            this.authorizationProviderMock.VerifyAccessToken(AccessTokenValue).ReturnsForAnyArgs(new TokenValidationResponse { IsValid = true });
 
             await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
-            this.authorizationProviderMock.Verify();
+            await this.authorizationProviderMock.ReceivedWithAnyArgs().VerifyAccessToken(Arg.Any<string>());
         }
 
         [TestMethod]
@@ -133,8 +132,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
-            this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(new TokenValidationResponse { IsValid = true });
+            this.authorizationProviderMock.VerifyAccessToken(AccessTokenValue).ReturnsForAnyArgs(new TokenValidationResponse { IsValid = true });
 
             var response = await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -152,8 +150,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
-            this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(new TokenValidationResponse { IsValid = true });
+            this.authorizationProviderMock.VerifyAccessToken(AccessTokenValue).ReturnsForAnyArgs(new TokenValidationResponse { IsValid = true });
 
             _ = await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -171,8 +168,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
-            this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(new TokenValidationResponse { IsValid = false });
+            this.authorizationProviderMock.VerifyAccessToken(AccessTokenValue).ReturnsForAnyArgs(new TokenValidationResponse { IsValid = false });
 
             var response = await this.authorizeAttribute.HandleRequestAsync(routeContext);
 
@@ -190,10 +186,8 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
-            this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(new TokenValidationResponse { IsValid = false });
-            this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
-                .ReturnsAsync(RedirectUri);
+            this.authorizationProviderMock.VerifyAccessToken(AccessTokenValue).ReturnsForAnyArgs(new TokenValidationResponse { IsValid = false });
+            this.authorizationProviderMock.GetRedirectUri().Returns(RedirectUri);
 
             var response = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
 
@@ -213,10 +207,8 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             httpRequest.Cookies.Add(new Cookie(AccessTokenKey, AccessTokenValue));
-            this.authorizationProviderMock.Setup(u => u.VerifyAccessToken(AccessTokenValue))
-                .ReturnsAsync(new TokenValidationResponse { IsValid = false });
-            this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
-                .ReturnsAsync(RedirectUri);
+            this.authorizationProviderMock.VerifyAccessToken(AccessTokenValue).ReturnsForAnyArgs(new TokenValidationResponse { IsValid = false });
+            this.authorizationProviderMock.GetRedirectUri().Returns(RedirectUri);
 
             var response = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
 
@@ -234,8 +226,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
 
             var response = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
 
@@ -254,8 +245,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
 
             var response = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
 
@@ -273,8 +263,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
 
             var response = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
@@ -294,8 +283,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
 
             var response = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
@@ -313,8 +301,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = "someKey=someValue";
 
@@ -333,8 +320,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}=someValue";
 
@@ -353,8 +339,7 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}={StateValue}";
 
@@ -373,16 +358,14 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
-            this.authorizationProviderMock.Setup(u => u.RetrieveAccessToken(AuthorizationCodeValue))
-                .ReturnsAsync(Optional.None<JsonWebToken>());
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
+            this.authorizationProviderMock.RetrieveAccessToken(AuthorizationCodeValue).Returns(Optional.None<JsonWebToken>());
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}={StateValue}&{AuthorizationCodeKey}={AuthorizationCodeValue}";
 
             _ = (await this.authorizeAttribute.HandleRequestAsync(routeContext)).Cast<RouteEnablerAsyncResponse.RouteEnablerAsyncResponseError>();
 
-            this.authorizationProviderMock.Verify();
+            await this.authorizationProviderMock.ReceivedWithAnyArgs().RetrieveAccessToken(AuthorizationCodeValue);
         }
 
         [TestMethod]
@@ -395,10 +378,8 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 clientData: null,
                 scopedServiceProvider: null,
                 urlValues: null);
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
-            this.authorizationProviderMock.Setup(u => u.RetrieveAccessToken(AuthorizationCodeValue))
-                .ReturnsAsync(Optional.None<JsonWebToken>());
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
+            this.authorizationProviderMock.RetrieveAccessToken(AuthorizationCodeValue).Returns(Optional.None<JsonWebToken>());
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}={StateValue}&{AuthorizationCodeKey}={AuthorizationCodeValue}";
 
@@ -418,12 +399,9 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             var jsonWebToken = new JsonWebToken(new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken()));
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
-            this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
-                .ReturnsAsync(RedirectUri);
-            this.authorizationProviderMock.Setup(u => u.RetrieveAccessToken(AuthorizationCodeValue))
-                .ReturnsAsync(jsonWebToken);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
+            this.authorizationProviderMock.GetRedirectUri().Returns(RedirectUri);
+            this.authorizationProviderMock.RetrieveAccessToken(AuthorizationCodeValue).Returns(jsonWebToken);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}={StateValue}&{AuthorizationCodeKey}={AuthorizationCodeValue}";
 
@@ -445,12 +423,9 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             var jsonWebToken = new JsonWebToken(new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken()));
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
-            this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
-                .ReturnsAsync(RedirectUri);
-            this.authorizationProviderMock.Setup(u => u.RetrieveAccessToken(AuthorizationCodeValue))
-                .ReturnsAsync(jsonWebToken);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
+            this.authorizationProviderMock.GetRedirectUri().Returns(RedirectUri);
+            this.authorizationProviderMock.RetrieveAccessToken(AuthorizationCodeValue).Returns(jsonWebToken);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}={StateValue}&{AuthorizationCodeKey}={AuthorizationCodeValue}";
 
@@ -470,12 +445,9 @@ namespace MTSC.OAuth2.Tests.UnitTests
                 scopedServiceProvider: null,
                 urlValues: null);
             var jsonWebToken = new JsonWebToken(new JwtSecurityTokenHandler().WriteToken(new JwtSecurityToken()));
-            this.authorizationProviderMock.Setup(u => u.GetOAuthUri(It.IsAny<string>()))
-                .ReturnsAsync(OAuthUri);
-            this.authorizationProviderMock.Setup(u => u.GetRedirectUri())
-                .ReturnsAsync(RedirectUri);
-            this.authorizationProviderMock.Setup(u => u.RetrieveAccessToken(AuthorizationCodeValue))
-                .ReturnsAsync(jsonWebToken);
+            this.authorizationProviderMock.GetOAuthUri(Arg.Any<string>()).Returns(OAuthUri);
+            this.authorizationProviderMock.GetRedirectUri().Returns(RedirectUri);
+            this.authorizationProviderMock.RetrieveAccessToken(AuthorizationCodeValue).Returns(jsonWebToken);
             httpRequest.Cookies.Add(new Cookie(StateKey, StateValue));
             httpRequest.RequestQuery = $"{StateKey}={StateValue}&{AuthorizationCodeKey}={AuthorizationCodeValue}";
 
