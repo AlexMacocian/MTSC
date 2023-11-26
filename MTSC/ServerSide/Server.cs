@@ -513,7 +513,7 @@ namespace MTSC.ServerSide
                     {
                         var client = this.Listener.AcceptSocket();
                         var clientStruct = new ClientData(client);
-                        Task.Run(() => this.AcceptClient(clientStruct));
+                        new TaskFactory().StartNew(() => this.AcceptClient(clientStruct), this.cancellationToken, TaskCreationOptions.LongRunning, TaskScheduler.Current);
                     }
                 }
                 catch (Exception e)

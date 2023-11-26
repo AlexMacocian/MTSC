@@ -50,14 +50,14 @@ namespace MTSC.ServerSide.Listeners
                 }
 
                 this.socket.Listen(50);
-                Task.Run(async () =>
+                new TaskFactory().StartNew(async () =>
                 {
                     while (this.socket is not null)
                     {
                         var clientSocket = await this.socket.AcceptAsync();
                         this.acceptedSockets.Enqueue(clientSocket);
                     }
-                });
+                }, TaskCreationOptions.LongRunning);
             }
         }
 
